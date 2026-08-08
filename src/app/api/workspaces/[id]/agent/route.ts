@@ -25,10 +25,12 @@ export async function POST(req: Request, { params }: Ctx) {
   });
   if (!workspace) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const { prompt } = await req.json();
+  const body = await req.json();
+  const prompt = body?.prompt;
   if (!prompt || typeof prompt !== 'string') {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
   }
+  const providerId = typeof body?.providerId === 'string' ? body.providerId : undefined;
 
   const currentFiles: WorkspaceFileDraft[] = workspace.files.map((f) => ({
     path: f.path,
@@ -37,11 +39,11 @@ export async function POST(req: Request, { params }: Ctx) {
 
   let result;
   try {
-    result = await runAgent(prompt, currentFiles);
+    result = await runAgent(prompt, currentFiles, [], providerId);
   } catch (e) {
     console.error('agent error', e);
     return NextResponse.json(
-      { error: 'Failed to run agent. Check that your LLM API key is configured.' },
+      { error: 'Failed to run agent. Configure an AI provider in Settings, or check your API key.' },
       { status: 500 },
     );
   }

@@ -44,11 +44,12 @@ export interface AgentResult {
 }
 
 // Run the agent once to (re)generate the app. `files` is the current workspace state,
-// `prompt` is the user's instruction.
+// `prompt` is the user's instruction. `providerId` optionally selects which AI provider to use.
 export async function runAgent(
   prompt: string,
   currentFiles: WorkspaceFileDraft[],
   history: { role: 'user' | 'assistant'; content: string }[] = [],
+  providerId?: string,
 ): Promise<AgentResult> {
   const currentFileList = currentFiles
     .map((f) => `\n===== ${f.path} =====\n${f.content}`)
@@ -63,7 +64,7 @@ export async function runAgent(
     },
   ];
 
-  const raw = await complete(messages);
+  const raw = await complete(messages, providerId);
   return parseAgentResult(raw);
 }
 

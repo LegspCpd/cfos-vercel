@@ -46,6 +46,38 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ signupsEnabled }),
     }),
+  listProviders: () =>
+    request<{
+      providers: {
+        id: string;
+        name: string;
+        baseUrl: string;
+        model: string;
+        isEnabled: boolean;
+        apiKeyMasked: string;
+      }[];
+    }>('/api/providers'),
+  addProvider: (data: {
+    name: string;
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    isEnabled?: boolean;
+  }) =>
+    request<{ provider: { id: string } }>('/api/providers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProvider: (
+    id: string,
+    data: { name?: string; baseUrl?: string; apiKey?: string; model?: string; isEnabled?: boolean },
+  ) =>
+    request<{ ok: boolean }>(`/api/providers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteProvider: (id: string) =>
+    request<{ ok: boolean }>(`/api/providers/${id}`, { method: 'DELETE' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

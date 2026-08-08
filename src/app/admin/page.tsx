@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import ProvidersManager from '@/components/ProvidersManager';
 
 interface Overview {
   settings: { signupsEnabled: boolean };
@@ -151,6 +152,9 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </section>
+
+            {/* AI Providers */}
+            <ProvidersManager />
           </div>
         ) : null}
       </div>

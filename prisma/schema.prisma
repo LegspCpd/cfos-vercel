@@ -30,6 +30,20 @@ model AppSetting {
   value String
 }
 
+// An AI provider (LLM endpoint) that the agent can use. Multiple providers can be
+// configured at runtime via the admin/providers UI, each with its own API key.
+model AiProvider {
+  id        String   @id @default(cuid())
+  name      String   // display name, e.g. "DeepSeek", "OpenAI", "Local"
+  baseUrl   String   // OpenAI-compatible endpoint, e.g. https://api.deepseek.com/v1
+  apiKey    String   // the API token
+  model     String   // default model for this provider, e.g. deepseek-chat
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([name])
+}
+
 // A workspace ("gadget" in Cloudflare OS terms) owned by a user.
 // Holds a collection of files (the app's source code).
 model Workspace {

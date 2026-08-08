@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/password';
 import { createSessionToken } from '@/lib/auth';
 import { areSignupsEnabled } from '@/lib/settings';
-import { maybeBootstrapAdmin } from '@/lib/admin';
+import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
 import { z } from 'zod';
 
 const signupSchema = z.object({
@@ -44,6 +44,8 @@ export async function POST(req: Request) {
 
     // The first user ever created becomes the bootstrap admin.
     await maybeBootstrapAdmin(user.username);
+    // Any user whose username is listed in ADMIN_USERNAME also becomes an admin.
+    await promoteEnvAdmins();
 
     const isAdmin = user.isAdmin || userCount === 0;
     const token = await createSessionToken({ userId: user.id, username: user.username });

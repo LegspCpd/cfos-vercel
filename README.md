@@ -68,6 +68,10 @@ DEFAULT_MODEL=deepseek-chat
 
 其他兼容厂商同理（如本地 ollama：`OPENAI_BASE_URL=http://localhost:11434/v1`）。
 
+### 多 AI Provider（推荐，不用改环境变量）
+
+部署后，管理员可在 **`/admin` → AI Providers** 页面**动态添加多个 LLM provider**（每个含名称、Base URL、API Key、模型），例如同时配 DeepSeek、OpenAI、本地模型，可随时增删/启停。agent 默认使用第一个启用的 provider。API Key 存数据库，列表页只显示掩码。
+
 ## 管理员与注册开关
 
 - **第一个注册的用户自动成为管理员**（bootstrap admin）。

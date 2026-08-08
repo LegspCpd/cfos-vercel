@@ -130,6 +130,8 @@ pnpm install && pnpm db:push && pnpm build
 
 ## Cloudflare Access（完整版 SSO 门禁）
 
+> 📖 **完整配置教程见 [`docs/CLOUDFLARE_ACCESS_SETUP.md`](docs/CLOUDFLARE_ACCESS_SETUP.md)**（含截图级分步操作、排查、回滚）。
+
 Cloudflare Access 在你的站点前面加一道 SSO 认证。用户必须先通过你配置的 IdP（GitHub/Google/邮箱等）登录，才能访问。后端 API 会校验 Cloudflare 注入的 JWT。
 
 > 前提：**你的域名必须走 Cloudflare 代理（orange cloud）**。如果域名在 CF 里是灰云（仅 DNS），CF 不会注入 JWT，Access 不生效。

@@ -20,11 +20,19 @@ export default function HomePage() {
   const { t } = useI18n();
   const [prompt, setPrompt] = useState('');
   const [creating, setCreating] = useState(false);
+  const [tagline, setTagline] = useState('');
 
   // Prefill from ?prompt= (e.g. from Explore page).
   useEffect(() => {
     const p = new URL(window.location.href).searchParams.get('prompt');
     if (p) setPrompt(p);
+  }, []);
+
+  useEffect(() => {
+    api
+      .getPublicSite()
+      .then((site) => setTagline(site.siteTagline))
+      .catch(() => {});
   }, []);
 
   async function startWorkspace(text: string) {
@@ -46,7 +54,7 @@ export default function HomePage() {
           {t('home.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          {t('home.sub')}
+          {tagline || t('home.sub')}
         </p>
       </div>
 

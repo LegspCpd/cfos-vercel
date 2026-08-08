@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
 import { requireCfAccess } from '@/lib/require-access';
+import { getSiteSettings } from '@/lib/settings';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -56,9 +57,20 @@ export async function POST(req: Request, { params }: Ctx) {
     finalPrompt = `${prompt}\n\n--- Reference context documents ---\n${ctxBlock}\n--- End context ---`;
   }
 
+  // Apply site-level agent configuration (default model + admin instructions).
+  const siteSettings = await getSiteSettings();
+  const effectiveModel = providerId ? undefined : siteSettings.defaultModel || undefined;
+
   let result;
   try {
-    result = await runAgent(finalPrompt, currentFiles, [], providerId);
+    result = await runAgent(
+      finalPrompt,
+      currentFiles,
+      [],
+      providerId,
+      effectiveModel,
+      siteSettings.agentInstructions || undefined,
+    );
   } catch (e) {
     console.error('agent error', e);
     await writeAudit({

@@ -1,12 +1,34 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { isUserAdmin } from '@/lib/admin';
-import { setSetting, SETTING_SIGNUPS_ENABLED } from '@/lib/settings';
+import { getSiteSettings, updateSiteSettings } from '@/lib/settings';
 import { z } from 'zod';
 
-// POST /api/admin/settings — update admin settings (admin only).
+// GET /api/admin/settings — read all site settings (admin only).
+export async function GET(req: Request) {
+  const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
+  if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const session = await verifySessionToken(token);
+  if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  const admin = await isUserAdmin(session.userId);
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const settings = await getSiteSettings();
+  return NextResponse.json({ settings });
+}
+
+// POST /api/admin/settings — update site settings (admin only).
 const patchSchema = z.object({
   signupsEnabled: z.boolean().optional(),
+  siteName: z.string().max(200).optional(),
+  siteTagline: z.string().max(300).optional(),
+  bannerText: z.string().max(500).optional(),
+  bannerEnabled: z.boolean().optional(),
+  bannerColor: z.enum(['blue', 'amber', 'red', 'green']).optional(),
+  footerText: z.string().max(500).optional(),
+  defaultModel: z.string().max(200).optional(),
+  agentInstructions: z.string().max(5000).optional(),
 });
 
 export async function POST(req: Request) {
@@ -19,9 +41,7 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = patchSchema.parse(await req.json());
-  if (typeof body.signupsEnabled === 'boolean') {
-    await setSetting(SETTING_SIGNUPS_ENABLED, String(body.signupsEnabled));
-  }
+  await updateSiteSettings(body);
 
   return NextResponse.json({ ok: true });
 }

@@ -128,6 +128,50 @@ export const api = {
     request<{ enabled: boolean; team: string | null; audConfigured: boolean; audMasked: string | null }>(
       '/api/admin/cfaccess',
     ),
+  getSiteSettings: () =>
+    request<{
+      settings: {
+        signupsEnabled: boolean;
+        siteName: string;
+        siteTagline: string;
+        bannerText: string;
+        bannerEnabled: boolean;
+        bannerColor: string;
+        footerText: string;
+        defaultModel: string;
+        agentInstructions: string;
+      };
+    }>('/api/admin/settings'),
+  updateSiteSettings: (data: Record<string, unknown>) =>
+    request<{ ok: boolean }>('/api/admin/settings', { method: 'POST', body: JSON.stringify(data) }),
+  getStats: () =>
+    request<{
+      stats: {
+        users: number;
+        workspaces: number;
+        files: number;
+        shares: number;
+        contexts: number;
+        aiCalls: number;
+        agentRuns: number;
+      };
+    }>('/api/admin/stats'),
+  getPublicSite: () =>
+    request<{
+      siteName: string;
+      siteTagline: string;
+      bannerText: string;
+      bannerEnabled: boolean;
+      bannerColor: string;
+      footerText: string;
+    }>('/api/site'),
+  adminSetUserRole: (id: string, isAdmin: boolean) =>
+    request<{ ok: boolean }>(`/api/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isAdmin }),
+    }),
+  adminDeleteUser: (id: string) =>
+    request<{ ok: boolean }>(`/api/admin/users/${id}`, { method: 'DELETE' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

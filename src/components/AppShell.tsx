@@ -53,6 +53,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [siteName, setSiteName] = useState('');
+  const [banner, setBanner] = useState<{ text: string; color: string } | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -66,6 +68,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         setUserName(me.displayName || me.username);
       })
       .catch(() => router.replace('/login'));
+    api
+      .getPublicSite()
+      .then((site) => {
+        setSiteName(site.siteName);
+        if (site.bannerEnabled && site.bannerText) {
+          setBanner({ text: site.bannerText, color: site.bannerColor });
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   // Global ⌘K / Ctrl+K
@@ -105,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.jpg" alt="logo" className="h-7 w-7 rounded-md object-cover" />
-          <span className="text-base font-semibold">{t('app.name')}</span>
+          <span className="text-base font-semibold">{siteName || t('app.name')}</span>
         </Link>
 
         {/* Search button */}
@@ -216,7 +227,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="ml-60 min-h-screen flex-1">{children}</main>
+      <main className="ml-60 min-h-screen flex-1">
+        {banner && (
+          <div
+            className={`px-4 py-2 text-center text-sm font-medium ${
+              banner.color === 'amber'
+                ? 'bg-amber-500/15 text-amber-600'
+                : banner.color === 'red'
+                  ? 'bg-red-500/15 text-red-600'
+                  : banner.color === 'green'
+                    ? 'bg-green-500/15 text-green-600'
+                    : 'bg-blue-500/15 text-blue-600'
+            }`}
+          >
+            {banner.text}
+          </div>
+        )}
+        {children}
+      </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>

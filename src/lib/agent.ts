@@ -45,18 +45,25 @@ export interface AgentResult {
 
 // Run the agent once to (re)generate the app. `files` is the current workspace state,
 // `prompt` is the user's instruction. `providerId` optionally selects which AI provider to use.
+// `model` optionally overrides the provider's default model. `extraSystem` appends to the system prompt.
 export async function runAgent(
   prompt: string,
   currentFiles: WorkspaceFileDraft[],
   history: { role: 'user' | 'assistant'; content: string }[] = [],
   providerId?: string,
+  model?: string,
+  extraSystem?: string,
 ): Promise<AgentResult> {
   const currentFileList = currentFiles
     .map((f) => `\n===== ${f.path} =====\n${f.content}`)
     .join('');
 
+  const systemContent = extraSystem
+    ? `${SYSTEM_PROMPT}\n\nAdditional instructions from the site admin:\n${extraSystem}`
+    : SYSTEM_PROMPT;
+
   const messages: ChatMessageIn[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemContent },
     ...history.map((h) => ({ role: h.role, content: h.content })),
     {
       role: 'user',
@@ -64,7 +71,7 @@ export async function runAgent(
     },
   ];
 
-  const raw = await complete(messages, providerId);
+  const raw = await complete(messages, providerId, model);
   return parseAgentResult(raw);
 }
 

@@ -114,6 +114,11 @@ export default function LoginPage() {
             {t('auth.createOne')}
           </Link>
         </p>
+        <p className="mt-2 text-center text-sm">
+          <Link href="/docs" className="text-primary/70 hover:underline">
+            📖 查看部署文档
+          </Link>
+        </p>
       </div>
     </main>
   );

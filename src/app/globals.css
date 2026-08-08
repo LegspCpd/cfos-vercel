@@ -78,3 +78,27 @@
 body, .card, button, input, textarea, iframe {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+
+/* Docs page: code blocks + tables */
+.prose pre {
+  background: hsl(var(--muted)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+}
+.prose code {
+  font-size: 0.85em;
+}
+.prose table {
+  display: block;
+  overflow-x: auto;
+}
+.prose th, .prose td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.4rem 0.6rem;
+}
+.prose blockquote {
+  border-left-color: hsl(var(--primary));
+  background: hsl(var(--muted));
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+}

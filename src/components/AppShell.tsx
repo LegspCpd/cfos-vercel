@@ -19,6 +19,8 @@ import {
   Plug,
   BookOpen,
   BookMarked,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -55,6 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [siteName, setSiteName] = useState('');
   const [banner, setBanner] = useState<{ text: string; color: string } | null>(null);
 
@@ -112,8 +115,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r bg-card">
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r bg-card md:flex">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -229,7 +232,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="ml-60 min-h-screen flex-1">
+      <main className="min-h-screen flex-1 md:ml-60">
+        {/* Mobile top bar */}
+        <div className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/80 px-3 py-2 backdrop-blur md:hidden">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded p-1 hover:bg-secondary"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <Link href="/" className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.jpg" alt="logo" className="h-6 w-6 rounded-md object-cover" />
+              <span className="text-sm font-semibold">{siteName || t('app.name')}</span>
+            </Link>
+          </div>
+        </div>
         {banner && (
           <div
             className={`px-4 py-2 text-center text-sm font-medium ${
@@ -247,6 +267,62 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
         {children}
       </main>
+
+      {/* Mobile drawer */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-card shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.jpg" alt="logo" className="h-6 w-6 rounded-md object-cover" />
+                <span className="font-semibold">{siteName || t('app.name')}</span>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="rounded p-1 hover:bg-secondary" aria-label="Close menu">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto px-2 py-2">
+              {NAV.map((item) => {
+                const active = isActive(item);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={clsx(
+                      'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+                      active ? 'bg-secondary font-medium text-foreground' : 'text-muted-foreground',
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              })}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setSidebarOpen(false)}
+                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {t('nav.admin')}
+                </Link>
+              )}
+            </nav>
+            <div className="border-t p-3">
+              <button
+                onClick={logout}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" /> {t('nav.signout')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>

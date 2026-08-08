@@ -3,7 +3,29 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light theme (default) */
   :root {
+    --background: 0 0% 98%;
+    --foreground: 240 10% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 12%;
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 240 8% 20%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 217 91% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 88%;
+    --ring: 217 91% 55%;
+    --radius: 0.5rem;
+  }
+
+  /* Dark theme */
+  .dark {
     --background: 0 0% 7%;
     --foreground: 0 0% 92%;
     --card: 0 0% 10%;
@@ -20,7 +42,6 @@
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 18%;
     --ring: 217 91% 60%;
-    --radius: 0.5rem;
   }
 
   * {
@@ -32,7 +53,7 @@
   }
 }
 
-/* Custom scrollbar for a dark code-editor aesthetic */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -41,14 +62,19 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 22%);
+  background: hsl(var(--border));
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 0% 30%);
+  background: hsl(var(--muted-foreground));
 }
 
 /* Monaco should fill its container */
 .monaco-editor, .monaco-editor-background, .monaco-editor .margin {
   height: 100% !important;
+}
+
+/* Theme transition */
+body, .card, button, input, textarea, iframe {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }

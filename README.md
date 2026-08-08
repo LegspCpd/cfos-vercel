@@ -53,15 +53,36 @@ pnpm dev
 4. **Build Command**：`pnpm install && pnpm db:push && pnpm build`（或用 Build Step 跑 Prisma migration）。
 5. Deploy。
 
-## 支持的 LLM
+## 支持的 LLM（含 DeepSeek）
 
-通过 OpenAI 兼容接口接入。设置 `OPENAI_API_KEY` 即可用 `gpt-4o-mini` 等；要换其他厂商：
+通过 OpenAI 兼容接口接入。**可以完全使用 DeepSeek**（便宜，适合 agent 频繁调用）：
 
 ```env
-OPENAI_API_KEY=sk-xxx
-OPENAI_BASE_URL=https://api.deepseek.com/v1   # 例：DeepSeek
+# DeepSeek 配置（在 https://platform.deepseek.com 注册充值拿 key）
+OPENAI_API_KEY=sk-你的deepseek密钥
+OPENAI_BASE_URL=https://api.deepseek.com/v1
 DEFAULT_MODEL=deepseek-chat
 ```
+
+> ⚠️ **`OPENAI_BASE_URL` 必须配**成 `https://api.deepseek.com/v1`，否则 SDK 会连 OpenAI 官方服务器，你的 `sk-` key 会报 401。
+
+其他兼容厂商同理（如本地 ollama：`OPENAI_BASE_URL=http://localhost:11434/v1`）。
+
+## 管理员与注册开关
+
+- **第一个注册的用户自动成为管理员**（bootstrap admin）。
+- 也可以用环境变量 `ADMIN_USERNAME=xxx` 指定某个用户为管理员。
+- 管理后台在 `/admin`（只有管理员能访问），可：
+  - **开关公开注册**（默认**关闭**）
+  - 查看用户列表（用户名、角色、workspace 数、注册时间）
+- 注册开关关闭时，非管理员的新用户注册会被拒绝（返回 403）。
+
+### 首次使用流程
+1. 部署后，先访问 `/signup` 注册**第一个账号** → 它自动成为管理员。
+2. 进入 `/admin`，把"Public registration"开关打开（若要让别人注册）。
+3. 之后普通用户就能注册了。
+
+> 安全默认：注册开关默认关闭。即使你忘了关，陌生人也无法注册。
 
 ## 架构说明
 

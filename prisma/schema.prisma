@@ -16,10 +16,18 @@ model User {
   username     String   @unique
   displayName  String
   passwordHash String // argon2id hash, computed server-side
+  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   workspaces Workspace[]
   chats      Chat[]
+}
+
+// A single-row settings table (key = "singleton"). Holds deployment-level switches
+// that an admin can flip at runtime without redeploying.
+model AppSetting {
+  key   String @id
+  value String
 }
 
 // A workspace ("gadget" in Cloudflare OS terms) owned by a user.

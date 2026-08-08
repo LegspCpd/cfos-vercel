@@ -27,17 +27,35 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  me: () => request<{ id: string; username: string; displayName: string }>('/api/me'),
+  me: () =>
+    request<{ id: string; username: string; displayName: string; isAdmin: boolean }>('/api/me'),
+  adminOverview: () =>
+    request<{
+      settings: { signupsEnabled: boolean };
+      users: {
+        id: string;
+        username: string;
+        displayName: string;
+        isAdmin: boolean;
+        createdAt: string;
+        _count: { workspaces: number };
+      }[];
+    }>('/api/admin/overview'),
+  adminSetSignups: (signupsEnabled: boolean) =>
+    request<{ ok: boolean }>('/api/admin/settings', {
+      method: 'POST',
+      body: JSON.stringify({ signupsEnabled }),
+    }),
   login: (username: string, password: string) =>
-    request<{ token: string; user: { id: string; username: string; displayName: string } }>(
-      '/api/auth/login',
-      { method: 'POST', body: JSON.stringify({ username, password }) },
-    ),
+    request<{ token: string; user: AuthUser }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
   signup: (username: string, displayName: string, password: string) =>
-    request<{ token: string; user: { id: string; username: string; displayName: string } }>(
-      '/api/auth/signup',
-      { method: 'POST', body: JSON.stringify({ username, displayName, password }) },
-    ),
+    request<{ token: string; user: AuthUser }>('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ username, displayName, password }),
+    }),
   listWorkspaces: () =>
     request<{ workspaces: WorkspaceSummary[] }>('/api/workspaces'),
   createWorkspace: (title: string) =>
@@ -65,6 +83,13 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ prompt }) },
     ),
 };
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  displayName: string;
+  isAdmin: boolean;
+}
 
 export interface WorkspaceSummary {
   id: string;

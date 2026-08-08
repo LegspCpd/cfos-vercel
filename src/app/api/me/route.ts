@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isUserAdmin } from '@/lib/admin';
 
 // GET /api/me — returns current user from Bearer token.
 export async function GET(req: Request) {
@@ -16,5 +17,11 @@ export async function GET(req: Request) {
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
-  return NextResponse.json({ id: user.id, username: user.username, displayName: user.displayName });
+  const isAdmin = await isUserAdmin(user.id);
+  return NextResponse.json({
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    isAdmin,
+  });
 }

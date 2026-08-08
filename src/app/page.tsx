@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Trash2, FileCode2, LogOut } from 'lucide-react';
+import { Plus, Trash2, FileCode2, LogOut, ShieldCheck } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { clearToken, getToken } from '@/lib/client/auth';
 
 export default function HomePage() {
   const router = useRouter();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -19,6 +20,10 @@ export default function HomePage() {
       router.replace('/login');
       return;
     }
+    api
+      .me()
+      .then((me) => setIsAdmin(me.isAdmin))
+      .catch(() => {});
     api
       .listWorkspaces()
       .then((res) => setWorkspaces(res.workspaces))
@@ -54,12 +59,22 @@ export default function HomePage() {
             <FileCode2 className="h-6 w-6 text-primary" />
             <h1 className="text-lg font-semibold">Cloudflare OS</h1>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" /> Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <ShieldCheck className="h-4 w-4" /> Admin
+              </Link>
+            )}
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
+          </div>
         </div>
       </header>
 

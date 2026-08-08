@@ -1,0 +1,74 @@
+// Prisma schema for the Vercel rewrite of Cloudflare OS.
+// Postgres replaces Cloudflare Durable Object SQLite as the data layer.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A single application user. Replaces UserDurableObject.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  passwordHash String // argon2id hash, computed server-side
+  createdAt    DateTime @default(now())
+
+  workspaces Workspace[]
+  chats      Chat[]
+}
+
+// A workspace ("gadget" in Cloudflare OS terms) owned by a user.
+// Holds a collection of files (the app's source code).
+model Workspace {
+  id        String   @id @default(cuid())
+  ownerId   String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  files WorkspaceFile[]
+  chats Chat[]
+}
+
+// One file inside a workspace.
+model WorkspaceFile {
+  id          String @id @default(cuid())
+  workspaceId String
+  path        String // e.g. "index.html", "src/App.tsx"
+  content     String @default("")
+  isEntry     Boolean @default(false) // the file previewed / run first
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, path])
+}
+
+// A chat conversation attached to a workspace (or standalone).
+model Chat {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String?
+  title       String   @default("New chat")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  role      String // "user" | "assistant" | "tool"
+  content   String   @default("")
+  createdAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}

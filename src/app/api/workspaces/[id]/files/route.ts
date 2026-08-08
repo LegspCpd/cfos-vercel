@@ -1,0 +1,76 @@
+import { NextResponse } from 'next/server';
+import { verifySessionToken } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
+async function authUser(req: Request) {
+  const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
+  if (!token) return null;
+  return verifySessionToken(token);
+}
+
+type Ctx = { params: { id: string } };
+
+// PUT /api/workspaces/:id/files — save a batch of file contents.
+// Body: { files: [{ path, content, isEntry? }] }
+export async function PUT(req: Request, { params }: Ctx) {
+  const session = await authUser(req);
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Ownership check
+  const owned = await prisma.workspace.findFirst({
+    where: { id: params.id, ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const { files } = await req.json();
+  if (!Array.isArray(files)) {
+    return NextResponse.json({ error: 'files must be an array' }, { status: 400 });
+  }
+
+  const upserts = files.map((f: { path?: string; content?: string; isEntry?: boolean }) => {
+    const path = String(f.path ?? '').trim();
+    if (!path) return null;
+    return prisma.workspaceFile.upsert({
+      where: { workspaceId_path: { workspaceId: params.id, path } },
+      update: { content: String(f.content ?? '') },
+      create: {
+        workspaceId: params.id,
+        path,
+        content: String(f.content ?? ''),
+        isEntry: Boolean(f.isEntry) || path === 'index.html',
+      },
+    });
+  });
+
+  await Promise.all(upserts.filter(Boolean));
+
+  // If an entry file was set, clear isEntry on others.
+  const entry = files.find((f) => f.isEntry)?.path;
+  if (entry) {
+    await prisma.workspaceFile.updateMany({
+      where: { workspaceId: params.id, path: { not: entry } },
+      data: { isEntry: false },
+    });
+  }
+
+  await prisma.workspace.update({ where: { id: params.id }, data: { updatedAt: new Date() } });
+
+  return NextResponse.json({ ok: true });
+}
+
+// DELETE /api/workspaces/:id/files?path=...
+export async function DELETE(req: Request, { params }: Ctx) {
+  const session = await authUser(req);
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const url = new URL(req.url);
+  const path = url.searchParams.get('path');
+  if (!path) return NextResponse.json({ error: 'path required' }, { status: 400 });
+  const owned = await prisma.workspace.findFirst({
+    where: { id: params.id, ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  await prisma.workspaceFile.deleteMany({ where: { workspaceId: params.id, path } });
+  return NextResponse.json({ ok: true });
+}

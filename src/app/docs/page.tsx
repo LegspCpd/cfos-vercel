@@ -1,15 +1,13 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import DocViewer from './DocViewer';
+import DocLayout from '@/components/docs/DocLayout';
+import Markdown from '@/components/docs/Markdown';
+import { getDocContent } from '@/lib/docs';
 
-// Server component: reads the markdown doc at build/runtime and renders it via the client viewer.
+// /docs — documentation home (renders index.md).
 export default function DocsPage() {
-  const filePath = path.join(process.cwd(), 'src', 'content', 'deploy-doc.md');
-  let content = '';
-  try {
-    content = readFileSync(filePath, 'utf-8');
-  } catch {
-    content = '# 文档未找到\n\n请检查 `src/content/deploy-doc.md` 是否存在。';
-  }
-  return <DocViewer content={content} />;
+  const content = getDocContent('index');
+  return (
+    <DocLayout>
+      {content ? <Markdown content={content} /> : <p>文档未找到。</p>}
+    </DocLayout>
+  );
 }

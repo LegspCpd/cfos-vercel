@@ -2,19 +2,30 @@
 
 对 Cloudflare OS 的**全栈重写**，适配 Vercel（Next.js 14 + Postgres），去掉了对 Cloudflare Durable Objects / Dynamic Workers / Workers RPC 的依赖。
 
-**注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留的核心能力：
+**注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留并尽量还原了原版功能：
 
+**核心能力：**
 - 用户注册/登录（argon2id 密码哈希 + JWT 会话）
-- Workspace（工作区）：多文件 + Monaco 代码编辑器
-- AI Agent：用自然语言构建/修改应用，agent 直接写代码文件
-- iframe 预览：把 agent 生成的 HTML/CSS/JS 应用实时渲染出来
+- **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
+- **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
+- **命令面板 ⌘K**：搜索/跳转 workspace、新建文档
+- **主题切换**：light / dark / system 三态
+- **Workspace 编辑器**：多文件 + Monaco 代码编辑器 + 文件树 + iframe 预览 + 聊天面板
+- **AI Agent**：自然语言构建/修改应用，agent 直接写代码文件（支持 markdown 输出、自动运行）
+- **多 AI Provider**：后台动态添加多个 LLM（DeepSeek/OpenAI/本地等）
+- **Outputs**：聚合所有 workspace 应用，网格/列表视图 + 搜索
+- **Blueprints**：你的应用列表 + 复制分享链接
+- **Explore**：发现 + 尝试构建的想法
+- **Profile 设置**：改显示名、改密码
+- **管理后台 /admin**：注册开关、用户列表、AI Providers 管理
 - Postgres 持久化（替代原版的 DO SQLite）
 
-**已砍掉**（因不使用 Cloudflare 运行时/免费层限制）：
-- 实时多人协同（Yjs）
+**已砍掉**（因不使用 Cloudflare 运行时/免费层限制，或原版本为占位）：
+- 实时多人协同（Yjs）—— 你已同意砍掉
 - 每 gadget 独立沙箱进程（Dynamic Workers）→ 改为浏览器 iframe 静态预览
-- Gatekeeper 外部 OAuth 集成（GitHub/Google/Slack 等）
-- 企业 Admin 面板、Cloudflare Access SSO
+- Gatekeeper 外部 OAuth 集成（GitHub/Google/Slack 等，需外部服务配置）
+- Context & Skills（原版即为 ComingSoon 占位）
+- Cloudflare Access SSO
 
 ## 技术栈
 

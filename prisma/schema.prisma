@@ -21,6 +21,7 @@ model User {
 
   workspaces Workspace[]
   chats      Chat[]
+  sharedFiles SharedFile[]
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches
@@ -93,6 +94,24 @@ model ChatMessage {
   createdAt DateTime @default(now())
 
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}
+
+// A file uploaded to Cloudflare R2 and shared via a link, with an expiry.
+model SharedFile {
+  id           String   @id @default(cuid())
+  ownerId      String // user who shared it
+  workspaceId  String? // optional source workspace
+  r2Key        String   @unique // object key in the R2 bucket
+  fileName     String // original name, used as download name
+  mimeType     String   @default("application/octet-stream")
+  sizeBytes    Int
+  expiresAt    DateTime // link stops working after this
+  createdAt    DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([expiresAt])
 }
 
 // Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).

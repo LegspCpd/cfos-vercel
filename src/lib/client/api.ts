@@ -86,6 +86,27 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify(data),
   }),
+  listShares: () =>
+    request<{
+      files: {
+        id: string;
+        fileName: string;
+        mimeType: string;
+        sizeBytes: number;
+        expiresAt: string;
+        createdAt: string;
+      }[];
+    }>('/api/share'),
+  uploadShare: (data: { fileName: string; mimeType: string; content: string; expiresInDays?: number }) =>
+    request<{
+      file: { id: string; fileName: string; sizeBytes: number; expiresAt: string; mimeType: string };
+    }>('/api/share', { method: 'POST', body: JSON.stringify(data) }),
+  getShareLink: (id: string) =>
+    request<{ url: string; fileName: string; sizeBytes: number; mimeType: string; expiresAt: string }>(
+      `/api/share/${id}`,
+    ),
+  deleteShare: (id: string) =>
+    request<{ ok: boolean }>(`/api/share/${id}`, { method: 'DELETE' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

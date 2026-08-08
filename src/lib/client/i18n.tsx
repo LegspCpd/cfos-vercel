@@ -40,6 +40,7 @@ const zh: Record<string, string> = {
   // Nav
   'nav.home': '首页',
   'nav.workspaces': '工作区',
+  'nav.shares': '文件分享',
   'nav.blueprints': '蓝图',
   'nav.outputs': '输出',
   'nav.explore': '探索',
@@ -168,6 +169,7 @@ const en: Record<string, string> = {
   'auth.pwTooShort': 'Password must be at least 6 characters.',
   'nav.home': 'Home',
   'nav.workspaces': 'Workspaces',
+  'nav.shares': 'File Shares',
   'nav.blueprints': 'Blueprints',
   'nav.outputs': 'Outputs',
   'nav.explore': 'Explore',

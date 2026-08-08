@@ -15,6 +15,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Boxes,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -33,8 +34,9 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/', labelKey: 'nav.home', icon: Home, match: '/workspaces' },
   { href: '/workspaces', labelKey: 'nav.workspaces', icon: LayoutGrid },
-  { href: '/blueprints', labelKey: 'nav.blueprints', icon: Share2 },
+  { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
   { href: '/outputs', labelKey: 'nav.outputs', icon: FileCode2 },
+  { href: '/blueprints', labelKey: 'nav.blueprints', icon: Boxes },
   { href: '/explore', labelKey: 'nav.explore', icon: Compass },
 ];
 

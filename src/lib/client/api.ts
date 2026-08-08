@@ -111,6 +111,19 @@ export const api = {
     request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null }>('/api/github/status'),
   githubDisconnect: () =>
     request<{ ok: boolean }>('/api/github/disconnect', { method: 'POST' }),
+  listContext: () =>
+    request<{
+      docs: { id: string; title: string; tags: string; createdAt: string; updatedAt: string }[];
+    }>('/api/context'),
+  getContext: (id: string) =>
+    request<{ doc: { id: string; title: string; content: string; tags: string } }>(`/api/context/${id}`),
+  createContext: (data: { title: string; content: string; tags?: string }) =>
+    request<{ doc: { id: string } }>('/api/context', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteContext: (id: string) =>
+    request<{ ok: boolean }>(`/api/context/${id}`, { method: 'DELETE' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

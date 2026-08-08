@@ -17,6 +17,7 @@ import {
   Monitor,
   Boxes,
   Plug,
+  BookOpen,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -37,6 +38,7 @@ const NAV: NavItem[] = [
   { href: '/workspaces', labelKey: 'nav.workspaces', icon: LayoutGrid },
   { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
   { href: '/connections', labelKey: 'nav.connections', icon: Plug },
+  { href: '/context', labelKey: 'nav.context', icon: BookOpen },
   { href: '/outputs', labelKey: 'nav.outputs', icon: FileCode2 },
   { href: '/blueprints', labelKey: 'nav.blueprints', icon: Boxes },
   { href: '/explore', labelKey: 'nav.explore', icon: Compass },

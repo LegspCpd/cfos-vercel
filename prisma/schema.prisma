@@ -23,6 +23,7 @@ model User {
   chats      Chat[]
   sharedFiles SharedFile[]
   githubConnection GitHubConnection?
+  contextDocs ContextDoc[]
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches
@@ -127,6 +128,21 @@ model GitHubConnection {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("GitHubConnection")
+}
+
+// A context document the user uploads for the agent to reference when building.
+model ContextDoc {
+  id        String   @id @default(cuid())
+  ownerId   String
+  title     String
+  content   String // full text
+  tags      String   @default("") // comma-separated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
 }
 
 // Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).

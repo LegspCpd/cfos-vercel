@@ -38,9 +38,23 @@ export async function POST(req: Request, { params }: Ctx) {
     content: f.content,
   }));
 
+  // Load the user's context documents and attach them so the agent can reference them.
+  const contextDocs = await prisma.contextDoc.findMany({
+    where: { ownerId: session.userId },
+    orderBy: { updatedAt: 'desc' },
+    take: 5,
+  });
+  let finalPrompt = prompt;
+  if (contextDocs.length > 0) {
+    const ctxBlock = contextDocs
+      .map((d) => `\n===== Context: ${d.title} =====\n${d.content.slice(0, 4000)}`)
+      .join('\n');
+    finalPrompt = `${prompt}\n\n--- Reference context documents ---\n${ctxBlock}\n--- End context ---`;
+  }
+
   let result;
   try {
-    result = await runAgent(prompt, currentFiles, [], providerId);
+    result = await runAgent(finalPrompt, currentFiles, [], providerId);
   } catch (e) {
     console.error('agent error', e);
     await writeAudit({

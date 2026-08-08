@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Send } from 'lucide-react';
 import { api } from '@/lib/client/api';
@@ -17,6 +17,12 @@ export default function HomePage() {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Prefill from ?prompt= (e.g. from Explore page).
+  useEffect(() => {
+    const p = new URL(window.location.href).searchParams.get('prompt');
+    if (p) setPrompt(p);
+  }, []);
 
   async function startWorkspace(text: string) {
     if (!text.trim() || creating) return;

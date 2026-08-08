@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -11,6 +13,9 @@ interface ChatMessage {
 interface ChatPanelProps {
   onRunAgent: (prompt: string) => Promise<{ message: string; agentEdited?: boolean }>;
   busy: boolean;
+  // When autoPrompt changes (and autoPromptNonce bumps), it is sent automatically.
+  autoPrompt?: string;
+  autoPromptNonce?: number;
 }
 
 const SUGGESTIONS = [
@@ -20,15 +25,34 @@ const SUGGESTIONS = [
   'Build a counter with a nice design',
 ];
 
-export default function ChatPanel({ onRunAgent, busy }: ChatPanelProps) {
+function MessageContent({ content }: { content: string }) {
+  // Simple markdown render with code block support.
+  return (
+    <div className="prose prose-sm max-w-none prose-invert">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  );
+}
+
+export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonce }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sentAutoRef = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
+
+  // Auto-send an externally supplied prompt (from home page / explore).
+  useEffect(() => {
+    if (autoPrompt && autoPromptNonce && autoPromptNonce > 0 && !sentAutoRef.current) {
+      sentAutoRef.current = true;
+      send(autoPrompt);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPrompt, autoPromptNonce]);
 
   async function send(prompt: string) {
     const trimmed = prompt.trim();
@@ -36,10 +60,9 @@ export default function ChatPanel({ onRunAgent, busy }: ChatPanelProps) {
     setError('');
     setInput('');
     setMessages((m) => [...m, { role: 'user', content: trimmed }]);
-    // Optimistically show an assistant "working" state via the busy indicator in parent.
     try {
       const result = await onRunAgent(trimmed);
-      const editedNote = result.agentEdited ? '\n\n*(Files were updated — check the editor and preview.)*' : '';
+      const editedNote = result.agentEdited ? '\n\n_(Files were updated — check the editor and preview.)_' : '';
       setMessages((m) => [...m, { role: 'assistant', content: result.message + editedNote }]);
     } catch (e) {
       setError((e as Error).message);
@@ -76,13 +99,17 @@ export default function ChatPanel({ onRunAgent, busy }: ChatPanelProps) {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
+              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                 m.role === 'user'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary text-secondary-foreground'
               }`}
             >
-              {m.content}
+              {m.role === 'user' ? (
+                m.content
+              ) : (
+                <MessageContent content={m.content} />
+              )}
             </div>
           </div>
         ))}

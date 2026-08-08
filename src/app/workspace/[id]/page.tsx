@@ -22,6 +22,8 @@ export default function WorkspacePage() {
   const [saved, setSaved] = useState(true);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [view, setView] = useState<'split' | 'editor' | 'preview'>('split');
+  const [autoPrompt, setAutoPrompt] = useState<string | undefined>(undefined);
+  const [autoPromptNonce, setAutoPromptNonce] = useState(0);
   const filesRef = useRef<WorkspaceDetail['files']>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -30,16 +32,27 @@ export default function WorkspacePage() {
       router.replace('/login');
       return;
     }
+    // Read ?prompt= (from the home page) — the agent runs automatically on load.
+    const url = new URL(window.location.href);
+    const autoPrompt = url.searchParams.get('prompt');
     api
       .getWorkspace(id)
-      .then((res) => {
+      .then(async (res) => {
         setWorkspace(res.workspace);
         filesRef.current = res.workspace.files;
         const entry = res.workspace.files.find((f) => f.isEntry) || res.workspace.files[0];
         setActivePath(entry?.path ?? null);
+        if (autoPrompt) {
+          // Clear the URL param so it doesn't re-run on reload.
+          url.searchParams.delete('prompt');
+          window.history.replaceState({}, '', url.pathname + url.search);
+          setAutoPrompt(autoPrompt);
+          setAutoPromptNonce((n) => n + 1);
+        }
       })
       .catch(() => router.replace('/'))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, router]);
 
   // Debounced autosave.
@@ -207,7 +220,12 @@ export default function WorkspacePage() {
 
         {/* Chat panel */}
         <div className="w-80 shrink-0 border-l bg-card">
-          <ChatPanel onRunAgent={runAgent} busy={agentBusy} />
+          <ChatPanel
+            onRunAgent={runAgent}
+            busy={agentBusy}
+            autoPrompt={autoPrompt}
+            autoPromptNonce={autoPromptNonce}
+          />
         </div>
       </div>
     </main>

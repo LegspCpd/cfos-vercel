@@ -78,6 +78,14 @@ export const api = {
     }),
   deleteProvider: (id: string) =>
     request<{ ok: boolean }>(`/api/providers/${id}`, { method: 'DELETE' }),
+  updateProfile: (data: {
+    displayName?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => request<{ user: { displayName: string; username: string } }>('/api/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

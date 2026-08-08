@@ -97,7 +97,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r bg-card">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
-          <FileCode2 className="h-6 w-6 text-primary" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="logo" className="h-7 w-7 rounded-md object-cover" />
           <span className="text-base font-semibold">{t('app.name')}</span>
         </Link>
 

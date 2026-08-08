@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
@@ -43,6 +44,13 @@ export async function POST(req: Request) {
       },
     },
     include: { files: true },
+  });
+  await writeAudit({
+    userId: session.userId,
+    username: session.username,
+    action: 'workspace.create',
+    targetId: workspace.id,
+    detail: `Created workspace "${workspace.title}"`,
   });
   return NextResponse.json({ workspace }, { status: 201 });
 }

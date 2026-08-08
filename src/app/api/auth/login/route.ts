@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { hashPassword, verifyPassword } from '@/lib/password';
+import { verifyPassword } from '@/lib/password';
 import { createSessionToken } from '@/lib/auth';
 import { isUserAdmin } from '@/lib/admin';
+import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -17,15 +18,23 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user) {
+      await writeAudit({ username, action: 'auth.login_failed', detail: 'User not found' });
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
     const ok = await verifyPassword(user.passwordHash, body.password);
     if (!ok) {
+      await writeAudit({ userId: user.id, username: user.username, action: 'auth.login_failed', detail: 'Wrong password' });
       return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
     }
 
     const isAdmin = user.isAdmin || (await isUserAdmin(user.id));
     const token = await createSessionToken({ userId: user.id, username: user.username });
+    await writeAudit({
+      userId: user.id,
+      username: user.username,
+      action: 'auth.login',
+      detail: `User signed in${isAdmin ? ' (admin)' : ''}`,
+    });
     return NextResponse.json({
       token,
       user: { id: user.id, username: user.username, displayName: user.displayName, isAdmin },

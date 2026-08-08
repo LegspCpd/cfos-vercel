@@ -5,6 +5,11 @@ import { I18nProvider } from '@/lib/client/i18n';
 export const metadata: Metadata = {
   title: 'Cloudflare OS',
   description: 'AI productivity workspace rebuilt on Next.js + Postgres',
+  icons: {
+    icon: '/logo.jpg',
+    shortcut: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

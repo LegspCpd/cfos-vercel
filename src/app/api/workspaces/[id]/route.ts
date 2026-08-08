@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { writeAudit } from '@/lib/audit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -39,6 +40,17 @@ export async function PATCH(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const target = await prisma.workspace.findFirst({
+    where: { id: params.id, ownerId: session.userId },
+    select: { title: true },
+  });
   await prisma.workspace.deleteMany({ where: { id: params.id, ownerId: session.userId } });
+  await writeAudit({
+    userId: session.userId,
+    username: session.username,
+    action: 'workspace.delete',
+    targetId: params.id,
+    detail: `Deleted workspace "${target?.title ?? params.id}"`,
+  });
   return NextResponse.json({ ok: true });
 }

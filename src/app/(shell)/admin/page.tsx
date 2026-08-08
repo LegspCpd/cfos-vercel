@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import ProvidersManager from '@/components/ProvidersManager';
+import AuditLogView from '@/components/AuditLogView';
 import { useI18n } from '@/lib/client/i18n';
 
 interface Overview {
@@ -143,6 +144,9 @@ export default function AdminPage() {
 
           {/* AI Providers */}
           <ProvidersManager />
+
+          {/* Audit log */}
+          <AuditLogView />
         </div>
       ) : null}
     </div>

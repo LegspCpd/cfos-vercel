@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { writeAudit } from '@/lib/audit';
 import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
 
 async function authUser(req: Request) {
@@ -42,6 +43,13 @@ export async function POST(req: Request, { params }: Ctx) {
     result = await runAgent(prompt, currentFiles, [], providerId);
   } catch (e) {
     console.error('agent error', e);
+    await writeAudit({
+      userId: session.userId,
+      username: session.username,
+      action: 'agent.run_failed',
+      targetId: workspace.id,
+      detail: `Agent failed on workspace "${workspace.title}" (prompt: ${prompt.slice(0, 120)})`,
+    });
     return NextResponse.json(
       { error: 'Failed to run agent. Configure an AI provider in Settings, or check your API key.' },
       { status: 500 },
@@ -76,6 +84,23 @@ export async function POST(req: Request, { params }: Ctx) {
   const updatedFiles = await prisma.workspaceFile.findMany({
     where: { workspaceId: workspace.id },
     orderBy: { path: 'asc' },
+  });
+
+  // Audit: agent run + AI call with affected files.
+  const changedPaths = result.files.map((f) => f.path);
+  await writeAudit({
+    userId: session.userId,
+    username: session.username,
+    action: 'agent.run',
+    targetId: workspace.id,
+    detail: `Agent ran on "${workspace.title}" (provider: ${providerId ?? 'default'}) — touched files: ${changedPaths.join(', ') || 'none'}`,
+  });
+  await writeAudit({
+    userId: session.userId,
+    username: session.username,
+    action: 'ai.call',
+    targetId: workspace.id,
+    detail: `AI call from agent (prompt: ${prompt.slice(0, 120)})`,
   });
 
   return NextResponse.json({

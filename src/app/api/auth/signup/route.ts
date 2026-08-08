@@ -4,6 +4,7 @@ import { hashPassword } from '@/lib/password';
 import { createSessionToken } from '@/lib/auth';
 import { areSignupsEnabled } from '@/lib/settings';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
+import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
 
 const signupSchema = z.object({
@@ -49,6 +50,12 @@ export async function POST(req: Request) {
 
     const isAdmin = user.isAdmin || userCount === 0;
     const token = await createSessionToken({ userId: user.id, username: user.username });
+    await writeAudit({
+      userId: user.id,
+      username: user.username,
+      action: 'auth.signup',
+      detail: `New user registered${isAdmin ? ' (admin)' : ''}`,
+    });
     return NextResponse.json(
       { token, user: { id: user.id, username: user.username, displayName: user.displayName, isAdmin } },
       { status: 201 },

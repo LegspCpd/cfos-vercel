@@ -94,3 +94,19 @@ model ChatMessage {
 
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }
+
+// Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).
+// Provides the "operation audit / permission review" visibility the original system had.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String? // actor; null for anonymous/system events
+  username  String? // denormalized for display convenience
+  action    String // e.g. "auth.login", "workspace.create", "agent.run", "ai.call"
+  targetId  String? // e.g. workspaceId, providerId
+  detail    String? // human-readable summary / JSON payload
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

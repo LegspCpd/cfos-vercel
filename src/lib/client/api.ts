@@ -107,6 +107,10 @@ export const api = {
     ),
   deleteShare: (id: string) =>
     request<{ ok: boolean }>(`/api/share/${id}`, { method: 'DELETE' }),
+  githubStatus: () =>
+    request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null }>('/api/github/status'),
+  githubDisconnect: () =>
+    request<{ ok: boolean }>('/api/github/disconnect', { method: 'POST' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

@@ -22,6 +22,7 @@ model User {
   workspaces Workspace[]
   chats      Chat[]
   sharedFiles SharedFile[]
+  githubConnection GitHubConnection?
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches
@@ -112,6 +113,20 @@ model SharedFile {
 
   @@index([ownerId])
   @@index([expiresAt])
+}
+
+// A user's OAuth connection to GitHub. Lets the agent call the GitHub API on the user's behalf.
+model GitHubConnection {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  githubLogin String
+  accessToken String // stored; used by the agent's GitHub tools
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("GitHubConnection")
 }
 
 // Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).

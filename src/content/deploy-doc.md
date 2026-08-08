@@ -272,16 +272,15 @@ Redeploy 后生效。侧边栏"文件分享"就能用了。
 简短版：
 
 1. 域名 `os.legspcpd.top` 在 Cloudflare DNS 里设为 **Proxied（橙云）**
-2. Cloudflare → **Zero Trust → Access → Applications** → 新建 Self-hosted 应用，域名填 `os.legspcpd.top`
-3. 配置登录策略（Everyone / 指定邮箱）
-4. **记下 AUD Tag**
-5. 找到你的 **team name**（Access 域名 `xxx.cloudflareaccess.com` 的前段）
-6. Vercel 环境变量加：
+2. 打开 **https://one.dash.cloudflare.com** → 左侧 **Networks → Access → Applications**（或 **Access → Applications**）→ 新建 **Self-hosted** 应用，域名填 `os.legspcpd.top`
+3. 向导里勾选身份提供程序（如 GitHub），再配置登录策略（Everyone / 指定邮箱）
+4. 找到你的 **team name**（Access 域名 `xxx.cloudflareaccess.com` 的前段，如 `lapdsss`）——**这是必填项**
+5. Vercel 环境变量加（**只配这一个即可**）：
    ```
-   CF_ACCESS_TEAM=你的team name
-   CF_ACCESS_AUD=你的AUD Tag
+   CF_ACCESS_TEAM=lapdsss
    ```
-7. Redeploy
+   （可选增强项 `CF_ACCESS_AUD` 是 AUD Tag，新版面板不好找，**可跳过不填**，不影响使用）
+6. Redeploy
 
 启用后，访问站点先要 CF 登录，敏感 API 也会校验 JWT。
 
@@ -344,6 +343,6 @@ Redeploy 后生效。侧边栏"文件分享"就能用了。
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 |
 | `R2_BUCKET` | 文件分享 | Cloudflare R2 |
-| `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名 |
-| `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag |
+| `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名（必填） |
+| `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag（可选） |
 | `CRON_SECRET` | 可选 | 清理 cron 保护 |

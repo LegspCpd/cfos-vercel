@@ -145,26 +145,25 @@ Cloudflare Access 在你的站点前面加一道 SSO 认证。用户必须先通
 
 ### 第 2 步：在 Cloudflare 创建 Access 应用
 
-1. 打开 **Cloudflare 控制台 → Zero Trust → Access → Applications**
+1. 打开 **https://one.dash.cloudflare.com** → 左侧 **Networks → Access → Applications**（或 **Access → Applications**）
 2. 点 **Add an application** → 选 **Self-hosted**
 3. 填写：
-   - **Application domain**：`os.legspcpd.top`（你的实际域名）
+   - **Application domain**：`os.legspcpd.top`（你的实际域名，自定义域名才能被 Access 保护）
    - 其他保持默认，点 **Next**
-4. 在 **Policy** 步骤：
+4. 在身份提供程序步骤勾选 **GitHub**（或你用的 IdP），点 **Next**
+5. 在 **Policy** 步骤：
    - 给策略起名（如 `allow-all`）
    - 点 **Add** → 选 **Everyone**（允许所有人，但要登录）→ 或选择特定邮箱/组
-   - 点 **Next**
-5. 在 **Setup** 步骤，记下 **Application Audience (AUD) Tag**（一长串，如 `6da...guid`）
-6. 点 **Add application**
+   - 点 **Next** → 点 **Add application**
 
 ### 第 3 步：配置 Vercel 环境变量
 
-在 Vercel 项目 Settings → Environment Variables 添加：
+在 Vercel 项目 Settings → Environment Variables 添加（**只配第一个必填即可**）：
 
 | Key | 值 |
 |---|---|
-| `CF_ACCESS_TEAM` | 你的 **Zero Trust 团队名**。看 Access 域名：如果你 Access 的地址是 `https://abc123.cloudflareaccess.com`，团队名就是 `abc123` |
-| `CF_ACCESS_AUD` | 第 2 步记下的 **AUD Tag** |
+| `CF_ACCESS_TEAM` | 你的 **Zero Trust 团队名**（必填）。看 Access 域名：如果你 Access 的地址是 `https://lapdsss.cloudflareaccess.com`，团队名就是 `lapdsss` |
+| `CF_ACCESS_AUD` | AUD Tag（**可选**，新版面板不好找，可跳过。不填时后端只校验签名 + issuer，已足够安全） |
 
 ### 第 4 步：重新部署
 

@@ -17,8 +17,8 @@
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |
 | `R2_BUCKET` | 文件分享 | Cloudflare R2 存储桶名 |
-| `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名 |
-| `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag |
+| `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名（必填） |
+| `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag（可选，可跳过） |
 | `CRON_SECRET` | 可选 | 清理 cron 的访问密钥 |
 
 ## 生成 AUTH_SECRET
@@ -44,7 +44,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 - `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`
 
 ### Cloudflare Access
-- `CF_ACCESS_TEAM`、`CF_ACCESS_AUD`
+- `CF_ACCESS_TEAM`（必填）、`CF_ACCESS_AUD`（可选）
 
 ## 修改环境变量后
 

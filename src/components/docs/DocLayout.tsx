@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Home, ChevronRight } from 'lucide-react';
 import { DOC_NAV } from '@/content/docs/nav';
+import { LOGO_URL } from '@/lib/brand';
 
 export default function DocLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -43,7 +44,7 @@ export default function DocLayout({ children }: { children: React.ReactNode }) {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r bg-card p-4 md:block">
         <Link href="/docs" className="mb-6 flex items-center gap-2 px-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="logo" className="h-7 w-7 rounded-md object-cover" />
+          <img src={LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
           <span className="font-semibold">文档</span>
         </Link>
         {sidebar}
@@ -74,7 +75,7 @@ export default function DocLayout({ children }: { children: React.ReactNode }) {
           </button>
           <Link href="/" className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.jpg" alt="logo" className="h-6 w-6 rounded-md object-cover" />
+            <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
             <span className="text-sm font-semibold">文档</span>
           </Link>
         </div>

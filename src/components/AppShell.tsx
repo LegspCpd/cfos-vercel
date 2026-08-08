@@ -27,6 +27,7 @@ import { clearToken, getToken } from '@/lib/client/auth';
 import { api } from '@/lib/client/api';
 import CommandPalette from './CommandPalette';
 import { useI18n, type Lang } from '@/lib/client/i18n';
+import { LOGO_URL } from '@/lib/brand';
 import { clsx } from 'clsx';
 
 interface NavItem {
@@ -120,7 +121,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="logo" className="h-7 w-7 rounded-md object-cover" />
+          <img src={LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
           <span className="text-base font-semibold">{siteName || t('app.name')}</span>
         </Link>
 
@@ -245,7 +246,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <Link href="/" className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.jpg" alt="logo" className="h-6 w-6 rounded-md object-cover" />
+              <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
               <span className="text-sm font-semibold">{siteName || t('app.name')}</span>
             </Link>
           </div>
@@ -276,7 +277,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.jpg" alt="logo" className="h-6 w-6 rounded-md object-cover" />
+                <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
                 <span className="font-semibold">{siteName || t('app.name')}</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="rounded p-1 hover:bg-secondary" aria-label="Close menu">

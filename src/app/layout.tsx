@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   title: 'Cloudflare OS',
   description: 'AI productivity workspace rebuilt on Next.js + Postgres',
   icons: {
-    icon: '/logo.jpg',
-    shortcut: '/logo.jpg',
-    apple: '/logo.jpg',
+    icon: 'https://hub.legspcpd.top/file/1786217341335_logo.jpg',
+    shortcut: 'https://hub.legspcpd.top/file/1786217341335_logo.jpg',
+    apple: 'https://hub.legspcpd.top/file/1786217341335_logo.jpg',
   },
 };
 

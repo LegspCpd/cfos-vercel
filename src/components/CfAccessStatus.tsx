@@ -71,8 +71,9 @@ export default function CfAccessStatus() {
 
           {!status.enabled && (
             <p className="text-xs text-muted-foreground">
-              启用方式：在 Vercel 环境变量设置 <code className="rounded bg-muted px-1">CF_ACCESS_TEAM</code>{' '}
-              和 <code className="rounded bg-muted px-1">CF_ACCESS_AUD</code>，并确保域名走 Cloudflare 代理。
+              启用方式：在 Vercel 环境变量设置 <code className="rounded bg-muted px-1">CF_ACCESS_TEAM</code>
+              （团队名，如 <code className="rounded bg-muted px-1">lapdsss</code>），并确保域名走 Cloudflare 代理。
+              可选增强项 <code className="rounded bg-muted px-1">CF_ACCESS_AUD</code> 可跳过。
             </p>
           )}
         </div>

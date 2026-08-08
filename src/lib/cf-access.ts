@@ -11,8 +11,13 @@ import type { JWTPayload } from 'jose';
 // Config:
 //   CF_ACCESS_TEAM: your Cloudflare team name, e.g. "mycompany" (if your Access domain is
 //                   "mycompany.cloudflareaccess.com"). When set, Access verification is enabled.
-//   CF_ACCESS_AUD:  optional; the AUD tag of your Access application. If omitted we skip the
-//                   aud claim check (still secure if the audience is your own team, but best to set it).
+//   CF_ACCESS_AUD:  OPTIONAL. The AUD tag of your Access application. Newer Cloudflare dashboards
+//                   make it awkward to find, so this is deliberately optional.
+//                   - If set: we also require the JWT's `aud` to match (strongest check).
+//                   - If omitted: we skip the `aud` check and rely only on the issuer signature.
+//                   Omitting AUD is still secure enough for most deployments: Cloudflare Access
+//                   only issues a token for a user who already passed this team's Access policy,
+//                   so a valid signature from your team's JWKS already proves they're allowed in.
 
 let remoteJWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
 

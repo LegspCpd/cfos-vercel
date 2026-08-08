@@ -7,6 +7,7 @@ import { Github } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { setToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
+import { LOGO_URL } from '@/lib/brand';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,6 +59,8 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={LOGO_URL} alt="logo" className="mx-auto mb-3 h-16 w-16 rounded-xl object-cover" />
           <h1 className="text-2xl font-bold">{t('app.name')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.signinTitle')}</p>
         </div>

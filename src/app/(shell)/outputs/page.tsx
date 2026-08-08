@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { LayoutGrid, List, Search, FileCode2 } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import { useI18n } from '@/lib/client/i18n';
 
 export default function OutputsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -34,9 +36,9 @@ export default function OutputsPage() {
     <div className="mx-auto max-w-5xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Outputs</h1>
+          <h1 className="text-2xl font-bold">{t('out.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All the apps you&apos;ve built with the agent.
+            {t('out.sub')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -45,7 +47,7 @@ export default function OutputsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search outputs..."
+              placeholder={t('out.search')}
               className="w-48 rounded-md border bg-card py-2 pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -69,10 +71,10 @@ export default function OutputsPage() {
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t('loading')}</p>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          {search ? 'No outputs match your search.' : 'No outputs yet. Build an app with the agent.'}
+          {search ? t('out.noMatch') : t('out.empty')}
         </div>
       ) : view === 'grid' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -88,7 +90,7 @@ export default function OutputsPage() {
               <div className="p-4">
                 <h3 className="truncate font-medium group-hover:text-primary">{w.title}</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {w._count.files} files · updated {new Date(w.updatedAt).toLocaleDateString()}
+                  {w._count.files} {t('ws.files')} · {t('out.updated')} {new Date(w.updatedAt).toLocaleDateString()}
                 </p>
               </div>
             </Link>
@@ -107,11 +109,11 @@ export default function OutputsPage() {
                 <div>
                   <p className="font-medium">{w.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {w._count.files} files · updated {new Date(w.updatedAt).toLocaleDateString()}
+                    {w._count.files} {t('ws.files')} · {t('out.updated')} {new Date(w.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-              <span className="text-sm text-primary">Open →</span>
+              <span className="text-sm text-primary">{t('out.open')} →</span>
             </Link>
           ))}
         </div>

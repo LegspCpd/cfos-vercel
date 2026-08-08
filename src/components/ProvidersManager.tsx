@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Loader2, Save, Power } from 'lucide-react';
+import { Plus, Trash2, Loader2, Power } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
 interface Provider {
   id: string;
@@ -16,6 +17,7 @@ interface Provider {
 const emptyForm = { name: '', baseUrl: '', apiKey: '', model: '' };
 
 export default function ProvidersManager() {
+  const { t } = useI18n();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +43,7 @@ export default function ProvidersManager() {
   async function addProvider(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name || !form.baseUrl || !form.apiKey || !form.model) {
-      setError('All fields are required.');
+      setError(t('ad.allRequired'));
       return;
     }
     setError('');
@@ -83,10 +85,9 @@ export default function ProvidersManager() {
 
   return (
     <section className="rounded-lg border bg-card p-6">
-      <h2 className="mb-1 text-base font-semibold">AI Providers</h2>
+      <h2 className="mb-1 text-base font-semibold">{t('ad.aiProviders')}</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Add one or more LLM providers (OpenAI, DeepSeek, local, etc.). The agent uses the first
-        enabled one by default.
+        {t('ad.aiDesc')}
       </p>
 
       {error && <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
@@ -123,17 +124,17 @@ export default function ProvidersManager() {
           disabled={adding}
           className="flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 sm:col-span-2"
         >
-          <Plus className="h-4 w-4" /> {adding ? 'Adding...' : 'Add provider'}
+          <Plus className="h-4 w-4" /> {adding ? t('ad.adding') : t('ad.addProvider')}
         </button>
       </form>
 
       {/* List */}
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       ) : providers.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No providers yet. Add one above, or set OPENAI_API_KEY.</p>
+        <p className="text-sm text-muted-foreground">{t('ad.noProviders')}</p>
       ) : (
         <div className="space-y-2">
           {providers.map((p) => (
@@ -145,9 +146,9 @@ export default function ProvidersManager() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{p.name}</span>
                   {p.isEnabled ? (
-                    <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400">active</span>
+                    <span className="rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-400">{t('ad.active')}</span>
                   ) : (
-                    <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">off</span>
+                    <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t('ad.off')}</span>
                   )}
                 </div>
                 <p className="truncate text-xs text-muted-foreground">

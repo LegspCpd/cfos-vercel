@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { Share2, FileCode2, Copy } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import { useI18n } from '@/lib/client/i18n';
 
 export default function BlueprintsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
@@ -38,16 +40,16 @@ export default function BlueprintsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <h1 className="text-2xl font-bold">Blueprints</h1>
+      <h1 className="text-2xl font-bold">{t('bp.title')}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Your apps as reusable templates. Share them with others.
+        {t('bp.sub')}
       </p>
 
       {loading ? (
-        <p className="mt-6 text-muted-foreground">Loading...</p>
+        <p className="mt-6 text-muted-foreground">{t('loading')}</p>
       ) : workspaces.length === 0 ? (
         <div className="mt-6 rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          No blueprints yet. Build an app and it will appear here.
+          {t('bp.empty')}
         </div>
       ) : (
         <div className="mt-6 space-y-3">
@@ -59,7 +61,7 @@ export default function BlueprintsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium">{w.title}</p>
-                  <p className="text-xs text-muted-foreground">{w._count.files} files</p>
+                  <p className="text-xs text-muted-foreground">{w._count.files} {t('ws.files')}</p>
                 </div>
               </Link>
               <button
@@ -67,7 +69,7 @@ export default function BlueprintsPage() {
                 className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
               >
                 <Copy className="h-3.5 w-3.5" />
-                {copied === w.id ? 'Copied!' : 'Copy link'}
+                {copied === w.id ? t('bp.copied') : t('bp.copyLink')}
               </button>
             </div>
           ))}
@@ -75,8 +77,7 @@ export default function BlueprintsPage() {
       )}
 
       <p className="mt-6 text-xs text-muted-foreground">
-        Note: share links currently open the workspace directly. Public blueprint publishing is
-        available in the full Cloudflare OS version.
+        {t('bp.note')}
       </p>
     </div>
   );

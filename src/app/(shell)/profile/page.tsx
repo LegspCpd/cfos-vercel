@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import { useI18n } from '@/lib/client/i18n';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -40,7 +42,7 @@ export default function ProfilePage() {
     try {
       const res = await api.updateProfile({ displayName });
       setDisplayName(res.user.displayName);
-      setMessage('Display name updated.');
+      setMessage(t('pr.displayUpdated'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -52,7 +54,7 @@ export default function ProfilePage() {
     setError('');
     setMessage('');
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+      setError(t('auth.pwTooShort'));
       return;
     }
     setSavingPw(true);
@@ -60,7 +62,7 @@ export default function ProfilePage() {
       await api.updateProfile({ currentPassword, newPassword });
       setCurrentPassword('');
       setNewPassword('');
-      setMessage('Password updated.');
+      setMessage(t('pr.pwUpdated'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -78,16 +80,16 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
+      <h1 className="mb-6 text-2xl font-bold">{t('pr.title')}</h1>
 
       {message && <div className="mb-4 rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{message}</div>}
       {error && <div className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
 
       {/* Profile */}
       <section className="mb-6 rounded-lg border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold">Profile</h2>
-        <p className="mb-4 text-sm text-muted-foreground">Username: <span className="font-mono">{username}</span></p>
-        <label className="mb-1 block text-sm font-medium">Display name</label>
+        <h2 className="mb-1 text-base font-semibold">{t('pr.profile')}</h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('pr.usernameLabel')}: <span className="font-mono">{username}</span></p>
+        <label className="mb-1 block text-sm font-medium">{t('pr.displayName')}</label>
         <div className="flex gap-2">
           <input
             value={displayName}
@@ -99,17 +101,17 @@ export default function ProfilePage() {
             disabled={savingName}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            {savingName ? 'Saving...' : 'Save'}
+            {savingName ? t('saving') : t('save')}
           </button>
         </div>
       </section>
 
       {/* Password */}
       <section className="rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-base font-semibold">Change password</h2>
+        <h2 className="mb-4 text-base font-semibold">{t('pr.changePw')}</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Current password</label>
+            <label className="mb-1 block text-sm font-medium">{t('pr.currentPw')}</label>
             <input
               type="password"
               value={currentPassword}
@@ -118,7 +120,7 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">New password</label>
+            <label className="mb-1 block text-sm font-medium">{t('pr.newPw')}</label>
             <input
               type="password"
               value={newPassword}
@@ -131,11 +133,11 @@ export default function ProfilePage() {
             disabled={savingPw}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            {savingPw ? 'Updating...' : 'Update password'}
+            {savingPw ? t('pr.updating') : t('pr.updatePw')}
           </button>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Tip: it&apos;s recommended to change your password after the initial setup.
+          {t('pr.tip')}
         </p>
       </section>
     </div>

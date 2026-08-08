@@ -20,26 +20,28 @@ import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
 import { api } from '@/lib/client/api';
 import CommandPalette from './CommandPalette';
+import { useI18n, type Lang } from '@/lib/client/i18n';
 import { clsx } from 'clsx';
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: typeof Home;
   match?: string;
 }
 
 const NAV: NavItem[] = [
-  { href: '/', label: 'Home', icon: Home, match: '/workspaces' },
-  { href: '/workspaces', label: 'Workspaces', icon: LayoutGrid },
-  { href: '/blueprints', label: 'Blueprints', icon: Share2 },
-  { href: '/outputs', label: 'Outputs', icon: FileCode2 },
-  { href: '/explore', label: 'Explore', icon: Compass },
+  { href: '/', labelKey: 'nav.home', icon: Home, match: '/workspaces' },
+  { href: '/workspaces', labelKey: 'nav.workspaces', icon: LayoutGrid },
+  { href: '/blueprints', labelKey: 'nav.blueprints', icon: Share2 },
+  { href: '/outputs', labelKey: 'nav.outputs', icon: FileCode2 },
+  { href: '/explore', labelKey: 'nav.explore', icon: Compass },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t, lang, setLang } = useI18n();
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -96,7 +98,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           <FileCode2 className="h-6 w-6 text-primary" />
-          <span className="text-base font-semibold">Cloudflare OS</span>
+          <span className="text-base font-semibold">{t('app.name')}</span>
         </Link>
 
         {/* Search button */}
@@ -106,7 +108,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             className="flex w-full items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm text-muted-foreground hover:border-primary/40"
           >
             <Search className="h-3.5 w-3.5" />
-            <span className="flex-1 text-left">Search...</span>
+            <span className="flex-1 text-left">{t('nav.search')}</span>
             <kbd className="rounded bg-secondary px-1.5 text-[10px]">⌘K</kbd>
           </button>
         </div>
@@ -127,7 +129,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <item.icon className={clsx('h-4 w-4', active && 'text-primary')} />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -142,13 +144,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <ShieldCheck className="h-4 w-4" />
-              Admin
+              {t('nav.admin')}
             </Link>
           )}
         </nav>
 
         {/* Bottom utility strip */}
         <div className="border-t px-3 py-2">
+          <div className="mb-2 flex items-center gap-1 rounded-md border p-1">
+            {/* Language toggle */}
+            <button
+              onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+              title="中文 / English"
+              className="flex flex-1 items-center justify-center rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              {lang === 'zh' ? '中 / EN' : '中 / EN'}
+            </button>
+          </div>
           <div className="mb-2 flex items-center gap-1 rounded-md border p-1">
             {themeOptions.map((opt) => (
               <button
@@ -182,13 +194,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-secondary"
                 >
-                  Settings
+                  {t('nav.settings')}
                 </Link>
                 <button
                   onClick={logout}
                   className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
                 >
-                  <LogOut className="h-4 w-4" /> Sign out
+                  <LogOut className="h-4 w-4" /> {t('nav.signout')}
                 </button>
               </div>
             )}

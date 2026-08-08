@@ -1,6 +1,7 @@
 'use client';
 
 import { RefreshCw, ExternalLink } from 'lucide-react';
+import { useI18n } from '@/lib/client/i18n';
 
 interface PreviewProps {
   workspaceId: string;
@@ -8,10 +9,11 @@ interface PreviewProps {
 }
 
 export default function Preview({ workspaceId, nonce }: PreviewProps) {
+  const { t } = useI18n();
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('ws.preview')}</span>
         <div className="flex items-center gap-1">
           <a
             href={`/api/preview/${workspaceId}`}

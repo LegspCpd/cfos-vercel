@@ -10,10 +10,12 @@ import FileTree from '@/components/FileTree';
 import CodeEditor from '@/components/Editor';
 import ChatPanel from '@/components/ChatPanel';
 import Preview from '@/components/Preview';
+import { useI18n } from '@/lib/client/i18n';
 
 export default function WorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const [workspace, setWorkspace] = useState<WorkspaceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePath, setActivePath] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function WorkspacePage() {
           <FileCode2 className="h-5 w-5 shrink-0 text-primary" />
           <h1 className="truncate text-sm font-medium">{workspace.title}</h1>
           <span className={`hidden text-xs sm:inline ${saved ? 'text-muted-foreground' : 'text-amber-400'}`}>
-            {saving ? 'Saving...' : saved ? 'All changes saved' : 'Unsaved changes'}
+            {saving ? t('saving') : saved ? t('ws.saved') : t('ws.unsaved')}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -175,7 +177,7 @@ export default function WorkspacePage() {
             onClick={() => setPreviewNonce((n) => n + 1)}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
-            <Play className="h-4 w-4" /> Run
+            <Play className="h-4 w-4" /> {t('ws.run')}
           </button>
         </div>
       </header>
@@ -206,7 +208,7 @@ export default function WorkspacePage() {
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Select a file or add a new one.
+                  {t('ws.noFileSelected')}
                 </div>
               )}
             </div>

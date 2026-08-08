@@ -2,6 +2,7 @@
 
 import { Plus, FileCode2, Trash2, Star } from 'lucide-react';
 import { useMemo } from 'react';
+import { useI18n } from '@/lib/client/i18n';
 
 interface FileNode {
   name: string;
@@ -44,6 +45,7 @@ export default function FileTree({
   onDeleteFile,
   onSetEntry,
 }: FileTreeProps) {
+  const { t } = useI18n();
   const tree = useMemo(() => buildTree(files), [files]);
 
   function renderNode(node: FileNode, depth: number) {
@@ -86,7 +88,7 @@ export default function FileTree({
                 e.stopPropagation();
                 onSetEntry(node.path);
               }}
-              title="Set as entry"
+              title={t('ws.setEntry')}
               className="rounded p-0.5 hover:bg-muted"
             >
               <Star className="h-3 w-3" />
@@ -96,7 +98,7 @@ export default function FileTree({
                 e.stopPropagation();
                 onDeleteFile(node.path);
               }}
-              title="Delete file"
+              title={t('ws.deleteFile')}
               className="rounded p-0.5 text-destructive hover:bg-muted"
             >
               <Trash2 className="h-3 w-3" />
@@ -110,11 +112,11 @@ export default function FileTree({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Explorer</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('ws.explorer')}</span>
         <button
           onClick={onAddFile}
           className="rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          title="Add file"
+          title={t('ws.addFile')}
         >
           <Plus className="h-4 w-4" />
         </button>

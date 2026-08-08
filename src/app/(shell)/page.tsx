@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Send } from 'lucide-react';
+import { Sparkles, Send, FileText, CheckSquare, Gamepad2, BarChart3, Timer } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
+// Task cards — Chinese titles for display, English prompts for the agent.
 const TASKS = [
-  { icon: '📄', title: 'Build a one-page landing site', prompt: 'Create a modern landing page for my product with a hero, features, and footer.' },
-  { icon: '✅', title: 'Make a todo app', prompt: 'Build a todo list app with add, complete, and delete. Nice design.' },
-  { icon: '🎮', title: 'Build a tic-tac-toe game', prompt: 'Make a tic-tac-toe game with a clean UI and win detection.' },
-  { icon: '📊', title: 'Create a data dashboard', prompt: 'Build a dashboard with some charts and stat cards using sample data.' },
-  { icon: '⏱️', title: 'Build a pomodoro timer', prompt: 'Create a pomodoro timer with start/pause/reset.' },
+  { icon: FileText, title: '做一个单页落地页', prompt: 'Create a modern landing page for my product with a hero, features, and footer.' },
+  { icon: CheckSquare, title: '做一个待办事项应用', prompt: 'Build a todo list app with add, complete, and delete. Nice design.' },
+  { icon: Gamepad2, title: '做一个井字棋游戏', prompt: 'Make a tic-tac-toe game with a clean UI and win detection.' },
+  { icon: BarChart3, title: '创建一个数据看板', prompt: 'Build a dashboard with some charts and stat cards using sample data.' },
+  { icon: Timer, title: '做一个番茄钟', prompt: 'Create a pomodoro timer with start/pause/reset.' },
 ];
 
 export default function HomePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [prompt, setPrompt] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -28,7 +31,7 @@ export default function HomePage() {
     if (!text.trim() || creating) return;
     setCreating(true);
     try {
-      const res = await api.createWorkspace('Untitled Workspace');
+      const res = await api.createWorkspace('未命名工作区');
       // Pass the prompt so the workspace page can auto-run the agent on load.
       router.push(`/workspace/${res.workspace.id}?prompt=${encodeURIComponent(text)}`);
     } finally {
@@ -40,10 +43,10 @@ export default function HomePage() {
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-16">
       <div className="mb-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          What do you want to build?
+          {t('home.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Describe an app and the agent will write it for you.
+          {t('home.sub')}
         </p>
       </div>
 
@@ -64,7 +67,7 @@ export default function HomePage() {
               startWorkspace(prompt);
             }
           }}
-          placeholder="e.g. Build a calculator app..."
+          placeholder={t('home.placeholder')}
           rows={1}
           className="max-h-40 min-h-[44px] flex-1 resize-y rounded-lg border bg-card px-4 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
         />
@@ -72,7 +75,7 @@ export default function HomePage() {
           type="submit"
           disabled={creating || !prompt.trim()}
           className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          aria-label="Create workspace"
+          aria-label={t('ws.new')}
         >
           <Send className="h-4 w-4" />
         </button>
@@ -87,10 +90,11 @@ export default function HomePage() {
             disabled={creating}
             className="flex items-start gap-3 rounded-lg border bg-card p-4 text-left hover:border-primary/50 disabled:opacity-50"
           >
-            <span className="text-xl">{task.icon}</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <task.icon className="h-5 w-5" />
+            </span>
             <div>
               <p className="flex items-center gap-1.5 text-sm font-medium">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
                 {task.title}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{task.prompt}</p>

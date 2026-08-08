@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useI18n } from '@/lib/client/i18n';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -19,10 +20,10 @@ interface ChatPanelProps {
 }
 
 const SUGGESTIONS = [
-  'Build me a todo app',
-  'Make a tic-tac-toe game',
-  'Create a landing page for my product',
-  'Build a counter with a nice design',
+  { label: '做一个待办应用', prompt: 'Build me a todo app with add, complete, and delete. Nice design.' },
+  { label: '做一个井字棋游戏', prompt: 'Make a tic-tac-toe game with a clean UI and win detection.' },
+  { label: '做一个落地页', prompt: 'Create a modern landing page for my product with a hero, features, and footer.' },
+  { label: '做一个计数器', prompt: 'Build a counter with a nice design.' },
 ];
 
 function MessageContent({ content }: { content: string }) {
@@ -35,6 +36,7 @@ function MessageContent({ content }: { content: string }) {
 }
 
 export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonce }: ChatPanelProps) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
@@ -62,7 +64,7 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
     setMessages((m) => [...m, { role: 'user', content: trimmed }]);
     try {
       const result = await onRunAgent(trimmed);
-      const editedNote = result.agentEdited ? '\n\n_(Files were updated — check the editor and preview.)_' : '';
+      const editedNote = result.agentEdited ? `\n\n_(${t('ws.filesUpdated')})_` : '';
       setMessages((m) => [...m, { role: 'assistant', content: result.message + editedNote }]);
     } catch (e) {
       setError((e as Error).message);
@@ -74,24 +76,24 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <Bot className="h-4 w-4 text-primary" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agent</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('ws.agent')}</span>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 && !busy && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Ask the agent to build or modify your app. It will write code to the workspace files.
+              {t('ws.agentHint')}
             </p>
             {SUGGESTIONS.map((s) => (
               <button
-                key={s}
-                onClick={() => send(s)}
+                key={s.label}
+                onClick={() => send(s.prompt)}
                 disabled={busy}
                 className="block w-full rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-primary/50 disabled:opacity-50"
               >
                 <Sparkles className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-                {s}
+                {s.label}
               </button>
             ))}
           </div>
@@ -116,7 +118,7 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
         {busy && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-            Agent is thinking...
+            {t('ws.agentThinking')}
           </div>
         )}
       </div>
@@ -140,7 +142,7 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
                 send(input);
               }
             }}
-            placeholder="Tell the agent what to build..."
+            placeholder={t('ws.agentPlaceholder')}
             rows={1}
             className="max-h-32 min-h-[38px] flex-1 resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />

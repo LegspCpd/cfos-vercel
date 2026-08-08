@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { r2Put, isR2Configured, listSharedFiles } from '@/lib/r2';
+import { requireCfAccess } from '@/lib/require-access';
 import crypto from 'node:crypto';
 
 async function authUser(req: Request) {
@@ -23,6 +24,9 @@ export async function GET(req: Request) {
 // Body: JSON { fileName, mimeType, content (base64), expiresInDays? }
 // (Content is base64-encoded to keep the API simple and JSON-friendly.)
 export async function POST(req: Request) {
+  if (!(await requireCfAccess(req))) {
+    return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
+  }
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

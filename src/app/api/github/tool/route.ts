@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { githubListRepos, githubReadFile } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
+import { requireCfAccess } from '@/lib/require-access';
 
 // POST /api/github/tool — let the agent call GitHub tools on the user's behalf.
 // Body: { tool: "list_repos" } | { tool: "read_file", repo, path }
 export async function POST(req: Request) {
+  if (!(await requireCfAccess(req))) {
+    return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
+  }
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
+import { requireCfAccess } from '@/lib/require-access';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -17,6 +18,9 @@ type Ctx = { params: { id: string } };
 // Runs the code-mode agent against the workspace's current files, applies the
 // generated file changes to Postgres, and returns the new file set + agent message.
 export async function POST(req: Request, { params }: Ctx) {
+  if (!(await requireCfAccess(req))) {
+    return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
+  }
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

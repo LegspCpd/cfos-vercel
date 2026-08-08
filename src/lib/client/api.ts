@@ -124,6 +124,10 @@ export const api = {
     }),
   deleteContext: (id: string) =>
     request<{ ok: boolean }>(`/api/context/${id}`, { method: 'DELETE' }),
+  cfAccessStatus: () =>
+    request<{ enabled: boolean; team: string | null; audConfigured: boolean; audMasked: string | null }>(
+      '/api/admin/cfaccess',
+    ),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

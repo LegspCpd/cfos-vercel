@@ -7,6 +7,7 @@ import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import ProvidersManager from '@/components/ProvidersManager';
 import AuditLogView from '@/components/AuditLogView';
+import CfAccessStatus from '@/components/CfAccessStatus';
 import { useI18n } from '@/lib/client/i18n';
 
 interface Overview {
@@ -144,6 +145,9 @@ export default function AdminPage() {
 
           {/* AI Providers */}
           <ProvidersManager />
+
+          {/* Cloudflare Access status */}
+          <CfAccessStatus />
 
           {/* Audit log */}
           <AuditLogView />

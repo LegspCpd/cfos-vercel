@@ -128,6 +128,60 @@ pnpm install && pnpm db:push && pnpm build
 - 第一个登录的账号自动成为管理员，或把用户名加进 `ADMIN_USERNAME`。
 - 登录后自动跳回首页。
 
+## Cloudflare Access（完整版 SSO 门禁）
+
+Cloudflare Access 在你的站点前面加一道 SSO 认证。用户必须先通过你配置的 IdP（GitHub/Google/邮箱等）登录，才能访问。后端 API 会校验 Cloudflare 注入的 JWT。
+
+> 前提：**你的域名必须走 Cloudflare 代理（orange cloud）**。如果域名在 CF 里是灰云（仅 DNS），CF 不会注入 JWT，Access 不生效。
+
+### 第 1 步：确认域名走 CF 代理
+
+1. 登录 **Cloudflare 控制台** → 选择你的域名 `legspcpd.top`
+2. 左侧 **DNS → Records**，找到 `os` 这条记录
+3. 确保 **Proxy status** 是 **Proxied（橙云）**，不是 DNS only（灰云）
+4. 如果不是，点它切换为 Proxied，等 1-2 分钟生效
+
+### 第 2 步：在 Cloudflare 创建 Access 应用
+
+1. 打开 **Cloudflare 控制台 → Zero Trust → Access → Applications**
+2. 点 **Add an application** → 选 **Self-hosted**
+3. 填写：
+   - **Application domain**：`os.legspcpd.top`（你的实际域名）
+   - 其他保持默认，点 **Next**
+4. 在 **Policy** 步骤：
+   - 给策略起名（如 `allow-all`）
+   - 点 **Add** → 选 **Everyone**（允许所有人，但要登录）→ 或选择特定邮箱/组
+   - 点 **Next**
+5. 在 **Setup** 步骤，记下 **Application Audience (AUD) Tag**（一长串，如 `6da...guid`）
+6. 点 **Add application**
+
+### 第 3 步：配置 Vercel 环境变量
+
+在 Vercel 项目 Settings → Environment Variables 添加：
+
+| Key | 值 |
+|---|---|
+| `CF_ACCESS_TEAM` | 你的 **Zero Trust 团队名**。看 Access 域名：如果你 Access 的地址是 `https://abc123.cloudflareaccess.com`，团队名就是 `abc123` |
+| `CF_ACCESS_AUD` | 第 2 步记下的 **AUD Tag** |
+
+### 第 4 步：重新部署
+
+Redeploy 后生效。现在：
+- 访问 `https://os.legspcpd.top` → 未登录会被 CF 重定向到登录页 → 通过后进入你的应用
+- 敏感 API（agent 运行、文件分享上传、GitHub 工具）会额外校验 CF JWT
+
+### 管理后台查看状态
+
+登录管理员账号 → `/admin` → **Cloudflare Access** 区块，可看到是否启用、Team、AUD 配置情况。
+
+### 常见问题
+
+| 现象 | 原因 |
+|---|---|
+| 访问不跳登录，直接进 | 域名没走 CF 代理（橙云），或 `CF_ACCESS_TEAM` 没配 |
+| 502 / 502 Bad Gateway | 域名走了 CF 代理但没配 Access 应用，或 Vercel 源站异常 |
+| 进入后 API 报 401 | 敏感 API 校验 CF JWT 失败（多为 AUD 配错或 JWT 过期） |
+
 ## 支持的 LLM（含 DeepSeek）
 
 通过 OpenAI 兼容接口接入。**可以完全使用 DeepSeek**（便宜，适合 agent 频繁调用）：

@@ -188,6 +188,19 @@ Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、
 
 > 若未配置 `RESEND_API_KEY`，邮箱验证功能会提示"邮件服务未配置"，不强制使用。
 
+### 排查：发送验证码返回 500
+
+如果点"发送验证码"报错，**最常见原因 = 发件域名未在 Resend 验证**：
+
+1. 登录 https://resend.com → 左侧 **Domains**
+2. 看你的发件域名（如 `legspcpd.top`）是否已添加并**验证通过**（绿色勾）
+3. 没验证就：**Add Domain** → 按提示把 **SPF / DKIM** DNS 记录加到你的域名解析 → 等待验证通过（通常几分钟）
+4. 验证通过后，`no-reply@legspcpd.top` 才能作为发件人
+
+**临时快速测试**：把 `RESEND_FROM_EMAIL` 改成 Resend 的免费测试发件人 `onboarding@resend.dev`（无需验证域名），Redeploy 后再试。如果能收到邮件，就说明是域名验证问题，把 `legspcpd.top` 验证好再改回即可。
+
+> 若仍报错，前端会显示 Resend 返回的具体错误（如 "Invalid `from` email"），照提示处理即可。
+
 ## 人机验证（Cloudflare Turnstile + Google reCAPTCHA，可选）
 
 **默认关闭。** 新用户注册时必须通过人机验证（防机器人灌注册）。

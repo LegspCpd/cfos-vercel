@@ -5,7 +5,9 @@ import crypto from 'node:crypto';
 import { prisma } from './db';
 import { sendVerificationEmail, resendConfigured } from './email';
 
-export const CODE_LIFETIME_MS = 10 * 60 * 1000; // 10 minutes
+// Verification-code lifetime, configurable via VERIFY_CODE_TTL_MINUTES (default 10 min).
+export const CODE_LIFETIME_MS =
+  (Number(process.env.VERIFY_CODE_TTL_MINUTES) || 10) * 60 * 1000;
 const CODE_LENGTH = 6;
 
 function hashCode(code: string): string {

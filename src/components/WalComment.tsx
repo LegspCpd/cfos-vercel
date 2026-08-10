@@ -14,8 +14,12 @@ import { useI18n } from '@/lib/client/i18n';
 // Waline comment server URL, configurable via env (inlined by Next at build time).
 const SERVER_URL =
   process.env.NEXT_PUBLIC_COMMENTS_SERVER_URL || 'https://chat.example.com';
-const WALINE_CSS = 'https://unpkg.com/@waline/client@v3/dist/waline.css';
-const WALINE_JS = 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+// Waline assets are served from unpkg by default; override the CDN via env vars
+// (useful when self-hosting Waline or mirroring assets). Client-read, so NEXT_PUBLIC_.
+const WALINE_CSS =
+  process.env.NEXT_PUBLIC_WALINE_CSS || 'https://unpkg.com/@waline/client@v3/dist/waline.css';
+const WALINE_JS =
+  process.env.NEXT_PUBLIC_WALINE_JS || 'https://unpkg.com/@waline/client@v3/dist/waline.js';
 // Off unless explicitly enabled via env var (inlined by Next at build time).
 const COMMENTS_ENABLED = process.env.NEXT_PUBLIC_COMMENTS_ENABLED === 'true';
 

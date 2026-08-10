@@ -33,6 +33,8 @@
 | `NEXT_PUBLIC_BEIJIN` | 全站背景图 | 背景图 URL，每次刷新重新请求；客户端读取需 `NEXT_PUBLIC_` 前缀 |
 | `SITE_IMG_URL` | 网站图标/Logo | 自定义 favicon/Logo 的图片 URL；`SITE_IMG_URL` 用于服务端 favicon，客户端 Logo 需用 `NEXT_PUBLIC_SITE_IMG_URL`（推荐两者配同一个值） |
 | `NEXT_PUBLIC_COMMENTS_SERVER_URL` | 评论服务 | Waline 评论服务器地址（启用评论时用） |
+| `NEXT_PUBLIC_WALINE_CSS` / `NEXT_PUBLIC_WALINE_JS` | 评论资源 | Waline 前端资源 CDN 地址（默认 unpkg 官方源） |
+| `VERIFY_CODE_TTL_MINUTES` | 验证码有效期 | 邮箱验证码有效分钟数，默认 10 |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |

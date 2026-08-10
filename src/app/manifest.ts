@@ -16,9 +16,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     theme_color: '#0a0a0a',
     orientation: 'any',
     icons: [
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      // Primary app icon — the project logo (logo.png, actually a 900x900 JPEG).
+      { src: '/app-icon.png', sizes: '900x900', type: 'image/jpeg', purpose: 'any' },
+      { src: '/app-icon.png', sizes: '900x900', type: 'image/jpeg', purpose: 'maskable' },
+      // PNG fallbacks for iOS / older browsers.
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
     ],
     shortcuts: [
       { name: '新建工作区', url: '/', description: '打开首页创建新工作区' },

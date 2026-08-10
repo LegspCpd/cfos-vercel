@@ -4,7 +4,8 @@ import { I18nProvider } from '@/lib/client/i18n';
 import PwaRegister from '@/components/PwaRegister';
 import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/settings';
 
-const DEFAULT_ICON = 'https://hub.legspcpd.top/file/1786217341335_logo.jpg';
+// Default icon = the project logo (public/app-icon.png, copied from the repo-root logo).
+const DEFAULT_ICON = '/app-icon.png';
 
 // Dynamic metadata: read the admin-configured favicon + site name from the DB.
 export async function generateMetadata(): Promise<Metadata> {

@@ -28,7 +28,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   me: () =>
-    request<{ id: string; username: string; displayName: string; isAdmin: boolean }>('/api/me'),
+    request<{
+      id: string;
+      username: string;
+      displayName: string;
+      isAdmin: boolean;
+      avatarUrl: string;
+      email: string;
+      googleConnected: boolean;
+      githubConnected: boolean;
+      githubUsername: string | null;
+    }>('/api/me'),
   adminOverview: () =>
     request<{
       settings: { signupsEnabled: boolean };
@@ -86,6 +96,28 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify(data),
   }),
+  uploadAvatar: async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    // Use raw fetch — do NOT set Content-Type: application/json, or the multipart
+    // boundary (required by the image host) won't be sent.
+    const res = await fetch('/api/upload/avatar', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: fd,
+    });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(message);
+    }
+    return res.json() as Promise<{ url: string }>;
+  },
   listShares: () =>
     request<{
       files: {

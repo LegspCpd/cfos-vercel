@@ -18,8 +18,12 @@ model User {
   passwordHash String // argon2id hash, computed server-side
   // Google OAuth subject id (if the account was created / linked via Google login).
   googleId     String?  @unique
+  // GitHub numeric user id (if the account was linked via GitHub login/connect).
+  githubId     Int?     @unique
   // Verified email (used for email-code signup). Optional.
   email        String?  @unique
+  // Custom avatar image URL (uploaded via the admin-provided image host).
+  avatarUrl    String?
   isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
 

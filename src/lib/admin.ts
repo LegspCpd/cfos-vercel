@@ -13,9 +13,10 @@ function adminUsernameSet(): Set<string> {
 }
 
 // A user is an admin if:
-//  1. Their username is in ADMIN_USERNAME (comma-separated env list), OR
-//  2. They are the first user ever created in the system (bootstrap admin), OR
-//  3. isAdmin flag is set on the record.
+//  1. Their isAdmin flag is set on the record, OR
+//  2. Their username is in ADMIN_USERNAME (comma-separated env list).
+// NOTE: the historical "first user is always admin" bootstrap rule was removed because it
+// kept granting admin to the very first account even if it was a normal user.
 export async function isUserAdmin(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -23,18 +24,10 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
   });
   if (!user) return false;
   if (user.isAdmin) return true;
-
-  if (adminUsernameSet().has(user.username.toLowerCase())) {
-    return true;
-  }
-
-  // Bootstrap: the very first user is an admin.
-  const first = await prisma.user.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } });
-  return first?.id === userId;
+  return adminUsernameSet().has(user.username.toLowerCase());
 }
 
-// Persist isAdmin for any user whose username is in ADMIN_USERNAME. Run on signup so
-// admins declared via env don't need the bootstrap rule to hold forever.
+// Persist isAdmin for any user whose username is in ADMIN_USERNAME.
 export async function promoteEnvAdmins(): Promise<void> {
   const set = adminUsernameSet();
   if (set.size === 0) return;
@@ -44,13 +37,11 @@ export async function promoteEnvAdmins(): Promise<void> {
   });
 }
 
-// Ensure the first user created gets the isAdmin flag persisted.
+// Ensure there is always at least one admin. If NO admin exists at all, the first
+// created user becomes the bootstrap admin (so a fresh install isn't locked out).
 export async function maybeBootstrapAdmin(username: string): Promise<void> {
-  const count = await prisma.user.count();
-  if (count === 1) {
-    await prisma.user.updateMany({
-      where: { username },
-      data: { isAdmin: true },
-    });
+  const anyAdmin = await prisma.user.findFirst({ where: { isAdmin: true }, select: { id: true } });
+  if (!anyAdmin) {
+    await prisma.user.updateMany({ where: { username }, data: { isAdmin: true } });
   }
 }

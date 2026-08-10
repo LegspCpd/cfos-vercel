@@ -57,6 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [siteName, setSiteName] = useState('');
@@ -74,6 +75,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .then((me) => {
         setIsAdmin(me.isAdmin);
         setUserName(me.displayName || me.username);
+        setAvatarUrl(me.avatarUrl || '');
       })
       .catch(() => router.replace('/login'));
     api
@@ -210,9 +212,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setUserMenuOpen((v) => !v)}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                {userName.slice(0, 1).toUpperCase()}
-              </span>
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="avatar" className="h-6 w-6 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                  {userName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
               <span className="flex-1 truncate text-left">{userName}</span>
             </button>
             {userMenuOpen && (

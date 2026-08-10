@@ -82,16 +82,23 @@ export async function GET(req: Request) {
     const username = ghUser.login.toLowerCase();
     const displayName = ghUser.name || ghUser.login;
 
-    // 4. Find or create local user.
-    let user = await prisma.user.findUnique({ where: { username } });
+    // 4. Find or create local user. Priority: existing githubId link → matching username
+    // → create a new account. The githubId link lets a "connected" user sign in again
+    // and land back on the same account even if their GitHub username differs.
+    let user = await prisma.user.findUnique({ where: { githubId: ghUser.id } });
+    if (!user) {
+      user = await prisma.user.findUnique({ where: { username } });
+      if (user && user.githubId === null) {
+        // Link this GitHub account to the existing local user.
+        user = await prisma.user.update({ where: { id: user.id }, data: { githubId: ghUser.id } });
+      }
+    }
     if (!user) {
       user = await prisma.user.create({
-        data: { username, displayName, passwordHash: 'github-oauth-no-password' },
+        data: { username, displayName, passwordHash: 'github-oauth-no-password', githubId: ghUser.id },
       });
       await maybeBootstrapAdmin(username);
       await promoteEnvAdmins();
-    } else if (!user.passwordHash.startsWith('github-oauth')) {
-      // Existing user already has a password; leave it, just log them in.
     }
 
     // 5. Issue session token.

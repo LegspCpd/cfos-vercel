@@ -28,6 +28,12 @@ export async function saveGitHubConnection(userId: string, accessToken: string):
     update: { accessToken, githubLogin: login },
     create: { userId, accessToken, githubLogin: login },
   });
+  // Store the GitHub numeric id on the user so a later OAuth sign-in resolves to the
+  // same account (even if their GitHub username ever changes).
+  await prisma.user.updateMany({
+    where: { id: userId, githubId: null },
+    data: { githubId: gh.id },
+  });
   return login;
 }
 

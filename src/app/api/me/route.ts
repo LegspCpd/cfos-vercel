@@ -13,7 +13,10 @@ export async function GET(req: Request) {
   if (!session) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   }
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: { githubConnection: { select: { githubLogin: true } } },
+  });
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
@@ -22,6 +25,11 @@ export async function GET(req: Request) {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
+    avatarUrl: user.avatarUrl ?? '',
     isAdmin,
+    email: user.email ?? '',
+    googleConnected: Boolean(user.googleId),
+    githubConnected: Boolean(user.githubConnection),
+    githubUsername: user.githubConnection?.githubLogin ?? null,
   });
 }

@@ -67,6 +67,28 @@ export async function GET(req: Request) {
       return redirectWithError('Failed to fetch Google profile.', req);
     }
 
+    // 2.5 "Connect" flow: state = "connect:<userId>:<nonce>". Link the Google identity to
+    // the currently-logged-in user instead of creating/logging into a new session.
+    if (state.startsWith('connect:')) {
+      const targetUserId = state.split(':')[1];
+      const targetUser = targetUserId
+        ? await prisma.user.findUnique({ where: { id: targetUserId } })
+        : null;
+      if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
+
+      // If this Google account is already linked to a different user, block to avoid stealing.
+      const existing = await prisma.user.findUnique({ where: { googleId: info.sub } });
+      if (existing && existing.id !== targetUser.id) {
+        return redirectWithError('该 Google 账号已绑定到另一个用户', req, '1001');
+      }
+
+      await prisma.user.update({ where: { id: targetUser.id }, data: { googleId: info.sub } });
+      const res = NextResponse.redirect(`${siteBaseUrl()}/profile?googleLinked=1`);
+      res.cookies.delete('oauth_from');
+      res.cookies.delete('google_oauth_state');
+      return res;
+    }
+
     // 3. Find or create local user.
     // Prefer linking by googleId; fall back to email so a previously password-created
     // account with the same email can still log in via Google (we attach the googleId).

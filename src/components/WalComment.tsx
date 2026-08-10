@@ -6,10 +6,15 @@ import { X } from 'lucide-react';
 // Floating "chat" (public comments) widget in the bottom-right corner.
 // Backed by Waline (https://waline.js.org) pointed at the deployment's comment server.
 // Rendered only inside AppShell (i.e. after login), so only signed-in users see it.
+//
+// GATED BY ENV VAR: the feature is OFF by default (it's still in beta / unstable).
+// Set NEXT_PUBLIC_COMMENTS_ENABLED=true in Vercel to turn it on.
 
 const SERVER_URL = 'https://chat.api.legspcpd.top';
 const WALINE_CSS = 'https://unpkg.com/@waline/client@v3/dist/waline.css';
 const WALINE_JS = 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+// Off unless explicitly enabled via env var (inlined by Next at build time).
+const COMMENTS_ENABLED = process.env.NEXT_PUBLIC_COMMENTS_ENABLED === 'true';
 
 const MessagesSquareIcon = () => (
   <svg
@@ -102,6 +107,10 @@ export default function WalComment() {
       setOpen(false);
     }
   }
+
+  // Feature is off by default — render nothing unless enabled via env var.
+  // (Placed after all hooks so hook order stays consistent.)
+  if (!COMMENTS_ENABLED) return null;
 
   return (
     <>

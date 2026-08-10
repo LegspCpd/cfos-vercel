@@ -29,6 +29,7 @@
 | `IMGHOST_TOKEN` | 头像图床 | 图床 API token，如 `imgbed_xxx` |
 | `IMGHOST_FOLDER` | 头像图床 | 上传文件夹，默认 `photos/avatars` |
 | `ALLOW_SIGNUPS` | 注册开关 | `enabled` 允许注册 / `disabled` 禁止（环境变量优先于管理面板开关） |
+| `NEXT_PUBLIC_COMMENTS_ENABLED` | 公开评论/聊天 | `true` 开启右下角 Waline 评论区，默认关闭 |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |

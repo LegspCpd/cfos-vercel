@@ -89,6 +89,7 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `PUBLIC_SITE_URL` | 你的公开地址，如 `https://os.legspcpd.top` | ✅（GitHub 登录必需） |
 | `ADMIN_USERNAME` | 管理员用户名，多个用逗号分隔，如 `legspcpd,admin` | 推荐 |
 | `ALLOW_SIGNUPS` | 是否允许注册，`enabled` / `disabled`（环境变量优先于管理面板开关） | 可选 |
+| `NEXT_PUBLIC_COMMENTS_ENABLED` | 右下角公开评论/聊天（Waline），`true` 开启，默认关闭 | 可选 |
 | `HOME_URL` | 文档"返回主页"跳转地址（服务端），默认 `https://os.legspcpd.top` | 可选 |
 | `NEXT_PUBLIC_HOME_URL` | 同上，供文档前端客户端链接使用（与 `HOME_URL` 保持一致） | 可选 |
 | `GITHUB_CLIENT_ID` | GitHub OAuth App 的 Client ID | 用 GitHub 登录则必填 |
@@ -294,6 +295,18 @@ Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、
 ### 示例
 - 建一个"运营"分组，只勾选"文件分享/蓝图"→ 把用户 A 移入 → A 只能分享文件，看不到管理后台和用户管理
 - 建一个"管理员"分组，勾选"管理后台访问"+"用户管理"→ 该组用户可管理后台和用户
+
+## 公开评论 / 聊天（可选，默认关闭）
+
+右下角有一个浮动聊天按钮，点开是一个**公开评论区**（Waline），所有登录用户可见、可发言，实时更新。
+
+> **默认关闭**（该功能还在 beta 测试，可能不稳定）。需要时在 Vercel 环境变量开启：
+> ```
+> NEXT_PUBLIC_COMMENTS_ENABLED=true
+> ```
+> 设为 `true` 后 **Redeploy**，右下角会出现聊天按钮。不设置或设为其他值则保持关闭（按钮不显示）。
+>
+> 评论服务地址：`https://chat.api.legspcpd.top`（Waline 服务端，需已部署）。
 
 ## 头像图床（可选）
 

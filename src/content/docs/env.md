@@ -31,7 +31,7 @@
 | `ALLOW_SIGNUPS` | 注册开关 | `enabled` 允许注册 / `disabled` 禁止（环境变量优先于管理面板开关） |
 | `NEXT_PUBLIC_COMMENTS_ENABLED` | 公开评论/聊天 | `true` 开启右下角 Waline 评论区，默认关闭 |
 | `NEXT_PUBLIC_BEIJIN` | 全站背景图 | 背景图 URL，每次刷新重新请求；客户端读取需 `NEXT_PUBLIC_` 前缀 |
-| `NEXT_PUBLIC_LOGO_URL` | 全站 Logo | 自定义 Logo URL；未设置时用默认占位图 |
+| `SITE_IMG_URL` | 网站图标/Logo | 自定义 favicon/Logo 的图片 URL；`SITE_IMG_URL` 用于服务端 favicon，客户端 Logo 需用 `NEXT_PUBLIC_SITE_IMG_URL`（推荐两者配同一个值） |
 | `NEXT_PUBLIC_COMMENTS_SERVER_URL` | 评论服务 | Waline 评论服务器地址（启用评论时用） |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |

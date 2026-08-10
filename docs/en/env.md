@@ -31,7 +31,7 @@
 | `ALLOW_SIGNUPS` | Registration toggle | `enabled` allows signup / `disabled` blocks (env takes precedence over the admin toggle) |
 | `NEXT_PUBLIC_COMMENTS_ENABLED` | Public comments/chat | `true` enables the bottom-right Waline comment widget, off by default |
 | `NEXT_PUBLIC_BEIJIN` | Site-wide background | Background image URL, re-requested on every refresh; client components need the `NEXT_PUBLIC_` prefix |
-| `NEXT_PUBLIC_LOGO_URL` | Site-wide logo | Custom logo URL; falls back to a placeholder when unset |
+| `SITE_IMG_URL` | Site icon / logo | Image URL for a custom favicon/logo. `SITE_IMG_URL` is used server-side for the favicon; for the client-side logo use `NEXT_PUBLIC_SITE_IMG_URL` (recommended: set both to the same value) |
 | `NEXT_PUBLIC_COMMENTS_SERVER_URL` | Comment service | Waline comment server URL (used when comments are enabled) |
 | `R2_ACCOUNT_ID` | File sharing | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | File sharing | Cloudflare R2 Access Key |

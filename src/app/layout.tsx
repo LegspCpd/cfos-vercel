@@ -9,12 +9,13 @@ import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/setti
 const DEFAULT_ICON = '/app-icon.png';
 
 // Dynamic metadata: read the admin-configured favicon + site name from the DB.
+// SITE_IMG_URL env var provides a site-wide default image (favicon) when no DB value is set.
 export async function generateMetadata(): Promise<Metadata> {
   const [favicon, siteName] = await Promise.all([
     getSetting(SETTING_SITE_FAVICON).catch(() => ''),
     getSetting(SETTING_SITE_NAME).catch(() => ''),
   ]);
-  const icon = favicon || DEFAULT_ICON;
+  const icon = favicon || process.env.SITE_IMG_URL || DEFAULT_ICON;
   return {
     title: {
       default: siteName || 'Cloudflare OS',

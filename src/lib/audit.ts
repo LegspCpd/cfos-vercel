@@ -6,6 +6,10 @@ export interface AuditEntry {
   action: string;
   targetId?: string;
   detail?: string;
+  // Client IP captured at write time (e.g. login IP). Null when unknown.
+  ip?: string | null;
+  // Token usage on AI calls (total prompt + completion tokens).
+  tokens?: number | null;
 }
 
 // Non-blocking write: never let audit logging break the main request.
@@ -18,6 +22,8 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
         action: entry.action,
         targetId: entry.targetId ?? null,
         detail: entry.detail ?? null,
+        ip: entry.ip ?? null,
+        tokens: entry.tokens ?? null,
       },
     });
   } catch (e) {

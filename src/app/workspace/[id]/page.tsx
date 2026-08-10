@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Play, Columns2, FileCode2, Loader2, History, X } from 'lucide-react';
+import { ArrowLeft, Save, Play, Columns2, FileCode2, Loader2, History, X, Maximize, RefreshCw } from 'lucide-react';
 import { api, type WorkspaceDetail } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import FileTree from '@/components/FileTree';
@@ -26,6 +26,8 @@ export default function WorkspacePage() {
   const [view, setView] = useState<'split' | 'editor' | 'preview'>('split');
   // Mobile: which single panel is shown (file tree / editor+preview / chat).
   const [mobilePanel, setMobilePanel] = useState<'files' | 'work' | 'chat'>('work');
+  // Mobile: full-screen preview overlay (top-right button). Desktop uses the inline split.
+  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; content: string; createdAt: string }[]>([]);
   const [autoPrompt, setAutoPrompt] = useState<string | undefined>(undefined);
@@ -87,6 +89,15 @@ export default function WorkspacePage() {
     window.addEventListener('cfos-refresh-preview', handler);
     return () => window.removeEventListener('cfos-refresh-preview', handler);
   }, []);
+
+  // If a desktop-only preview view survives onto a small screen, fall back to the
+  // full-screen overlay so mobile never shows a blank "work" panel.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && view === 'preview') {
+      setFullPreviewOpen(true);
+      setView('split');
+    }
+  }, [view]);
 
   function updateFileContent(path: string, content: string) {
     const prev = filesRef.current.find((f) => f.path === path)?.content;
@@ -208,7 +219,7 @@ export default function WorkspacePage() {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <div className="flex items-center gap-0.5 rounded-md border p-0.5">
+          <div className="hidden items-center gap-0.5 rounded-md border p-0.5 md:flex">
             {(['split', 'editor', 'preview'] as const).map((v) => (
               <button
                 key={v}
@@ -236,6 +247,17 @@ export default function WorkspacePage() {
           >
             <Play className="h-4 w-4" />
             <span className="hidden sm:inline">{t('ws.run')}</span>
+          </button>
+          {/* Mobile: full-screen preview toggle in the top-right */}
+          <button
+            onClick={() => {
+              setPreviewNonce((n) => n + 1);
+              setFullPreviewOpen(true);
+            }}
+            className="press flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-sm text-muted-foreground hover:bg-secondary md:hidden"
+            title={t('ws.preview')}
+          >
+            <Maximize className="h-4 w-4" />
           </button>
         </div>
       </header>
@@ -334,9 +356,12 @@ export default function WorkspacePage() {
               )}
             </div>
           )}
+          {/* Inline preview is desktop-only; mobile uses the full-screen overlay instead. */}
           {view !== 'editor' && (
             <div
-              className={`min-h-0 ${view === 'preview' ? 'w-full' : 'w-full md:w-1/2'} border-t bg-card md:border-l md:border-t-0`}
+              className={`hidden min-h-0 md:block ${
+                view === 'preview' ? 'w-full' : 'w-full md:w-1/2'
+              } border-t bg-card md:border-l md:border-t-0`}
             >
               <Preview workspaceId={id} nonce={previewNonce} />
             </div>
@@ -379,6 +404,34 @@ export default function WorkspacePage() {
           </button>
         ))}
       </div>
+
+      {/* Mobile full-screen preview overlay */}
+      {fullPreviewOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-card md:hidden">
+          <header className="flex shrink-0 items-center gap-2 border-b bg-card px-3 py-2">
+            <button
+              onClick={() => setFullPreviewOpen(false)}
+              className="press rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <span className="flex-1 truncate text-sm font-medium">
+              {t('ws.preview')} · {workspace.title}
+            </span>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('cfos-refresh-preview'))}
+              className="press rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Refresh preview"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </header>
+          <div className="min-h-0 flex-1">
+            <Preview workspaceId={id} nonce={previewNonce} />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { I18nProvider } from '@/lib/client/i18n';
 import PwaRegister from '@/components/PwaRegister';
+import SiteBackground from '@/components/SiteBackground';
 import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/settings';
 
 // Default icon = the project logo (public/app-icon.png, copied from the repo-root logo).
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <I18nProvider>{children}</I18nProvider>
         <PwaRegister />
+        <SiteBackground />
       </body>
     </html>
   );

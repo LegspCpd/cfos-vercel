@@ -50,6 +50,13 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* Custom site-wide background (set by SiteBackground when the BEIJIN env var is
+       configured). Falls back to the plain background color when unset. */
+    background-image: var(--site-bg-url, none);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
 }
 

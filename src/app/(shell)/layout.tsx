@@ -34,6 +34,11 @@ export default async function ShellLayout({ children }: { children: React.ReactN
     if (!user) {
       redirect('/login'); // user deleted
     }
+    // OAuth-created accounts must complete their profile before using the app.
+    // /profile/complete is outside this shell, so redirecting there is safe (no loop).
+    if (!user.profileComplete) {
+      redirect('/profile/complete');
+    }
     initialPermissions = resolvePermissions(user);
     initialGroup = user.group?.name ?? null;
   } catch {

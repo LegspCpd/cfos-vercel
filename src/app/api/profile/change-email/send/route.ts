@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { verifySessionToken } from '@/lib/auth';
+import { issueVerificationCode } from '@/lib/verification';
+import { resendConfigured } from '@/lib/email';
+import { z } from 'zod';
+
+const sendSchema = z.object({
+  email: z.string().email('请输入有效的邮箱地址'),
+});
+
+// POST /api/profile/change-email/send — step 1 of the change-email flow: send a
+// verification code to the user's CURRENT bound email. Unlike the signup /verify-code
+// endpoint, this allows already-registered addresses because the email must match the
+// user's own bound address (this is a "confirm ownership" code, not a new-signup one).
+export async function POST(req: Request) {
+  try {
+    const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
+    if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const session = await verifySessionToken(token);
+    if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+    const body = sendSchema.parse(await req.json());
+    const email = body.email.trim().toLowerCase();
+
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user.email) {
+      return NextResponse.json({ error: '该账号尚未绑定邮箱，无法更改邮箱' }, { status: 400 });
+    }
+    // The email we send the ownership code to MUST be the user's own bound email.
+    if (user.email.toLowerCase() !== email) {
+      return NextResponse.json({ error: '该邮箱与当前绑定邮箱不一致' }, { status: 400 });
+    }
+
+    if (!resendConfigured()) {
+      return NextResponse.json({ error: '邮件服务未配置（缺少 RESEND_API_KEY）' }, { status: 500 });
+    }
+
+    const { sent } = await issueVerificationCode(email);
+    if (!sent) {
+      return NextResponse.json({ error: '邮件发送失败，请稍后再试' }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return NextResponse.json({ error: e.errors[0]?.message || 'Invalid request' }, { status: 400 });
+    }
+    console.error('change-email send error', e);
+    const msg = e instanceof Error ? e.message : '未知错误';
+    const friendly = msg.includes('Resend error') ? `邮件服务发送失败：${msg.slice(0, 300)}` : '发送验证码失败';
+    return NextResponse.json({ error: friendly }, { status: 500 });
+  }
+}

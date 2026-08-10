@@ -122,7 +122,13 @@ export async function GET(req: Request) {
     }
     if (!user) {
       user = await prisma.user.create({
-        data: { username, displayName: displayName || username, passwordHash: 'microsoft-oauth-no-password', microsoftId: msId },
+        data: {
+          username,
+          displayName: displayName || username,
+          passwordHash: 'microsoft-oauth-no-password',
+          microsoftId: msId,
+          profileComplete: false,
+        },
       });
       await maybeBootstrapAdmin(username);
       await promoteEnvAdmins();

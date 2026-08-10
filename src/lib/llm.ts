@@ -62,19 +62,22 @@ function makeClient(cfg: AiProviderConfig): OpenAI {
   return new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseUrl || undefined });
 }
 
-// Non-streaming completion for a given provider.
+// Non-streaming completion for a given provider. Returns the text plus token usage
+// (total prompt + completion tokens) so callers can record analytics.
 export async function complete(
   messages: ChatMessageIn[],
   providerId?: string,
   model?: string,
-): Promise<string> {
+): Promise<{ text: string; tokens: number | null }> {
   const cfg = await getProvider(providerId);
   const client = makeClient(cfg);
   const res = await client.chat.completions.create({
     model: model ?? cfg.model,
     messages,
   });
-  return res.choices[0]?.message?.content ?? '';
+  const text = res.choices[0]?.message?.content ?? '';
+  const tokens = res.usage?.total_tokens ?? null;
+  return { text, tokens };
 }
 
 // Streaming completion. Returns the SDK stream for the caller to pipe to the client.

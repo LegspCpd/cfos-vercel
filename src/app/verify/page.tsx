@@ -56,8 +56,18 @@ function VerifyContent() {
       return;
     }
     setToken(token);
-    window.history.replaceState({}, '', '/');
-    router.push('/');
+    // OAuth-created accounts must complete their profile (username + password) first.
+    api
+      .me()
+      .then((m) => {
+        const dest = m.profileComplete ? '/' : '/profile/complete';
+        window.history.replaceState({}, '', dest);
+        router.push(dest);
+      })
+      .catch(() => {
+        window.history.replaceState({}, '', '/');
+        router.push('/');
+      });
   }
 
   // If no CAPTCHA is configured, skip straight to the app.

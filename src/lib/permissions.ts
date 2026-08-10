@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   connections: 'connections.manage', // external connections
   admin: 'admin.access', // admin panel (管理类)
   userAdmin: 'admin.users', // user management (管理类)
+  tickets: 'tickets.manage', // support-ticket panel (管理类)
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -24,6 +25,7 @@ export const ALL_PERMISSIONS: { code: PermissionCode; label: string; desc: strin
   { code: PERMISSIONS.connections, label: '外部连接', desc: 'GitHub/Google/GitLab 外部连接' },
   { code: PERMISSIONS.admin, label: '管理后台访问', desc: '进入管理后台 /admin' },
   { code: PERMISSIONS.userAdmin, label: '用户管理', desc: '管理用户和分组（需同时有管理后台访问）' },
+  { code: PERMISSIONS.tickets, label: '工单管理', desc: '查看和处理用户提交的工单（需同时有管理后台访问）' },
 ];
 
 // The special group that has every permission (auto-created on first run).

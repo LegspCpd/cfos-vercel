@@ -33,6 +33,8 @@ interface AuditLog {
   action: string;
   targetId: string | null;
   detail: string | null;
+  ip?: string | null;
+  tokens?: number | null;
   createdAt: string;
 }
 
@@ -112,8 +114,10 @@ export default function AuditLogView() {
     <section className="rounded-lg border bg-card p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold">审计日志</h2>
-          <p className="text-sm text-muted-foreground">记录登录、工作区操作、Agent 运行和 AI 调用（共 {total} 条）</p>
+          <h2 className="text-base font-semibold">操作日志</h2>
+          <p className="text-sm text-muted-foreground">
+            记录登录（含 IP）、工作区操作、Agent 运行和 AI 调用（含 token 用量）· 共 {total} 条
+          </p>
         </div>
         <button
           onClick={load}
@@ -175,6 +179,8 @@ export default function AuditLogView() {
                 <th className="py-2 pr-3 font-medium">时间</th>
                 <th className="py-2 pr-3 font-medium">用户</th>
                 <th className="py-2 pr-3 font-medium">操作</th>
+                <th className="py-2 pr-3 font-medium">IP</th>
+                <th className="py-2 pr-3 font-medium">Token</th>
                 <th className="py-2 font-medium">详情</th>
               </tr>
             </thead>
@@ -196,6 +202,10 @@ export default function AuditLogView() {
                         );
                       })()}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap py-2 pr-3 font-mono text-xs text-muted-foreground">{log.ip ?? '—'}</td>
+                  <td className="whitespace-nowrap py-2 pr-3 text-xs text-muted-foreground">
+                    {log.tokens != null ? log.tokens.toLocaleString() : '—'}
                   </td>
                   <td className="max-w-md break-words py-2 text-xs text-muted-foreground">{log.detail ?? ''}</td>
                 </tr>

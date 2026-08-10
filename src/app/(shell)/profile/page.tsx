@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Check, Link2, Mail, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, Check, Link2, Mail, RefreshCw, X, HelpCircle } from 'lucide-react';
 import { GithubIcon, GoogleIcon, MicrosoftIcon } from '@/components/BrandIcons';
+import CaptchaWidget from '@/components/CaptchaWidget';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -19,6 +20,8 @@ interface MeInfo {
   githubConnected: boolean;
   githubUsername: string | null;
   microsoftConnected: boolean;
+  deleteRequestedAt: string | null;
+  deleteAt: string | null;
 }
 
 export default function ProfilePage() {
@@ -35,13 +38,49 @@ export default function ProfilePage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Bind-email flow
+  // Bind-email flow (only shown when the account has no email yet)
   const [bindEmail, setBindEmail] = useState('');
   const [bindCode, setBindCode] = useState('');
   const [bindPw, setBindPw] = useState('');
   const [bindSending, setBindSending] = useState(false);
   const [bindCountdown, setBindCountdown] = useState(0);
   const [binding, setBinding] = useState(false);
+
+  // Change-email flow (shown when the account already has an email)
+  const [chgOpen, setChgOpen] = useState(false);
+  const [oldEmail, setOldEmail] = useState('');
+  const [oldCode, setOldCode] = useState('');
+  const [oldSending, setOldSending] = useState(false);
+  const [oldCountdown, setOldCountdown] = useState(0);
+  const [newEmail, setNewEmail] = useState('');
+  const [newCode, setNewCode] = useState('');
+  const [newSending, setNewSending] = useState(false);
+  const [newCountdown, setNewCountdown] = useState(0);
+  const [chgSaving, setChgSaving] = useState(false);
+
+  // Appeal / ticket dialog
+  const [appealOpen, setAppealOpen] = useState(false);
+  const [site, setSite] = useState<{ turnstileEnabled: boolean; turnstileSiteKey: string; recaptchaEnabled: boolean; recaptchaSiteKey: string } | null>(null);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [ticketType, setTicketType] = useState('appeal');
+  const [ticketTitle, setTicketTitle] = useState('');
+  const [ticketContent, setTicketContent] = useState('');
+  const [ticketCaptcha, setTicketCaptcha] = useState<{ provider: 'turnstile' | 'recaptcha'; token: string } | null>(null);
+  const [ticketSaving, setTicketSaving] = useState(false);
+  const [ticketMsg, setTicketMsg] = useState('');
+  const [ticketError, setTicketError] = useState('');
+
+  // Delete-account flow (注销账号)
+  const [delOpen, setDelOpen] = useState(false);
+  const [delEmail, setDelEmail] = useState('');
+  const [delCode, setDelCode] = useState('');
+  const [delSending, setDelSending] = useState(false);
+  const [delCountdown, setDelCountdown] = useState(0);
+  const [delCaptcha, setDelCaptcha] = useState<{ provider: 'turnstile' | 'recaptcha'; token: string } | null>(null);
+  const [delSaving, setDelSaving] = useState(false);
+  const [delMsg, setDelMsg] = useState('');
+  const [delError, setDelError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
@@ -188,6 +227,222 @@ export default function ProfilePage() {
       setError((e as Error).message);
     } finally {
       setBinding(false);
+    }
+  }
+
+  // Change-email countdowns.
+  useEffect(() => {
+    if (oldCountdown <= 0) return;
+    const id = setInterval(() => setOldCountdown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [oldCountdown]);
+  useEffect(() => {
+    if (newCountdown <= 0) return;
+    const id = setInterval(() => setNewCountdown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [newCountdown]);
+
+  async function sendOldCode() {
+    setError('');
+    setMessage('');
+    if (!oldEmail.trim() || !/\S+@\S+\.\S+/.test(oldEmail)) {
+      setError('请输入有效的原邮箱地址');
+      return;
+    }
+    setOldSending(true);
+    try {
+      await api.sendChangeEmailCode(oldEmail);
+      setOldCountdown(60);
+      setMessage('验证码已发送到原邮箱');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setOldSending(false);
+    }
+  }
+
+  async function sendNewCode() {
+    setError('');
+    setMessage('');
+    if (!newEmail.trim() || !/\S+@\S+\.\S+/.test(newEmail)) {
+      setError('请输入有效的新邮箱地址');
+      return;
+    }
+    setNewSending(true);
+    try {
+      await api.sendVerificationCode(newEmail);
+      setNewCountdown(60);
+      setMessage('验证码已发送到新邮箱');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setNewSending(false);
+    }
+  }
+
+  async function changeEmail() {
+    setError('');
+    setMessage('');
+    if (!oldEmail || !oldCode) {
+      setError('请先验证原邮箱');
+      return;
+    }
+    if (!newEmail || !newCode) {
+      setError('请先验证新邮箱');
+      return;
+    }
+    setChgSaving(true);
+    try {
+      const res = await api.changeEmail({
+        oldEmail: oldEmail.trim(),
+        oldCode: oldCode.trim(),
+        newEmail: newEmail.trim(),
+        newCode: newCode.trim(),
+      });
+      setMe((m) => (m ? { ...m, email: res.email } : m));
+      setMessage('邮箱更改成功');
+      setChgOpen(false);
+      setOldEmail('');
+      setOldCode('');
+      setNewEmail('');
+      setNewCode('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setChgSaving(false);
+    }
+  }
+
+  function openAppeal() {
+    setError('');
+    setMessage('');
+    setTicketError('');
+    setTicketMsg('');
+    setTicketType('appeal');
+    setTicketTitle('');
+    setTicketContent('');
+    setTicketCaptcha(null);
+    setAppealOpen(true);
+    if (!site) api.getPublicSite().then(setSite).catch(() => {});
+    api.getPublicContact().then((c) => setAdminEmail(c.adminEmail || '')).catch(() => {});
+  }
+
+  async function submitTicket() {
+    setTicketError('');
+    setTicketMsg('');
+    if (!ticketTitle.trim()) {
+      setTicketError('请输入工单标题');
+      return;
+    }
+    if (!ticketContent.trim()) {
+      setTicketError('请输入工单内容');
+      return;
+    }
+    const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
+    if (captchaEnabled && !ticketCaptcha) {
+      setTicketError('请完成人机验证');
+      return;
+    }
+    setTicketSaving(true);
+    try {
+      await api.submitTicket({
+        type: ticketType,
+        title: ticketTitle.trim(),
+        content: ticketContent.trim(),
+        captchaProvider: ticketCaptcha?.provider,
+        captchaToken: ticketCaptcha?.token,
+      });
+      setTicketMsg('工单已提交，管理员会尽快处理。');
+      setTicketTitle('');
+      setTicketContent('');
+      setTicketCaptcha(null);
+    } catch (e) {
+      setTicketError((e as Error).message);
+    } finally {
+      setTicketSaving(false);
+    }
+  }
+
+  // Delete-account countdown.
+  useEffect(() => {
+    if (delCountdown <= 0) return;
+    const id = setInterval(() => setDelCountdown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [delCountdown]);
+
+  function openDelete() {
+    setError('');
+    setMessage('');
+    setDelError('');
+    setDelMsg('');
+    setDelEmail(me?.email || '');
+    setDelCode('');
+    setDelCaptcha(null);
+    setDelOpen(true);
+    if (!site) api.getPublicSite().then(setSite).catch(() => {});
+  }
+
+  async function sendDelCode() {
+    setDelError('');
+    setDelMsg('');
+    if (!delEmail.trim() || !/\S+@\S+\.\S+/.test(delEmail)) {
+      setDelError('请输入有效的邮箱地址');
+      return;
+    }
+    setDelSending(true);
+    try {
+      await api.sendDeleteAccountCode(delEmail.trim());
+      setDelCountdown(60);
+      setDelMsg('验证码已发送到你的邮箱');
+    } catch (e) {
+      setDelError((e as Error).message);
+    } finally {
+      setDelSending(false);
+    }
+  }
+
+  async function confirmDelete() {
+    setDelError('');
+    setDelMsg('');
+    if (!delEmail.trim() || !delCode.trim()) {
+      setDelError('请先发送验证码并填写');
+      return;
+    }
+    const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
+    if (captchaEnabled && !delCaptcha) {
+      setDelError('请完成人机验证');
+      return;
+    }
+    setDelSaving(true);
+    try {
+      const res = await api.requestDeleteAccount({
+        email: delEmail.trim(),
+        code: delCode.trim(),
+        captchaProvider: delCaptcha?.provider,
+        captchaToken: delCaptcha?.token,
+      });
+      setMe((m) => (m ? { ...m, deleteRequestedAt: new Date().toISOString(), deleteAt: res.deleteAt } : m));
+      setDelMsg('注销请求已提交。账号将进入 4–7 天冷静期，届时将自动删除。冷静期内可随时取消。');
+      setDelOpen(false);
+    } catch (e) {
+      setDelError((e as Error).message);
+    } finally {
+      setDelSaving(false);
+    }
+  }
+
+  async function cancelDelete() {
+    setError('');
+    setMessage('');
+    setDeleting(true);
+    try {
+      await api.cancelDeleteAccount();
+      setMe((m) => (m ? { ...m, deleteRequestedAt: null, deleteAt: null } : m));
+      setMessage('已取消账号注销');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -355,22 +610,114 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Bind email */}
+      {/* Email (change email if bound; bind first if not) */}
       <section className="mb-6 rounded-lg border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold">{t('pr.bindEmail')}</h2>
-        <p className="mb-4 text-sm text-muted-foreground">{t('pr.bindEmailHint')}</p>
+        <h2 className="mb-1 text-base font-semibold">{t('pr.email')}</h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('pr.emailHint')}</p>
 
-        {me?.email && (
-          <div className="mb-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{t('pr.boundEmail')}:</span>
-            <span>{me.email}</span>
-          </div>
-        )}
+        {me?.email ? (
+          <>
+            <div className="mb-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{t('pr.boundEmail')}:</span>
+              <span>{me.email}</span>
+            </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('auth.email')}</label>
+            {/* Change-email flow: verify old → enter new → verify new → save */}
+            {!chgOpen ? (
+              <button
+                onClick={() => setChgOpen(true)}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+              >
+                更改邮箱
+              </button>
+            ) : (
+              <div className="space-y-3">
+                {/* Step 1: verify current email */}
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <p className="mb-2 text-xs font-medium text-primary">步骤 1 · 验证原邮箱</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={oldEmail}
+                      onChange={(e) => setOldEmail(e.target.value)}
+                      placeholder={me.email}
+                      className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <button
+                      onClick={sendOldCode}
+                      disabled={oldSending || oldCountdown > 0}
+                      className="flex shrink-0 items-center gap-1 rounded-md border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+                    >
+                      {oldSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : oldCountdown > 0 ? `${oldCountdown}s` : (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    value={oldCode}
+                    onChange={(e) => setOldCode(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="输入原邮箱验证码"
+                    className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                {/* Step 2: enter + verify new email */}
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <p className="mb-2 text-xs font-medium text-primary">步骤 2 · 验证新邮箱</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      placeholder="输入新邮箱地址"
+                      className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <button
+                      onClick={sendNewCode}
+                      disabled={newSending || newCountdown > 0}
+                      className="flex shrink-0 items-center gap-1 rounded-md border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+                    >
+                      {newSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : newCountdown > 0 ? `${newCountdown}s` : (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="输入新邮箱验证码"
+                    className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={changeEmail}
+                    disabled={chgSaving}
+                    className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {chgSaving ? '提交中...' : '确认更改邮箱'}
+                  </button>
+                  <button
+                    onClick={() => setChgOpen(false)}
+                    className="rounded-md border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* No email yet — first-time binding (OAuth user skipped it during onboarding) */
+          <div className="space-y-3">
             <div className="flex gap-2">
               <input
                 type="email"
@@ -391,9 +738,6 @@ export default function ProfilePage() {
                 )}
               </button>
             </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('auth.verificationCode')}</label>
             <input
               value={bindCode}
               onChange={(e) => setBindCode(e.target.value)}
@@ -401,9 +745,6 @@ export default function ProfilePage() {
               placeholder={t('auth.codePlaceholder')}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('pr.setPasswordForEmail')}</label>
             <input
               type="password"
               value={bindPw}
@@ -411,13 +752,26 @@ export default function ProfilePage() {
               placeholder={t('auth.pwPlaceholder')}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
+            <button
+              onClick={bindEmailAccount}
+              disabled={binding}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              {binding ? t('pr.binding') : t('pr.bind')}
+            </button>
           </div>
+        )}
+
+        {/* Appeal / submit a ticket */}
+        <div className="mt-5 border-t pt-4">
+          <p className="mb-2 text-sm text-muted-foreground">
+            遇到问题需要帮助？可以提交申诉或反馈工单。
+          </p>
           <button
-            onClick={bindEmailAccount}
-            disabled={binding}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            onClick={openAppeal}
+            className="rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
-            {binding ? t('pr.binding') : t('pr.bind')}
+            点我申诉
           </button>
         </div>
       </section>
@@ -456,6 +810,234 @@ export default function ProfilePage() {
           {t('pr.tip')}
         </p>
       </section>
+
+      {/* Delete account */}
+      <section className="mt-6 rounded-lg border border-destructive/30 bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-destructive">注销账号</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {me?.deleteAt
+            ? `你的账号已申请注销，将在 ${new Date(me.deleteAt).toLocaleDateString()} ${new Date(
+                me.deleteAt,
+              ).toLocaleTimeString()} 自动删除。冷静期内可随时取消。`
+            : '注销后账号及其所有数据（工作区、聊天、分享等）将被永久删除，且无法恢复。账号删除后将释放邮箱和用户名，可重新注册。'}
+        </p>
+
+        {me?.deleteAt ? (
+          <button
+            onClick={cancelDelete}
+            disabled={deleting}
+            className="rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          >
+            {deleting ? '处理中...' : '取消注销'}
+          </button>
+        ) : (
+          <button
+            onClick={openDelete}
+            className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90"
+          >
+            注销账号
+          </button>
+        )}
+      </section>
+
+      {/* Delete-account confirmation dialog */}
+      {delOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[10vh]"
+          onClick={() => setDelOpen(false)}
+        >
+          <div className="w-full max-w-md rounded-xl border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <span className="text-sm font-semibold text-destructive">确认注销账号</span>
+              <button
+                onClick={() => setDelOpen(false)}
+                className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+              <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                注销后所有数据将永久删除，无法恢复。请确认你的邮箱以继续。
+              </div>
+
+              {delMsg && <div className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{delMsg}</div>}
+              {delError && (
+                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{delError}</div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">绑定邮箱</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={delEmail}
+                    onChange={(e) => setDelEmail(e.target.value)}
+                    placeholder={me?.email || '输入你的邮箱'}
+                    className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <button
+                    onClick={sendDelCode}
+                    disabled={delSending || delCountdown > 0}
+                    className="flex shrink-0 items-center gap-1 rounded-md border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+                  >
+                    {delSending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : delCountdown > 0 ? (
+                      `${delCountdown}s`
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">验证码</label>
+                <input
+                  value={delCode}
+                  onChange={(e) => setDelCode(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="输入邮箱验证码"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              {site && (site.turnstileEnabled || site.recaptchaEnabled) && (
+                <CaptchaWidget
+                  config={{
+                    turnstileEnabled: site.turnstileEnabled,
+                    turnstileSiteKey: site.turnstileSiteKey,
+                    recaptchaEnabled: site.recaptchaEnabled,
+                    recaptchaSiteKey: site.recaptchaSiteKey,
+                  }}
+                  onVerify={(provider, token) => setDelCaptcha({ provider, token })}
+                />
+              )}
+
+              <button
+                onClick={confirmDelete}
+                disabled={delSaving}
+                className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {delSaving ? '提交中...' : '确认注销账号'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appeal / submit-ticket dialog */}
+      {appealOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[10vh]"
+          onClick={() => setAppealOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <span className="text-sm font-semibold">提交申诉 / 反馈工单</span>
+              <button
+                onClick={() => setAppealOpen(false)}
+                className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+              {/* Admin contact email */}
+              {adminEmail && (
+                <div className="flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm">
+                  <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span>
+                    联系管理员邮箱：<span className="font-medium">{adminEmail}</span>
+                  </span>
+                </div>
+              )}
+
+              {ticketMsg && (
+                <div className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{ticketMsg}</div>
+              )}
+              {ticketError && (
+                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{ticketError}</div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">工单类型</label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ['appeal', '申诉'],
+                      ['feedback', '反馈'],
+                      ['emailChange', '更改邮箱'],
+                      ['other', '其他'],
+                    ] as const
+                  ).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setTicketType(val)}
+                      className={`rounded-md px-3 py-1.5 text-sm ${
+                        ticketType === val ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">标题</label>
+                <input
+                  value={ticketTitle}
+                  onChange={(e) => setTicketTitle(e.target.value)}
+                  placeholder="简要描述问题"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">详细内容</label>
+                <textarea
+                  value={ticketContent}
+                  onChange={(e) => setTicketContent(e.target.value)}
+                  rows={4}
+                  placeholder="请详细描述你的问题或申诉内容"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              {site && (site.turnstileEnabled || site.recaptchaEnabled) && (
+                <CaptchaWidget
+                  config={{
+                    turnstileEnabled: site.turnstileEnabled,
+                    turnstileSiteKey: site.turnstileSiteKey,
+                    recaptchaEnabled: site.recaptchaEnabled,
+                    recaptchaSiteKey: site.recaptchaSiteKey,
+                  }}
+                  onVerify={(provider, token) => setTicketCaptcha({ provider, token })}
+                />
+              )}
+
+              <button
+                onClick={submitTicket}
+                disabled={ticketSaving}
+                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {ticketSaving ? '提交中...' : '提交工单'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,6 +41,8 @@ Only output valid JSON. No markdown fences, no extra text.`;
 export interface AgentResult {
   message: string;
   files: WorkspaceFileDraft[];
+  // Total tokens consumed by this agent run (from the provider's usage response).
+  tokens?: number | null;
 }
 
 // Run the agent once to (re)generate the app. `files` is the current workspace state,
@@ -71,8 +73,9 @@ export async function runAgent(
     },
   ];
 
-  const raw = await complete(messages, providerId, model);
-  return parseAgentResult(raw);
+  const { text, tokens } = await complete(messages, providerId, model);
+  const result = parseAgentResult(text);
+  return { ...result, tokens };
 }
 
 function parseAgentResult(raw: string): AgentResult {

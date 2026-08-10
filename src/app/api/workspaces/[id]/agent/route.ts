@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { clientIp } from '@/lib/ip';
 import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
 import { requireCfAccess } from '@/lib/require-access';
 import { getSiteSettings } from '@/lib/settings';
@@ -123,6 +124,7 @@ export async function POST(req: Request, { params }: Ctx) {
     username: session.username,
     action: 'agent.run',
     targetId: workspace.id,
+    ip: clientIp(req),
     detail: `Agent ran on "${workspace.title}" (provider: ${providerId ?? 'default'}) — touched files: ${changedPaths.join(', ') || 'none'}`,
   });
   await writeAudit({
@@ -130,7 +132,9 @@ export async function POST(req: Request, { params }: Ctx) {
     username: session.username,
     action: 'ai.call',
     targetId: workspace.id,
-    detail: `AI call from agent (prompt: ${prompt.slice(0, 120)})`,
+    ip: clientIp(req),
+    tokens: result.tokens ?? null,
+    detail: `AI call from agent (prompt: ${prompt.slice(0, 120)})${result.tokens ? ` — ${result.tokens} tokens` : ''}`,
   });
 
   return NextResponse.json({

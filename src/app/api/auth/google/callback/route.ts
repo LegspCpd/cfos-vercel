@@ -113,6 +113,7 @@ export async function GET(req: Request) {
           displayName,
           passwordHash: 'google-oauth-no-password',
           googleId: info.sub,
+          profileComplete: false,
         },
       });
       await maybeBootstrapAdmin(username);

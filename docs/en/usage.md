@@ -3,18 +3,32 @@
 ## First sign-in
 
 1. Visit your domain
-2. Click **"Continue with GitHub"** / **"Continue with Google"**, or register an account
+2. Click **"Continue with GitHub"** / **"Continue with Google"** / **"Continue with Microsoft"**, or register an account
 3. The first account is admin (or the one named in `ADMIN_USERNAME`)
 
-## Bind email + email/password sign-in
+### OAuth accounts must complete their profile on first sign-in
 
-No matter how you registered (GitHub / Google / password), you can **bind an email and set a password**, then sign in with "email + password":
+New accounts created via GitHub / Google / Microsoft must finish an onboarding step before entering the app:
 
-1. After signing in, go to **Profile**
-2. Find the **Bind email** section
-3. Enter an email that can receive codes → click **Send code**
-4. Enter the code + set a password → click **Bind email**
-5. Next time, just enter **email + password** in the sign-in box (it accepts email or username)
+1. **Set a username** (required, defaults to your third-party username)
+2. **Set a password** (required — you can later sign in with "email + password")
+3. **Human verification** (enforced when Turnstile/reCAPTCHA is configured)
+4. **Bind an email** (optional — needed to change email or delete the account later)
+
+Until completed, you can't enter the app. After completing, you're taken in automatically.
+
+## Bind / change email + email/password sign-in
+
+No matter how you registered (GitHub / Google / Microsoft / password), you can **bind an email and set a password**, then sign in with "email + password":
+
+- **First-time bind** (no email yet): go to **Profile → Email**, enter an email → send a code → enter the code + set a password → bind.
+- **Change email** (an email is already bound): Profile → Email → click **"Change email"**:
+  1. Enter the **old email** → a code is sent to it → enter the code (proves ownership)
+  2. Enter the **new email** → a code is sent → enter the code
+  3. Pass human verification → submit to change.
+- At the bottom of the Email section there's also **"Appeal / submit a ticket"** to reach an admin.
+
+Next time, just enter **email + password** in the sign-in box (it accepts email or username).
 
 ## Build your first app
 
@@ -70,7 +84,39 @@ Admin sign-in → left sidebar **Admin**:
 - Registration toggle, human verification, brand icons
 - AI Providers
 - Cloudflare Access status
-- Audit log
+- **Operation log** entry (full logs live in the sidebar "Operation Log")
+
+## Operation log (/admin/audit)
+
+The sidebar **"Operation Log"** (needs `admin.access`) aggregates all logs:
+
+- **Sign-ins**: time, user, **IP address** (including failed attempts)
+- **Agent runs**: agent actions on workspaces
+- **AI calls**: every call with **token usage**
+
+## Ticket management (/admin/tickets)
+
+The sidebar **"Tickets"** (needs `tickets.manage`):
+
+- View all user tickets (feedback / appeal / email change / other)
+- Filter by status (open / processing / closed)
+- View details: submitter, email, **IP address**, content
+- **Change status** + **reply** to the user
+
+> Submitting a ticket passes human verification and auto-emails all admins with a link to handle it.
+
+## Delete account
+
+In **Profile → Delete account**:
+
+1. Enter your bound email → send a code
+2. Enter the code + **human verification** → submit
+3. Enter a **4–7 day cooldown**, cancel anytime during it
+4. After the deadline the account and all its data are **permanently deleted**; the **email/username free up and can be re-registered**
+
+## Custom site background
+
+Add `NEXT_PUBLIC_BEIJIN` (a background image URL) as a Vercel env var and redeploy — the image shows across the whole site and is re-requested on every refresh.
 
 ## User groups & permissions
 
@@ -102,7 +148,12 @@ Users with `admin.users` permission can use the **Users** page in the sidebar:
 
 ## Analytics page (/analytics)
 
-Every signed-in user can view personal usage stats in the **Analytics** page: number of workspaces, total files, recent activity, and a list of recent workspaces.
+Every signed-in user can view detailed stats in the **Analytics** page:
+
+- **Personal cards**: workspaces, files, today's sign-ins, today's AI calls, today's token usage
+- **Today's sign-in log**: the **IP addresses** you signed in from + timestamps
+
+Admins additionally see a **site-wide today summary**: total sign-ins, active users, AI calls, token total, and the **top login IPs** (Top 10 bar chart).
 
 ## Mobile
 

@@ -127,7 +127,13 @@ export async function GET(req: Request) {
     }
     if (!user) {
       user = await prisma.user.create({
-        data: { username, displayName, passwordHash: 'github-oauth-no-password', githubId: ghUser.id },
+        data: {
+          username,
+          displayName,
+          passwordHash: 'github-oauth-no-password',
+          githubId: ghUser.id,
+          profileComplete: false,
+        },
       });
       await maybeBootstrapAdmin(username);
       await promoteEnvAdmins();

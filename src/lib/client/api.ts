@@ -39,6 +39,9 @@ export const api = {
       githubConnected: boolean;
       githubUsername: string | null;
       microsoftConnected: boolean;
+      profileComplete: boolean;
+      deleteRequestedAt: string | null;
+      deleteAt: string | null;
       permissions: string[];
       groupId: string | null;
       groupName: string | null;
@@ -102,6 +105,102 @@ export const api = {
     '/api/profile',
     { method: 'PATCH', body: JSON.stringify(data) },
   ),
+  // Required onboarding for OAuth-created accounts: username + password + human check.
+  completeProfile: (data: {
+    username: string;
+    newPassword: string;
+    email?: string;
+    verificationCode?: string;
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
+    request<{ user: { id: string; username: string; displayName: string; email: string | null } }>(
+      '/api/profile/complete',
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
+  // Send a verification code to the user's CURRENT (already bound) email, for the
+  // change-email flow (step 1). Bypasses the "already registered" guard in /verify-code.
+  sendChangeEmailCode: (email: string) =>
+    request<{ ok: boolean }>('/api/profile/change-email/send', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  // Change the bound email: oldEmail + oldCode, then newEmail + newCode.
+  changeEmail: (data: {
+    oldEmail: string;
+    oldCode: string;
+    newEmail: string;
+    newCode: string;
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
+    request<{ ok: boolean; email: string }>('/api/profile/change-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  // Submit a support ticket (feedback / email-change appeal / other). Requires human check.
+  submitTicket: (data: {
+    type: string;
+    title: string;
+    content: string;
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
+    request<{ ticket: { id: string } }>('/api/tickets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listMyTickets: () =>
+    request<{ tickets: Ticket[] }>('/api/tickets'),
+  listTickets: () =>
+    request<{ tickets: Ticket[] }>('/api/admin/tickets'),
+  handleTicket: (id: string, data: { status?: string; reply?: string }) =>
+    request<{ ok: boolean }>(`/api/admin/tickets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  // Public contact info (admin's email) shown on the profile appeal dialog.
+  getPublicContact: () =>
+    request<{ adminEmail: string | null }>('/api/site/contact'),
+  // Per-user analytics (workspace counts, today's login IPs, AI token usage; admins
+  // also get a site-wide summary).
+  getAnalytics: () =>
+    request<{
+      joinedAt: string;
+      workspaces: number;
+      files: number;
+      today: {
+        loginCount: number;
+        logins: { at: string; ip: string | null }[];
+        aiCalls: number;
+        tokens: number;
+      };
+      site: {
+        todayLogins: number;
+        todayTokens: number;
+        todayAiCalls: number;
+        todayUsersActive: number;
+        topLoginIps: { ip: string; count: number }[];
+      } | null;
+    }>('/api/analytics'),
+  // Account deletion (注销账号): send code → verify + captcha → 4–7 day cooldown → delete.
+  sendDeleteAccountCode: (email: string) =>
+    request<{ ok: boolean }>('/api/profile/delete-account/send', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  requestDeleteAccount: (data: {
+    email: string;
+    code: string;
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
+    request<{ ok: boolean; deleteAt: string }>('/api/profile/delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  cancelDeleteAccount: () =>
+    request<{ ok: boolean }>('/api/profile/delete-account/cancel', { method: 'POST' }),
   uploadAvatar: async (file: File) => {
     const fd = new FormData();
     fd.append('file', file, file.name);
@@ -415,6 +514,19 @@ export interface WorkspaceDetail {
   title: string;
   ownerId: string;
   files: WorkspaceFile[];
+}
+
+export interface Ticket {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+  ip: string | null;
+  status: string;
+  reply: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: { username: string; displayName: string; email: string | null };
 }
 
 // Redirect to /login if no token present.

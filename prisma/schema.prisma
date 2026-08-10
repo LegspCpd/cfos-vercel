@@ -26,11 +26,20 @@ model User {
   email        String?  @unique
   // Custom avatar image URL (uploaded via the admin-provided image host).
   avatarUrl    String?
+  // Whether the user has finished the required "complete your profile" step after a
+  // third-party (OAuth) sign-up. New OAuth accounts start false and must set a username
+  // + password (+ human verification) before using the app.
+  profileComplete Boolean @default(true)
   isAdmin      Boolean  @default(false)
   // User group. A group defines the set of feature permissions the user has
   // (permissions fully decide what a user can do — see src/lib/permissions.ts).
   groupId      String?
   createdAt    DateTime @default(now())
+  // Account-deletion (self-serve) request. When deleteAt is set, the account is on a
+  // 4–7 day cooldown; the user can cancel until the deadline passes, after which the
+  // account and all its data are permanently deleted (the email/username free up).
+  deleteRequestedAt DateTime?
+  deleteAt           DateTime?
 
   workspaces Workspace[]
   chats      Chat[]
@@ -40,6 +49,7 @@ model User {
   gitlabConnection GitlabConnection?
   contextDocs ContextDoc[]
   favorites  Favorite[]
+  tickets    Ticket[]
   group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }
 
@@ -70,6 +80,30 @@ model EmailVerification {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+// A support ticket submitted by a user: feedback, email-change appeals, or general
+// requests. Admins review and handle them from the admin Tickets panel.
+model Ticket {
+  id        String   @id @default(cuid())
+  userId    String
+  // "feedback" | "emailChange" | "appeal" | "other"
+  type      String
+  title     String
+  content   String
+  // Submitter's IP address, captured at submission time.
+  ip        String?
+  // "open" | "processing" | "closed"
+  status    String   @default("open")
+  handledBy String? // admin userId who last handled it
+  reply     String? // admin reply text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches
@@ -260,6 +294,10 @@ model AuditLog {
   action    String // e.g. "auth.login", "workspace.create", "agent.run", "ai.call"
   targetId  String? // e.g. workspaceId, providerId
   detail    String? // human-readable summary / JSON payload
+  // Client IP captured at write time (e.g. the user's login IP). Null when unknown.
+  ip        String?
+  // Token usage recorded on AI calls (total prompt+completion tokens), for analytics.
+  tokens    Int?
   createdAt DateTime @default(now())
 
   @@index([userId])

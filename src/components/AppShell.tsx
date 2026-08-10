@@ -23,6 +23,8 @@ import {
   X,
   BarChart3,
   Users,
+  Ticket,
+  ScrollText,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -86,6 +88,11 @@ export default function AppShell({
     api
       .me()
       .then((me) => {
+        // OAuth-created accounts must finish the onboarding step before using the app.
+        if (!me.profileComplete && typeof window !== 'undefined' && !window.location.pathname.startsWith('/profile/complete')) {
+          router.replace('/profile/complete');
+          return;
+        }
         setIsAdmin(me.isAdmin);
         setPermissions(me.permissions || []);
         setUserName(me.displayName || me.username);
@@ -182,7 +189,10 @@ export default function AppShell({
               href="/admin"
               className={clsx(
                 'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')
+                pathname.startsWith('/admin') &&
+                  !pathname.startsWith('/admin/users') &&
+                  !pathname.startsWith('/admin/tickets') &&
+                  !pathname.startsWith('/admin/audit')
                   ? 'bg-secondary font-medium text-foreground'
                   : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
               )}
@@ -203,6 +213,34 @@ export default function AppShell({
             >
               <Users className="h-4 w-4" />
               {t('nav.users')}
+            </Link>
+          )}
+          {permissions.includes('tickets.manage') && (
+            <Link
+              href="/admin/tickets"
+              className={clsx(
+                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                pathname.startsWith('/admin/tickets')
+                  ? 'bg-secondary font-medium text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+              )}
+            >
+              <Ticket className="h-4 w-4" />
+              {t('nav.tickets')}
+            </Link>
+          )}
+          {permissions.includes('admin.access') && (
+            <Link
+              href="/admin/audit"
+              className={clsx(
+                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                pathname.startsWith('/admin/audit')
+                  ? 'bg-secondary font-medium text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+              )}
+            >
+              <ScrollText className="h-4 w-4" />
+              {t('nav.audit')}
             </Link>
           )}
         </nav>
@@ -364,6 +402,26 @@ export default function AppShell({
                 >
                   <Users className="h-4 w-4" />
                   {t('nav.users')}
+                </Link>
+              )}
+              {permissions.includes('tickets.manage') && (
+                <Link
+                  href="/admin/tickets"
+                  onClick={() => setSidebarOpen(false)}
+                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <Ticket className="h-4 w-4" />
+                  {t('nav.tickets')}
+                </Link>
+              )}
+              {permissions.includes('admin.access') && (
+                <Link
+                  href="/admin/audit"
+                  onClick={() => setSidebarOpen(false)}
+                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <ScrollText className="h-4 w-4" />
+                  {t('nav.audit')}
                 </Link>
               )}
             </nav>

@@ -30,6 +30,7 @@
 | `IMGHOST_FOLDER` | Avatar image host | Upload folder, default `photos/avatars` |
 | `ALLOW_SIGNUPS` | Registration toggle | `enabled` allows signup / `disabled` blocks (env takes precedence over the admin toggle) |
 | `NEXT_PUBLIC_COMMENTS_ENABLED` | Public comments/chat | `true` enables the bottom-right Waline comment widget, off by default |
+| `NEXT_PUBLIC_BEIJIN` | Site-wide background | Background image URL, re-requested on every refresh; client components need the `NEXT_PUBLIC_` prefix |
 | `R2_ACCOUNT_ID` | File sharing | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | File sharing | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | File sharing | Cloudflare R2 Secret Key |

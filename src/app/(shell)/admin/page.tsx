@@ -9,8 +9,8 @@ import StatsCards from '@/components/StatsCards';
 import SiteSettingsPanel from '@/components/SiteSettingsPanel';
 import ProvidersManager from '@/components/ProvidersManager';
 import CfAccessStatus from '@/components/CfAccessStatus';
-import AuditLogView from '@/components/AuditLogView';
 import SignupToggle from '@/components/SignupToggle';
+import { ScrollText } from 'lucide-react';
 import { useI18n } from '@/lib/client/i18n';
 
 export default function AdminPage() {
@@ -56,9 +56,11 @@ export default function AdminPage() {
     <div className="mx-auto w-full max-w-[1600px] space-y-6 px-6 py-8">
       <div>
         <h1 className="text-2xl font-bold">{t('ad.title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">站点统计、设置、AI 提供方、审计与访问控制。</p>
+        <p className="mt-1 text-sm text-muted-foreground">站点统计、设置、AI 提供方、日志与访问控制。</p>
         <p className="mt-1 text-sm text-muted-foreground">
           用户管理已移到独立页面：<a href="/admin/users" className="text-primary underline">进入用户管理 →</a>
+          {' · '}
+          操作日志已移到独立页面：<a href="/admin/audit" className="text-primary underline">进入操作日志 →</a>
         </p>
       </div>
 
@@ -66,11 +68,25 @@ export default function AdminPage() {
       <StatsCards />
       <SignupToggle />
 
-      {/* Row 1: site settings (left) + audit log & CF Access (right column) */}
+      {/* Row 1: site settings (left) + quick links & CF Access (right column) */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <SiteSettingsPanel />
         <div className="space-y-6">
-          <AuditLogView />
+          <a
+            href="/admin/audit"
+            className="flex items-center justify-between rounded-lg border bg-card p-6 transition hover:border-primary/40"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <ScrollText className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">操作日志</p>
+                <p className="text-xs text-muted-foreground">登录（含 IP）、Agent 运行、AI 调用（含 token 用量）</p>
+              </div>
+            </div>
+            <span className="text-sm text-muted-foreground">→</span>
+          </a>
           <CfAccessStatus />
         </div>
       </div>

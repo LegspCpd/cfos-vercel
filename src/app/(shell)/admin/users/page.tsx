@@ -33,6 +33,7 @@ const ALL_PERM_LABELS: { code: string; label: string }[] = [
   { code: 'connections.manage', label: '外部连接' },
   { code: 'admin.access', label: '管理后台访问' },
   { code: 'admin.users', label: '用户管理' },
+  { code: 'tickets.manage', label: '工单管理' },
 ];
 
 export default function AdminUsersPage() {

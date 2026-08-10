@@ -63,19 +63,19 @@ export default function AdminPage() {
       <StatsCards />
       <SignupToggle />
 
-      {/* Row 1: site settings (left) + user management & audit log (right) */}
+      {/* Row 1: site settings (left) + user management, audit log & CF Access (right column) */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <SiteSettingsPanel />
         <div className="space-y-6">
           <UserManagement />
           <AuditLogView />
+          {/* Cloudflare Access sits directly below the audit log, on the right column —
+              NOT under the human-verification section in site settings. */}
+          <CfAccessStatus />
         </div>
       </div>
 
-      {/* Row 2: Cloudflare Access — right below the audit log */}
-      <CfAccessStatus />
-
-      {/* Row 3: AI providers — full-width at the very bottom */}
+      {/* Row 2: AI providers — full-width at the very bottom */}
       <ProvidersManager />
     </div>
   );

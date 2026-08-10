@@ -140,6 +140,12 @@ export const api = {
         footerText: string;
         defaultModel: string;
         agentInstructions: string;
+        siteFavicon: string;
+        siteLogo: string;
+        turnstileSiteKey: string;
+        turnstileSecretKey: string;
+        recaptchaSiteKey: string;
+        recaptchaSecretKey: string;
       };
     }>('/api/admin/settings'),
   updateSiteSettings: (data: Record<string, unknown>) =>
@@ -164,6 +170,12 @@ export const api = {
       bannerEnabled: boolean;
       bannerColor: string;
       footerText: string;
+      siteFavicon: string;
+      siteLogo: string;
+      turnstileEnabled: boolean;
+      turnstileSiteKey: string;
+      recaptchaEnabled: boolean;
+      recaptchaSiteKey: string;
     }>('/api/site'),
   updateContext: (id: string, data: { title?: string; content?: string; tags?: string }) =>
     request<{ doc: { id: string; title: string; content: string; tags: string } }>(`/api/context/${id}`, {
@@ -182,10 +194,28 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
-  signup: (username: string, displayName: string, password: string) =>
+  signup: (data: {
+    username?: string;
+    displayName?: string;
+    password: string;
+    email?: string;
+    verificationCode?: string;
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
     request<{ token: string; user: AuthUser }>('/api/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ username, displayName, password }),
+      body: JSON.stringify(data),
+    }),
+  sendVerificationCode: (email: string) =>
+    request<{ ok: boolean }>('/api/auth/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  confirmVerificationCode: (email: string, code: string) =>
+    request<{ valid: boolean }>('/api/auth/verify-code/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
     }),
   listWorkspaces: () =>
     request<{ workspaces: WorkspaceSummary[] }>('/api/workspaces'),

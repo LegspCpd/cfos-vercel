@@ -62,6 +62,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [siteName, setSiteName] = useState('');
   const [banner, setBanner] = useState<{ text: string; color: string } | null>(null);
   const [footerText, setFooterText] = useState('');
+  const [siteLogo, setSiteLogo] = useState('');
 
   useEffect(() => {
     if (!getToken()) {
@@ -79,6 +80,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .getPublicSite()
       .then((site) => {
         setSiteName(site.siteName);
+        setSiteLogo(site.siteLogo || '');
         setFooterText(site.footerText || '');
         if (site.bannerEnabled && site.bannerText) {
           setBanner({ text: site.bannerText, color: site.bannerColor });
@@ -123,7 +125,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
+          <img src={siteLogo || LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
           <span className="text-base font-semibold">{siteName || t('app.name')}</span>
         </Link>
 
@@ -248,7 +250,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             <Link href="/" className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
+              <img src={siteLogo || LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
               <span className="text-sm font-semibold">{siteName || t('app.name')}</span>
             </Link>
           </div>
@@ -284,7 +286,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
+                <img src={siteLogo || LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
                 <span className="font-semibold">{siteName || t('app.name')}</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="rounded p-1 hover:bg-secondary" aria-label="Close menu">

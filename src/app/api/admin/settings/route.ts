@@ -29,6 +29,14 @@ const patchSchema = z.object({
   footerText: z.string().max(500).optional(),
   defaultModel: z.string().max(200).optional(),
   agentInstructions: z.string().max(5000).optional(),
+  // Branding
+  siteFavicon: z.string().max(500).optional(),
+  siteLogo: z.string().max(500).optional(),
+  // Human verification (CAPTCHA)
+  turnstileSiteKey: z.string().max(500).optional(),
+  turnstileSecretKey: z.string().max(500).optional(),
+  recaptchaSiteKey: z.string().max(500).optional(),
+  recaptchaSecretKey: z.string().max(500).optional(),
 });
 
 export async function POST(req: Request) {

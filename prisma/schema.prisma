@@ -18,6 +18,8 @@ model User {
   passwordHash String // argon2id hash, computed server-side
   // Google OAuth subject id (if the account was created / linked via Google login).
   googleId     String?  @unique
+  // Verified email (used for email-code signup). Optional.
+  email        String?  @unique
   isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
@@ -27,6 +29,22 @@ model User {
   githubConnection GitHubConnection?
   contextDocs ContextDoc[]
   favorites  Favorite[]
+  emailVerifications EmailVerification[]
+}
+
+// An email verification code issued during email-based signup (or email change).
+// One row per pending email; codes expire after a short window.
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  code      String // 6-8 digit code (stored hashed for safety)
+  expiresAt DateTime // e.g. now + 10 minutes
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [email], references: [email], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([email])
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches

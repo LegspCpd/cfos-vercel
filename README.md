@@ -5,7 +5,7 @@
 **注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留并尽量还原了原版功能：
 
 **核心能力：**
-- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth）
+- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth + 邮箱验证码注册）
 - **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
 - **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
 - **命令面板 ⌘K**：搜索/跳转 workspace、新建文档
@@ -19,7 +19,10 @@
 - **Explore**：发现 + 尝试构建的想法
 - **收藏工作区**：星标收藏 + 按收藏筛选
 - **Profile 设置**：改显示名、改密码
-- **管理后台 /admin**：注册开关、用户列表、AI Providers 管理、审计日志
+- **邮箱验证码注册**：注册时填邮箱 + 收验证码（Resend 发信），可选用户名
+- **人机验证**：Cloudflare Turnstile + Google reCAPTCHA，管理后台开关，默认关；新用户注册强制通过
+- **自定义品牌**：管理后台可配置 favicon / logo
+- **管理后台 /admin**：注册开关、用户列表、AI Providers 管理、审计日志、人机验证管理、品牌图标
 - Postgres 持久化（替代原版的 DO SQLite）
 
 **已砍掉**（因不使用 Cloudflare 运行时/免费层限制，或原版本为占位）：
@@ -84,6 +87,8 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App 的 Client Secret | 用 GitHub 登录则必填 |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 用 Google 登录则必填 |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | 用 Google 登录则必填 |
+| `RESEND_API_KEY` | 邮箱验证码发信（Resend） | 启用邮箱注册验证则必填 |
+| `RESEND_FROM_EMAIL` | 发件人邮箱，默认 `no-reply@legspcpd.top` | 可选 |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM（也可部署后在管理后台配多个 provider） | 推荐 |
 
 ### 4. Build Command
@@ -152,6 +157,46 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 **Redeploy** 后，登录页会出现"使用 Google 登录"按钮。
 
 > Google 登录用邮箱前缀作为用户名；若该用户名已存在（比如之前用密码/GitHub注册过），会自动关联到现有账号，不会重复创建。
+
+## 邮箱验证码注册（可选）
+
+注册时用户可以填邮箱并获取验证码。用 **Resend** 发信。
+
+1. 去 [Resend](https://resend.com) 注册并创建一个 API Key
+2. 在 Resend 验证你的发件域名（`legspcpd.top`），或用默认的 `onboarding@resend.dev` 测试
+3. 在 Vercel 环境变量填：
+
+```
+RESEND_API_KEY=re_xxxxxx
+RESEND_FROM_EMAIL=no-reply@legspcpd.top   # 可选，需在 Resend 已验证该域名
+```
+
+Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、10 分钟有效，存为哈希。
+
+> 若未配置 `RESEND_API_KEY`，邮箱验证功能会提示"邮件服务未配置"，不强制使用。
+
+## 人机验证（Cloudflare Turnstile + Google reCAPTCHA，可选）
+
+**默认关闭。** 新用户注册时必须通过人机验证（防机器人灌注册）。
+
+- 在管理后台 `/admin` → 站点设置 → **人机验证** 区块填写密钥
+- **Cloudflare Turnstile**：填 Site Key + Secret Key
+- **Google reCAPTCHA**：填 Site Key + Secret Key
+- 填了哪个就启用哪个；**两个都填则随机加载其中一个**
+- 密钥存在数据库（AppSetting），不在代码库或环境变量里，管理后台可随时开关
+
+获取密钥：
+- Turnstile：https://dash.cloudflare.com → Turnstile → Add site
+- reCAPTCHA：https://www.google.com/recaptcha/admin → 创建 v2 复选框
+
+## 自定义品牌图标（可选）
+
+管理后台 `/admin` → 站点设置 → **品牌与图标**：
+
+- **Favicon URL**：浏览器标签页图标（可填 .ico / .svg / .png）
+- **Logo URL**：登录/注册页和侧边栏的 Logo
+
+填了即生效（Redeploy 后 favicon 在标签页生效，Logo 实时生效）。
 
 ## Cloudflare Access（完整版 SSO 门禁）
 

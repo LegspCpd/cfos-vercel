@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useI18n } from '@/lib/client/i18n';
 
 interface CaptchaConfig {
   turnstileEnabled: boolean;
@@ -46,6 +47,7 @@ function pickProvider(config: CaptchaConfig): 'turnstile' | 'recaptcha' | null {
 }
 
 export default function CaptchaWidget({ config, onVerify }: CaptchaWidgetProps) {
+  const { t } = useI18n();
   const [provider, setProvider] = useState<'turnstile' | 'recaptcha' | null>(null);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +133,7 @@ export default function CaptchaWidget({ config, onVerify }: CaptchaWidgetProps) 
       <div ref={containerRef} className="min-h-[60px] min-w-[240px]" />
       {loading && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> 加载人机验证...
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('captcha.loading')}
         </div>
       )}
     </div>

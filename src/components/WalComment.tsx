@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { useI18n } from '@/lib/client/i18n';
 
 // Floating "chat" (public comments) widget in the bottom-right corner.
 // Backed by Waline (https://waline.js.org) pointed at the deployment's comment server.
@@ -78,6 +79,7 @@ function loadWalineInit() {
 }
 
 export default function WalComment() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -116,7 +118,7 @@ export default function WalComment() {
       dark: 'auto',
       login: 'enable',
       requiredMeta: ['nick'],
-      placeholder: '欢迎在公开聊天区发言…',
+      placeholder: t('comments.placeholder'),
       reaction: true,
     });
     return () => {
@@ -149,7 +151,7 @@ export default function WalComment() {
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold">
-              <MessagesSquareIcon /> 公开聊天
+              <MessagesSquareIcon /> {t('comments.title')}
             </span>
             <button onClick={() => setOpen(false)} className="rounded p-1 hover:bg-secondary" aria-label="Close">
               <X className="h-4 w-4" />
@@ -157,7 +159,7 @@ export default function WalComment() {
           </div>
           {/* Waline body */}
           <div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-            {!loaded && <p className="py-6 text-center text-sm text-muted-foreground">加载评论区…</p>}
+            {!loaded && <p className="py-6 text-center text-sm text-muted-foreground">{t('comments.loading')}</p>}
           </div>
         </div>
       )}

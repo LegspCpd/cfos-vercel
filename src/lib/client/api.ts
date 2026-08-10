@@ -165,6 +165,11 @@ export const api = {
       bannerColor: string;
       footerText: string;
     }>('/api/site'),
+  updateContext: (id: string, data: { title?: string; content?: string; tags?: string }) =>
+    request<{ doc: { id: string; title: string; content: string; tags: string } }>(`/api/context/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
   adminSetUserRole: (id: string, isAdmin: boolean) =>
     request<{ ok: boolean }>(`/api/admin/users/${id}`, {
       method: 'PATCH',
@@ -208,6 +213,61 @@ export const api = {
       `/api/workspaces/${id}/agent`,
       { method: 'POST', body: JSON.stringify({ prompt }) },
     ),
+  listChats: (id: string) =>
+    request<{
+      chats: {
+        id: string;
+        title: string;
+        createdAt: string;
+        updatedAt: string;
+        messages: { id: string; role: 'user' | 'assistant' | 'tool'; content: string }[];
+      }[];
+    }>(`/api/workspaces/${id}/chat`),
+  createChat: (id: string) =>
+    request<{ chat: { id: string } }>(`/api/workspaces/${id}/chat`, { method: 'POST' }),
+  appendChatMessage: (
+    id: string,
+    chatId: string,
+    role: 'user' | 'assistant' | 'tool',
+    content: string,
+  ) =>
+    request<{ message: { id: string } }>(`/api/workspaces/${id}/chat/${chatId}`, {
+      method: 'POST',
+      body: JSON.stringify({ role, content }),
+    }),
+  listFavorites: () =>
+    request<{ favorites: { workspaceId: string; createdAt: string }[] }>('/api/favorites'),
+  setFavorite: (workspaceId: string, favorite: boolean) =>
+    request<{ ok: boolean }>('/api/favorites', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId, favorite }),
+    }),
+  listFileVersions: (id: string, path: string) =>
+    request<{ versions: { id: string; content: string; createdAt: string }[] }>(
+      `/api/workspaces/${id}/versions?path=${encodeURIComponent(path)}`,
+    ),
+  restoreFileVersion: (id: string, path: string, versionId: string) =>
+    request<{ ok: boolean }>(`/api/workspaces/${id}/versions`, {
+      method: 'POST',
+      body: JSON.stringify({ path, versionId }),
+    }),
+  importWorkspace: (title: string, files: { path: string; content: string; isEntry: boolean }[]) =>
+    request<{ workspace: WorkspaceDetail }>('/api/workspaces/import', {
+      method: 'POST',
+      body: JSON.stringify({ title, files }),
+    }),
+  createShareToken: (id: string) =>
+    request<{ token: string; url: string }>(`/api/workspaces/${id}/share`, { method: 'POST' }),
+  getPublicBlueprint: (token: string) =>
+    request<{
+      workspace: {
+        id: string;
+        title: string;
+        updatedAt: string;
+        owner: { displayName: string; username: string };
+        files: { path: string; content: string; isEntry: boolean }[];
+      };
+    }>(`/api/blueprint/${token}`),
 };
 
 export interface AuthUser {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Play, Columns2, FileCode2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Play, Columns2, FileCode2, Loader2, History, X } from 'lucide-react';
 import { api, type WorkspaceDetail } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import FileTree from '@/components/FileTree';
@@ -24,9 +24,14 @@ export default function WorkspacePage() {
   const [saved, setSaved] = useState(true);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [view, setView] = useState<'split' | 'editor' | 'preview'>('split');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<{ id: string; content: string; createdAt: string }[]>([]);
   const [autoPrompt, setAutoPrompt] = useState<string | undefined>(undefined);
   const [autoPromptNonce, setAutoPromptNonce] = useState(0);
+  const [agentEdited, setAgentEdited] = useState<string[]>([]);
   const filesRef = useRef<WorkspaceDetail['files']>([]);
+  const dirtyRef = useRef<Set<string>>(new Set());
+  const [, forceDirty] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -66,6 +71,8 @@ export default function WorkspacePage() {
         setSaving(true);
         await api.saveFiles(id, filesRef.current.map((f) => ({ path: f.path, content: f.content })));
         setSaved(true);
+        dirtyRef.current.clear();
+        forceDirty((n) => n + 1);
       } finally {
         setSaving(false);
       }
@@ -80,7 +87,12 @@ export default function WorkspacePage() {
   }, []);
 
   function updateFileContent(path: string, content: string) {
+    const prev = filesRef.current.find((f) => f.path === path)?.content;
     filesRef.current = filesRef.current.map((f) => (f.path === path ? { ...f, content } : f));
+    if (prev !== content) {
+      dirtyRef.current.add(path);
+      forceDirty((n) => n + 1);
+    }
     if (workspace) setWorkspace({ ...workspace, files: filesRef.current });
     scheduleSave();
   }
@@ -116,11 +128,45 @@ export default function WorkspacePage() {
     setPreviewNonce((n) => n + 1);
   }
 
+  async function openHistory(path: string) {
+    setHistoryOpen(true);
+    try {
+      const res = await api.listFileVersions(id, path);
+      setVersions(res.versions);
+    } catch {
+      setVersions([]);
+    }
+  }
+
+  async function restoreVersion(path: string, versionId: string) {
+    try {
+      await api.restoreFileVersion(id, path, versionId);
+      const res = await api.getWorkspace(id);
+      filesRef.current = res.workspace.files;
+      if (workspace) setWorkspace({ ...workspace, files: res.workspace.files });
+      setPreviewNonce((n) => n + 1);
+      setSaved(true);
+      dirtyRef.current.clear();
+      forceDirty((n) => n + 1);
+      setHistoryOpen(false);
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function runAgent(prompt: string) {
     setAgentBusy(true);
     try {
       const res = await api.runAgent(id, prompt);
       filesRef.current = res.files.map((f) => ({ id: crypto.randomUUID(), ...f }));
+      if (res.files.length > 0) {
+        const added = res.files.map((f) => f.path);
+        setAgentEdited((prev) => {
+          const seen = new Set(prev);
+          added.forEach((p) => seen.add(p));
+          return Array.from(seen);
+        });
+      }
       if (workspace) setWorkspace({ ...workspace, files: filesRef.current });
       setPreviewNonce((n) => n + 1);
       setSaved(true);
@@ -174,21 +220,84 @@ export default function WorkspacePage() {
             ))}
           </div>
           <button
+            onClick={() => activePath && openHistory(activePath)}
+            disabled={!activePath}
+            className="press flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+            title={t('ws.history')}
+          >
+            <History className="h-4 w-4" /> {t('ws.history')}
+          </button>
+          <button
             onClick={() => setPreviewNonce((n) => n + 1)}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            className="press flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
             <Play className="h-4 w-4" /> {t('ws.run')}
           </button>
         </div>
       </header>
 
+      {/* Version history overlay */}
+      {historyOpen && (
+        <div
+          className="animate-backdrop-in fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[12vh]"
+          onClick={() => setHistoryOpen(false)}
+        >
+          <div
+            className="animate-sheet-in flex max-h-[70vh] w-full max-w-md flex-col rounded-xl border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <span className="text-sm font-semibold">
+                {t('ws.historyFor')} <span className="text-primary">{activePath}</span>
+              </span>
+              <button
+                onClick={() => setHistoryOpen(false)}
+                className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {versions.length === 0 ? (
+                <p className="p-4 text-center text-sm text-muted-foreground">{t('ws.noHistory')}</p>
+              ) : (
+                versions.map((v, i) => (
+                  <div
+                    key={v.id}
+                    className="reveal-row flex items-center justify-between rounded-md px-3 py-2 hover:bg-secondary"
+                  >
+                    <div>
+                      <p className="text-xs font-medium">
+                        {t('ws.version')} #{versions.length - i}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {new Date(v.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => activePath && restoreVersion(activePath, v.id)}
+                      className="press rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
+                    >
+                      {t('ws.restore')}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       <div className="flex min-h-0 flex-1">
         {/* File tree */}
-        <div className="w-56 shrink-0 border-r bg-card">
+        <div className="w-56 shrink-0 border-r bg-card transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]">
           <FileTree
             files={filesRef.current}
             activePath={activePath}
+            agentEdited={agentEdited}
+            dirtyPaths={Array.from(dirtyRef.current)}
             onSelect={setActivePath}
             onAddFile={addFile}
             onDeleteFile={deleteFile}
@@ -223,6 +332,7 @@ export default function WorkspacePage() {
         {/* Chat panel */}
         <div className="w-80 shrink-0 border-l bg-card">
           <ChatPanel
+            workspaceId={id}
             onRunAgent={runAgent}
             busy={agentBusy}
             autoPrompt={autoPrompt}

@@ -28,6 +28,29 @@ export async function PUT(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'files must be an array' }, { status: 400 });
   }
 
+  // Snapshot the previous content of any file that is being changed, so it can be
+  // restored later (per-file history / undo).
+  const existing = await prisma.workspaceFile.findMany({
+    where: { workspaceId: params.id },
+    select: { id: true, path: true, content: true },
+  });
+  const existingByPath = new Map(existing.map((f) => [f.path, f]));
+  const snapshotOps = files
+    .map((f: { path?: string; content?: string }) => {
+      const path = String(f.path ?? '').trim();
+      if (!path) return null;
+      const prior = existingByPath.get(path);
+      const newContent = String(f.content ?? '');
+      if (prior && prior.content !== newContent) {
+        return prisma.workspaceFileVersion.create({
+          data: { fileId: prior.id, content: prior.content },
+        });
+      }
+      return null;
+    })
+    .filter(Boolean);
+  await Promise.all(snapshotOps);
+
   const upserts = files.map((f: { path?: string; content?: string; isEntry?: boolean }) => {
     const path = String(f.path ?? '').trim();
     if (!path) return null;

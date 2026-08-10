@@ -27,7 +27,7 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 3. **Proxy status** 必须是 **Proxied（橙云）**
 4. 如果不是，点击切换为 Proxied，等 1-2 分钟生效
 
-> ⚠️ 最重要的一步。灰云则 CF 不注入 JWT。同时先确保 Vercel 部署成功，否则橙云下会 502。
+> **重要**：这是最重要的一步。灰云则 CF 不注入 JWT。同时先确保 Vercel 部署成功，否则橙云下会 502。
 
 ## 第二步：进入 Zero Trust 并创建 Access 应用
 
@@ -39,7 +39,7 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 3. 点 **Add an application** → 选择 **Self-hosted** → 点 **Next** / **Continue**
 4. 填写应用配置：
    - **Application name**：`Cloudflare OS`（如 `os`）
-   - **Application domain**：`os.legspcpd.top`（⚠️ 必须填你**自定义**的域名，`xxx.pages.dev` / `xxx.vercel.app` 这类默认域名**无法**用 Access）
+   - **Application domain**：`os.legspcpd.top`（**注意**：必须填你**自定义**的域名，`xxx.pages.dev` / `xxx.vercel.app` 这类默认域名**无法**用 Access）
    - **Session duration**：登录有效期，如 `24 hours`
    - 其余保持默认 → **Next**
 

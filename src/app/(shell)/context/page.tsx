@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, FileText, Loader2, BookOpen, X } from 'lucide-react';
+import { Plus, Trash2, FileText, Loader2, BookOpen, X, Pencil, Save } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 
@@ -26,6 +26,10 @@ export default function ContextPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [viewing, setViewing] = useState<ContextDoc | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editTags, setEditTags] = useState('');
 
   async function load() {
     try {
@@ -72,8 +76,40 @@ export default function ContextPage() {
     try {
       const res = await api.getContext(id);
       setViewing(res.doc);
+      setEditing(false);
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  function startEditing() {
+    if (!viewing) return;
+    setEditTitle(viewing.title);
+    setEditContent(viewing.content ?? '');
+    setEditTags(viewing.tags || '');
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!viewing || !editTitle.trim() || !editContent.trim()) {
+      setError('标题和内容都是必填的');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const res = await api.updateContext(viewing.id, {
+        title: editTitle,
+        content: editContent,
+        tags: editTags,
+      });
+      setViewing(res.doc);
+      setEditing(false);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -180,14 +216,64 @@ export default function ContextPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="font-semibold">{viewing.title}</h3>
-              <button onClick={() => setViewing(null)} className="rounded p-1 hover:bg-secondary">
-                <X className="h-4 w-4" />
-              </button>
+              <h3 className="truncate font-semibold">{viewing.title}</h3>
+              <div className="flex items-center gap-1">
+                {!editing ? (
+                  <button
+                    onClick={startEditing}
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> 编辑
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={saveEdit}
+                      disabled={saving}
+                      className="press flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                    >
+                      <Save className="h-3.5 w-3.5" /> {saving ? '保存中...' : '保存'}
+                    </button>
+                    <button
+                      onClick={() => setEditing(false)}
+                      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
+                    >
+                      取消
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setViewing(null)} className="rounded p-1 hover:bg-secondary">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-4 py-3 text-sm">
-              {viewing.content}
-            </div>
+            {editing ? (
+              <div className="max-h-[60vh] space-y-3 overflow-y-auto px-4 py-3">
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="文档标题"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <input
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="标签（逗号分隔，可选）"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="文档内容 / 参考资料..."
+                  rows={10}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-4 py-3 text-sm">
+                {viewing.content}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -6,11 +6,11 @@
 
 | 需要 | 说明 | 是否免费 |
 |---|---|---|
-| GitHub 账号 | 托管代码、Vercel 授权 | ✅ |
-| Neon 账号 | 免费 Postgres | ✅ |
-| Vercel 账号 | 部署平台 | ✅ |
-| Cloudflare 账号（可选） | R2、CF Access | ✅ |
-| AI 的 API Key（可选） | DeepSeek / OpenAI | 💰 |
+| GitHub 账号 | 托管代码、Vercel 授权 | 免费 |
+| Neon 账号 | 免费 Postgres | 免费 |
+| Vercel 账号 | 部署平台 | 免费 |
+| Cloudflare 账号（可选） | R2、CF Access | 免费 |
+| AI 的 API Key（可选） | DeepSeek / OpenAI | 付费 |
 
 ## 第一步：创建数据库（Neon）
 
@@ -23,7 +23,7 @@
 postgresql://neondb_owner:密码@ep-xxxx.region.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
 
-> 🔑 连接串含密码，**不要泄露**。泄露了可在 Neon 控制台重置。
+> **注意**：连接串含密码，**不要泄露**。泄露了可在 Neon 控制台重置。
 
 ## 第二步：部署到 Vercel
 
@@ -37,7 +37,7 @@ postgresql://neondb_owner:密码@ep-xxxx.region.aws.neon.tech/neondb?sslmode=req
 2. **Add New → Project** → 选你的仓库 → **Import**
 3. Vercel 自动识别为 **Next.js**
 
-### ⚠️ 关键配置
+### 重要配置
 
 | 配置项 | 填什么 |
 |---|---|
@@ -90,4 +90,4 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 **方式 B（后台）**：管理员登录 → `/admin` → AI Providers → 添加。
 
-> ⚠️ `OPENAI_BASE_URL` 必须配，否则默认连 OpenAI，你的 `sk-` key 会 401。
+> **注意**：`OPENAI_BASE_URL` 必须配，否则默认连 OpenAI，你的 `sk-` key 会 401。

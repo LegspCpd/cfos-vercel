@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Github } from 'lucide-react';
+import { Github, Chrome, BookOpen } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { setToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -55,6 +55,10 @@ export default function LoginPage() {
     window.location.href = '/api/auth/github';
   }
 
+  function googleLogin() {
+    window.location.href = '/api/auth/google';
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -65,13 +69,20 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.signinTitle')}</p>
         </div>
 
-        {/* GitHub login */}
+        {/* OAuth login */}
         <button
           onClick={githubLogin}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
         >
           <Github className="h-4 w-4" />
           {t('auth.github')}
+        </button>
+        <button
+          onClick={googleLogin}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+        >
+          <Chrome className="h-4 w-4" />
+          {t('auth.google')}
         </button>
 
         <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
@@ -117,9 +128,10 @@ export default function LoginPage() {
             {t('auth.createOne')}
           </Link>
         </p>
-        <p className="mt-2 text-center text-sm">
+        <p className="mt-2 flex items-center justify-center gap-1 text-center text-sm">
+          <BookOpen className="h-3.5 w-3.5 text-primary/70" />
           <Link href="/docs" className="text-primary/70 hover:underline">
-            📖 查看部署文档
+            查看部署文档
           </Link>
         </p>
       </div>

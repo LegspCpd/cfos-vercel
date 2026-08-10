@@ -31,7 +31,7 @@ export default function DocLayout({ children }: { children: React.ReactNode }) {
               : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
           }`}
         >
-          <span className="text-base">{item.icon}</span>
+          <item.icon className="h-4 w-4 shrink-0" />
           {item.title}
         </Link>
       ))}

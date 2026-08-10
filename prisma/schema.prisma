@@ -16,6 +16,8 @@ model User {
   username     String   @unique
   displayName  String
   passwordHash String // argon2id hash, computed server-side
+  // Google OAuth subject id (if the account was created / linked via Google login).
+  googleId     String?  @unique
   isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
@@ -24,6 +26,7 @@ model User {
   sharedFiles SharedFile[]
   githubConnection GitHubConnection?
   contextDocs ContextDoc[]
+  favorites  Favorite[]
 }
 
 // A single-row settings table (key = "singleton"). Holds deployment-level switches
@@ -50,15 +53,32 @@ model AiProvider {
 // A workspace ("gadget" in Cloudflare OS terms) owned by a user.
 // Holds a collection of files (the app's source code).
 model Workspace {
-  id        String   @id @default(cuid())
-  ownerId   String
-  title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  ownerId     String
+  title       String
+  // Public share token (uuid). When set, the workspace is viewable read-only by anyone
+  // at /blueprint/[shareToken] without logging in (mirrors the original OS's public blueprints).
+  shareToken  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   owner User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   files WorkspaceFile[]
   chats Chat[]
+  favorites Favorite[]
+}
+
+// A user's favorite (starred) workspace, mirroring the original OS's "favorites" rail.
+model Favorite {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
 }
 
 // One file inside a workspace.
@@ -70,8 +90,22 @@ model WorkspaceFile {
   isEntry     Boolean @default(false) // the file previewed / run first
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions WorkspaceFileVersion[]
 
   @@unique([workspaceId, path])
+}
+
+// A historical snapshot of a workspace file, captured whenever its content changes.
+// Enables "undo / restore earlier version" like the original OS's per-file history.
+model WorkspaceFileVersion {
+  id        String   @id @default(cuid())
+  fileId    String
+  content   String   @default("")
+  createdAt DateTime @default(now())
+
+  file WorkspaceFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
 }
 
 // A chat conversation attached to a workspace (or standalone).

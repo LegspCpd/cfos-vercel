@@ -72,11 +72,11 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[15vh]"
+      className="animate-backdrop-in fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[15vh]"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-xl border bg-card shadow-2xl"
+        className="animate-sheet-in w-full max-w-xl overflow-hidden rounded-xl border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b px-3">

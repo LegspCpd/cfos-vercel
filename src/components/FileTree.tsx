@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, FileCode2, Trash2, Star } from 'lucide-react';
+import { Plus, FileCode2, Trash2, Star, Bot, Folder } from 'lucide-react';
 import { useMemo } from 'react';
 import { useI18n } from '@/lib/client/i18n';
 
@@ -13,6 +13,10 @@ interface FileNode {
 interface FileTreeProps {
   files: { path: string; content: string; isEntry: boolean }[];
   activePath: string | null;
+  /** Paths the agent has modified in this session — shown with an "AI" badge. */
+  agentEdited?: string[];
+  /** Paths with unsaved local edits — shown with a dirty dot. */
+  dirtyPaths?: string[];
   onSelect: (path: string) => void;
   onAddFile: () => void;
   onDeleteFile: (path: string) => void;
@@ -40,6 +44,8 @@ function buildTree(files: { path: string }[]): FileNode {
 export default function FileTree({
   files,
   activePath,
+  agentEdited = [],
+  dirtyPaths = [],
   onSelect,
   onAddFile,
   onDeleteFile,
@@ -57,10 +63,11 @@ export default function FileTree({
         <div key={node.path || 'root'}>
           {node.path && (
             <div
-              className="cursor-pointer truncate px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
+              className="flex cursor-pointer items-center gap-1.5 truncate px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
               style={{ paddingLeft: `${depth * 12 + 8}px` }}
             >
-              📁 {node.name}
+              <Folder className="h-3.5 w-3.5 shrink-0" />
+              {node.name}
             </div>
           )}
           {Array.from(node.children.values()).map((child) => renderNode(child, depth + (node.path ? 1 : 0)))}
@@ -69,18 +76,26 @@ export default function FileTree({
     }
 
     const isActive = node.path === activePath;
+    const isAgentEdited = agentEdited.includes(node.path);
+    const isDirty = dirtyPaths.includes(node.path);
     return (
       <div
         key={node.path}
         onClick={() => onSelect(node.path)}
-        className={`group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-sm hover:bg-secondary ${
+        className={`group flex cursor-pointer items-center gap-1.5 px-2 py-1 text-sm transition-colors duration-150 hover:bg-secondary ${
           isActive ? 'bg-secondary text-foreground' : 'text-foreground/80'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
         <FileCode2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate">{node.name}</span>
+        {isAgentEdited && (
+          <span className="flex shrink-0 items-center gap-0.5 rounded bg-primary/10 px-1 py-px text-[10px] font-medium text-primary" title="Modified by AI">
+            <Bot className="h-2.5 w-2.5" /> AI
+          </span>
+        )}
         {file?.isEntry && <Star className="h-3 w-3 shrink-0 text-amber-400" />}
+        {isDirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" title="Unsaved changes" />}
         {isActive && (
           <span className="hidden shrink-0 gap-0.5 group-hover:flex">
             <button

@@ -33,8 +33,8 @@ export default function ConnectionsPage() {
     }
     // Handle OAuth callback ?connected=1 or ?error=
     const params = new URL(window.location.href).searchParams;
-    if (params.get('connected')) setMessage('✅ GitHub 连接成功！agent 现在可以访问你的 GitHub 了。');
-    if (params.get('error')) setMessage(`⚠️ 连接失败：${params.get('error')}`);
+    if (params.get('connected')) setMessage('GitHub 连接成功！agent 现在可以访问你的 GitHub 了。');
+    if (params.get('error')) setMessage(`连接失败：${params.get('error')}`);
     if (params.get('connected') || params.get('error')) {
       window.history.replaceState({}, '', '/connections');
     }

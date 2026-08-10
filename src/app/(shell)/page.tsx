@@ -49,7 +49,7 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-16">
-      <div className="mb-2 text-center">
+      <div className="reveal-row mb-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           {t('home.title')}
         </h1>
@@ -64,25 +64,29 @@ export default function HomePage() {
           e.preventDefault();
           startWorkspace(prompt);
         }}
-        className="mt-6 flex w-full max-w-xl items-end gap-2"
+        className="reveal-row mt-6 flex w-full max-w-xl items-end gap-2"
+        style={{ animationDelay: '60ms' }}
       >
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              startWorkspace(prompt);
-            }
-          }}
-          placeholder={t('home.placeholder')}
-          rows={1}
-          className="max-h-40 min-h-[44px] flex-1 resize-y rounded-lg border bg-card px-4 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-        />
+        <div className="relative flex-1">
+          <div className="prompt-glow" aria-hidden="true" />
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                startWorkspace(prompt);
+              }
+            }}
+            placeholder={t('home.placeholder')}
+            rows={1}
+            className="max-h-40 min-h-[44px] w-full resize-y rounded-lg border bg-card px-4 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
         <button
           type="submit"
           disabled={creating || !prompt.trim()}
-          className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          className="press flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           aria-label={t('ws.new')}
         >
           <Send className="h-4 w-4" />
@@ -91,12 +95,13 @@ export default function HomePage() {
 
       {/* Task suggestions */}
       <div className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-        {TASKS.map((task) => (
+        {TASKS.map((task, i) => (
           <button
             key={task.title}
             onClick={() => startWorkspace(task.prompt)}
             disabled={creating}
-            className="flex items-start gap-3 rounded-lg border bg-card p-4 text-left hover:border-primary/50 disabled:opacity-50"
+            style={{ animationDelay: `${120 + i * 40}ms` }}
+            className="reveal-row press flex items-start gap-3 rounded-lg border bg-card p-4 text-left transition-colors duration-200 hover:border-primary/50 hover:shadow-md disabled:opacity-50"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <task.icon className="h-5 w-5" />

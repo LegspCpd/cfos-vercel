@@ -71,18 +71,29 @@ export default function OutputsPage() {
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground">{t('loading')}</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-lg border bg-card">
+              <div className="skeleton h-32 rounded-none" />
+              <div className="p-4">
+                <div className="skeleton h-4 w-3/4" />
+                <div className="skeleton mt-2 h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+        <div className="animate-fade-in rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           {search ? t('out.noMatch') : t('out.empty')}
         </div>
       ) : view === 'grid' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((w) => (
+          {filtered.map((w, i) => (
             <Link
               key={w.id}
               href={`/workspace/${w.id}`}
-              className="group overflow-hidden rounded-lg border bg-card transition hover:border-primary/50"
+              style={{ animationDelay: `${i * 40}ms` }}
+              className="reveal-row press group overflow-hidden rounded-lg border bg-card transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
             >
               <div className="flex h-32 items-center justify-center bg-gradient-to-br from-primary/10 to-secondary">
                 <FileCode2 className="h-8 w-8 text-primary/50" />
@@ -98,11 +109,12 @@ export default function OutputsPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border bg-card">
-          {filtered.map((w) => (
+          {filtered.map((w, i) => (
             <Link
               key={w.id}
               href={`/workspace/${w.id}`}
-              className="flex items-center justify-between border-b px-4 py-3 last:border-0 hover:bg-secondary/50"
+              style={{ animationDelay: `${i * 30}ms` }}
+              className="reveal-row flex items-center justify-between border-b px-4 py-3 last:border-0 hover:bg-secondary/50"
             >
               <div className="flex items-center gap-3">
                 <FileCode2 className="h-5 w-5 text-primary" />

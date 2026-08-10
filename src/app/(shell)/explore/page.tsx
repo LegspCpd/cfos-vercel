@@ -44,11 +44,12 @@ export default function ExplorePage() {
       {/* Sample ideas */}
       <h2 className="mt-8 mb-3 text-base font-semibold">{t('ex.try')}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {SAMPLE_IDEAS.map((idea) => (
+        {SAMPLE_IDEAS.map((idea, i) => (
           <Link
             key={idea.title}
             href={`/?prompt=${encodeURIComponent(`Build ${idea.title}: ${idea.desc}`)}`}
-            className="rounded-lg border bg-card p-4 transition hover:border-primary/50"
+            style={{ animationDelay: `${i * 50}ms` }}
+            className="reveal-row press rounded-lg border bg-card p-4 transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
               <idea.icon className="h-5 w-5" />
@@ -62,19 +63,28 @@ export default function ExplorePage() {
       {/* Your creations */}
       <h2 className="mt-10 mb-3 text-base font-semibold">{t('ex.your')}</h2>
       {loading ? (
-        <p className="text-muted-foreground">{t('loading')}</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-4">
+              <div className="skeleton h-24" />
+              <div className="skeleton mt-3 h-4 w-2/3" />
+              <div className="skeleton mt-2 h-3 w-1/3" />
+            </div>
+          ))}
+        </div>
       ) : workspaces.length === 0 ? (
-        <div className="flex flex-col items-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+        <div className="animate-fade-in flex flex-col items-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <Compass className="mb-2 h-8 w-8" />
           <p>{t('ex.empty')}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {workspaces.map((w) => (
+          {workspaces.map((w, i) => (
             <Link
               key={w.id}
               href={`/workspace/${w.id}`}
-              className="rounded-lg border bg-card p-4 transition hover:border-primary/50"
+              style={{ animationDelay: `${i * 40}ms` }}
+              className="reveal-row press rounded-lg border bg-card p-4 transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
             >
               <div className="flex h-24 items-center justify-center rounded-md bg-gradient-to-br from-primary/10 to-secondary">
                 <FileCode2 className="h-7 w-7 text-primary/50" />

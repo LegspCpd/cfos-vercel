@@ -1,7 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, RefreshCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Loader2,
+  RefreshCw,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  LogIn,
+  LogOut,
+  UserPlus,
+  FolderPlus,
+  Trash2,
+  Bot,
+  AlertTriangle,
+  BrainCircuit,
+  Save,
+  FileX2,
+  Star,
+  History,
+  Share2,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react';
 import { getAuthHeaders } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
 
@@ -17,21 +38,26 @@ interface AuditLog {
 
 const PAGE_SIZE = 50;
 
-// Map action codes to friendly labels.
-function actionLabel(action: string): string {
-  const map: Record<string, string> = {
-    'auth.login': '🔐 登录',
-    'auth.login_failed': '⚠️ 登录失败',
-    'auth.signup': '✨ 注册',
-    'workspace.create': '📁 创建工作区',
-    'workspace.delete': '🗑️ 删除工作区',
-    'agent.run': '🤖 Agent 运行',
-    'agent.run_failed': '❌ Agent 失败',
-    'ai.call': '🧠 AI 调用',
-    'file.save': '💾 保存文件',
-    'file.delete': '🗑️ 删除文件',
+// Map action codes to an icon + friendly label.
+function actionMeta(action: string): { icon: LucideIcon; label: string } {
+  const map: Record<string, { icon: LucideIcon; label: string }> = {
+    'auth.login': { icon: LogIn, label: '登录' },
+    'auth.login_failed': { icon: AlertTriangle, label: '登录失败' },
+    'auth.signup': { icon: UserPlus, label: '注册' },
+    'workspace.create': { icon: FolderPlus, label: '创建工作区' },
+    'workspace.delete': { icon: Trash2, label: '删除工作区' },
+    'agent.run': { icon: Bot, label: 'Agent 运行' },
+    'agent.run_failed': { icon: AlertTriangle, label: 'Agent 失败' },
+    'ai.call': { icon: BrainCircuit, label: 'AI 调用' },
+    'file.save': { icon: Save, label: '保存文件' },
+    'file.delete': { icon: FileX2, label: '删除文件' },
+    'favorite.add': { icon: Star, label: '收藏工作区' },
+    'favorite.remove': { icon: Star, label: '取消收藏' },
+    'file.restore': { icon: History, label: '恢复文件版本' },
+    'workspace.share': { icon: Share2, label: '公开分享蓝图' },
+    'workspace.import': { icon: Upload, label: '导入蓝图' },
   };
-  return map[action] || action;
+  return map[action] || { icon: LogIn, label: action };
 }
 
 export default function AuditLogView() {
@@ -157,7 +183,20 @@ export default function AuditLogView() {
                 <tr key={log.id} className="border-b align-top last:border-0">
                   <td className="whitespace-nowrap py-2 pr-3 text-xs text-muted-foreground">{formatTime(log.createdAt)}</td>
                   <td className="whitespace-nowrap py-2 pr-3 font-mono">{log.username ?? '—'}</td>
-                  <td className="whitespace-nowrap py-2 pr-3">{actionLabel(log.action)}</td>
+                  <td className="whitespace-nowrap py-2 pr-3">
+                    <span className="flex items-center gap-1.5">
+                      {(() => {
+                        const meta = actionMeta(log.action);
+                        const Icon = meta.icon;
+                        return (
+                          <>
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                            {meta.label}
+                          </>
+                        );
+                      })()}
+                    </span>
+                  </td>
                   <td className="max-w-md break-words py-2 text-xs text-muted-foreground">{log.detail ?? ''}</td>
                 </tr>
               ))}

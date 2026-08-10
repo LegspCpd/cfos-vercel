@@ -7,12 +7,14 @@
 | `DATABASE_URL` | ✅ | Postgres 连接串（Neon） |
 | `AUTH_SECRET` | ✅ | 会话签名密钥 |
 | `ADMIN_USERNAME` | 推荐 | 管理员用户名，多个用逗号分隔 |
-| `PUBLIC_SITE_URL` | GitHub 登录时 | 你的公网地址 |
+| `PUBLIC_SITE_URL` | 登录时 | 你的公网地址 |
 | `OPENAI_API_KEY` | AI 功能 | LLM API Key |
 | `OPENAI_BASE_URL` | 非 OpenAI | LLM 端点，如 DeepSeek |
 | `DEFAULT_MODEL` | 可选 | 默认模型 |
 | `GITHUB_CLIENT_ID` | GitHub 登录 | GitHub OAuth Client ID |
 | `GITHUB_CLIENT_SECRET` | GitHub 登录 | GitHub OAuth Client Secret |
+| `GOOGLE_CLIENT_ID` | Google 登录 | Google OAuth Client ID |
+| `GOOGLE_CLIENT_SECRET` | Google 登录 | Google OAuth Client Secret |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |
@@ -37,8 +39,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ### AI
 - `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`DEFAULT_MODEL`
 
-### GitHub 登录
-- `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`PUBLIC_SITE_URL`
+### 登录（OAuth）
+- `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`PUBLIC_SITE_URL`（GitHub 登录）
+- `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`（Google 登录）
 
 ### 文件分享（R2）
 - `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`

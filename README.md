@@ -5,19 +5,21 @@
 **注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留并尽量还原了原版功能：
 
 **核心能力：**
-- 用户注册/登录（argon2id 密码哈希 + JWT 会话）
+- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth）
 - **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
 - **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
 - **命令面板 ⌘K**：搜索/跳转 workspace、新建文档
 - **主题切换**：light / dark / system 三态
-- **Workspace 编辑器**：多文件 + Monaco 代码编辑器 + 文件树 + iframe 预览 + 聊天面板
+- **Workspace 编辑器**：多文件 + Monaco 代码编辑器 + 文件树 + iframe 预览 + 聊天面板（对话自动持久化）
+- **文件历史/版本回滚**：每次修改自动记录，可一键恢复
 - **AI Agent**：自然语言构建/修改应用，agent 直接写代码文件（支持 markdown 输出、自动运行）
 - **多 AI Provider**：后台动态添加多个 LLM（DeepSeek/OpenAI/本地等）
 - **Outputs**：聚合所有 workspace 应用，网格/列表视图 + 搜索
-- **Blueprints**：你的应用列表 + 复制分享链接
+- **Blueprints**：你的应用列表 + 导出/导入 `.gadget.json` + 公开蓝图分享链接（他人免登录查看）
 - **Explore**：发现 + 尝试构建的想法
+- **收藏工作区**：星标收藏 + 按收藏筛选
 - **Profile 设置**：改显示名、改密码
-- **管理后台 /admin**：注册开关、用户列表、AI Providers 管理
+- **管理后台 /admin**：注册开关、用户列表、AI Providers 管理、审计日志
 - Postgres 持久化（替代原版的 DO SQLite）
 
 **已砍掉**（因不使用 Cloudflare 运行时/免费层限制，或原版本为占位）：
@@ -80,6 +82,8 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `ADMIN_USERNAME` | 管理员用户名，多个用逗号分隔，如 `legspcpd,admin` | 推荐 |
 | `GITHUB_CLIENT_ID` | GitHub OAuth App 的 Client ID | 用 GitHub 登录则必填 |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App 的 Client Secret | 用 GitHub 登录则必填 |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 用 Google 登录则必填 |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | 用 Google 登录则必填 |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM（也可部署后在管理后台配多个 provider） | 推荐 |
 
 ### 4. Build Command
@@ -127,6 +131,27 @@ pnpm install && pnpm db:push && pnpm build
 - 用 GitHub 登录后，系统会用你的 GitHub 用户名（小写）创建账号。
 - 第一个登录的账号自动成为管理员，或把用户名加进 `ADMIN_USERNAME`。
 - 登录后自动跳回首页。
+
+## Google 登录配置（可选）
+
+代码已内置 Google OAuth。只需在 **Google Cloud Console** 创建一个 OAuth Client，然后填两个环境变量即可：
+
+1. 打开 **https://console.cloud.google.com** → 选择或新建项目
+2. 左侧 **APIs & Services → OAuth consent screen** → 填应用名称并保存
+3. **Credentials → Create Credentials → OAuth client ID** → 类型选 **Web application**
+   - **Authorized redirect URIs**：`https://你的域名/api/auth/google/callback`
+   - （本地测试：`http://localhost:3000/api/auth/google/callback`）
+4. 复制 **Client ID** 和 **Client Secret**，填到 Vercel 环境变量：
+
+```
+GOOGLE_CLIENT_ID=你的Client ID
+GOOGLE_CLIENT_SECRET=你的Client Secret
+PUBLIC_SITE_URL=https://os.legspcpd.top
+```
+
+**Redeploy** 后，登录页会出现"使用 Google 登录"按钮。
+
+> Google 登录用邮箱前缀作为用户名；若该用户名已存在（比如之前用密码/GitHub注册过），会自动关联到现有账号，不会重复创建。
 
 ## Cloudflare Access（完整版 SSO 门禁）
 

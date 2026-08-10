@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Sparkles } from 'lucide-react';
+import { Send, Bot, Sparkles, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18n } from '@/lib/client/i18n';
+import { api } from '@/lib/client/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  id?: string;
 }
 
 interface ChatPanelProps {
+  workspaceId: string;
   onRunAgent: (prompt: string) => Promise<{ message: string; agentEdited?: boolean }>;
   busy: boolean;
   // When autoPrompt changes (and autoPromptNonce bumps), it is sent automatically.
@@ -27,7 +30,6 @@ const SUGGESTIONS = [
 ];
 
 function MessageContent({ content }: { content: string }) {
-  // Simple markdown render with code block support.
   return (
     <div className="prose prose-sm max-w-none prose-invert">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
@@ -35,13 +37,52 @@ function MessageContent({ content }: { content: string }) {
   );
 }
 
-export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonce }: ChatPanelProps) {
+export default function ChatPanel({
+  workspaceId,
+  onRunAgent,
+  busy,
+  autoPrompt,
+  autoPromptNonce,
+}: ChatPanelProps) {
   const { t } = useI18n();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
+  const [hydrated, setHydrated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatIdRef = useRef<string | null>(null);
   const sentAutoRef = useRef(false);
+
+  // Load the latest chat thread for this workspace (create one if none exists).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.listChats(workspaceId);
+        if (cancelled) return;
+        let chat = res.chats[0];
+        if (!chat) {
+          const created = await api.createChat(workspaceId);
+          chat = { id: created.chat.id, title: '', messages: [], createdAt: '', updatedAt: '' };
+        }
+        chatIdRef.current = chat.id;
+        setMessages(
+          chat.messages.map((m) => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content,
+            id: m.id,
+          })),
+        );
+      } catch {
+        /* persistence unavailable — continue in memory-only mode */
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -49,12 +90,21 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
 
   // Auto-send an externally supplied prompt (from home page / explore).
   useEffect(() => {
-    if (autoPrompt && autoPromptNonce && autoPromptNonce > 0 && !sentAutoRef.current) {
+    if (hydrated && autoPrompt && autoPromptNonce && autoPromptNonce > 0 && !sentAutoRef.current) {
       sentAutoRef.current = true;
       send(autoPrompt);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPrompt, autoPromptNonce]);
+  }, [hydrated, autoPrompt, autoPromptNonce]);
+
+  async function persistMessage(role: 'user' | 'assistant', content: string) {
+    if (!chatIdRef.current) return;
+    try {
+      await api.appendChatMessage(workspaceId, chatIdRef.current, role, content);
+    } catch {
+      /* best-effort persistence */
+    }
+  }
 
   async function send(prompt: string) {
     const trimmed = prompt.trim();
@@ -62,13 +112,18 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
     setError('');
     setInput('');
     setMessages((m) => [...m, { role: 'user', content: trimmed }]);
+    persistMessage('user', trimmed);
     try {
       const result = await onRunAgent(trimmed);
       const editedNote = result.agentEdited ? `\n\n_(${t('ws.filesUpdated')})_` : '';
-      setMessages((m) => [...m, { role: 'assistant', content: result.message + editedNote }]);
+      const reply = result.message + editedNote;
+      setMessages((m) => [...m, { role: 'assistant', content: reply }]);
+      persistMessage('assistant', reply);
     } catch (e) {
-      setError((e as Error).message);
-      setMessages((m) => [...m, { role: 'assistant', content: `⚠️ ${(e as Error).message}` }]);
+      const msg = (e as Error).message;
+      setError(msg);
+      setMessages((m) => [...m, { role: 'assistant', content: msg }]);
+      persistMessage('assistant', msg);
     }
   }
 
@@ -80,7 +135,12 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
-        {messages.length === 0 && !busy && (
+        {!hydrated ? (
+          <div className="space-y-2">
+            <div className="skeleton h-10 w-3/4" />
+            <div className="skeleton h-10 w-2/3" />
+          </div>
+        ) : messages.length === 0 && !busy ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
               {t('ws.agentHint')}
@@ -90,40 +150,46 @@ export default function ChatPanel({ onRunAgent, busy, autoPrompt, autoPromptNonc
                 key={s.label}
                 onClick={() => send(s.prompt)}
                 disabled={busy}
-                className="block w-full rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-primary/50 disabled:opacity-50"
+                className="press block w-full rounded-md border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 disabled:opacity-50"
               >
                 <Sparkles className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
                 {s.label}
               </button>
             ))}
           </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                m.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground'
-              }`}
-            >
-              {m.role === 'user' ? (
-                m.content
-              ) : (
-                <MessageContent content={m.content} />
-              )}
+        ) : (
+          messages.map((m, i) => (
+            <div key={m.id ?? i} className={`reveal-row flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  m.role === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >
+                {m.role === 'user' ? (
+                  m.content
+                ) : (
+                  <MessageContent content={m.content} />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
         {busy && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <span className="thinking-indicator inline-block h-2 w-6 overflow-hidden rounded-full bg-primary/30" />
             {t('ws.agentThinking')}
           </div>
         )}
       </div>
 
-      {error && <div className="px-3 pb-1 text-xs text-destructive">{error}</div>}
+      {error && (
+        <div className="flex items-center gap-1.5 px-3 pb-1 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5" />
+          {error}
+        </div>
+      )}
 
       <div className="border-t p-2">
         <form

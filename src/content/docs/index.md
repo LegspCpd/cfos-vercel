@@ -10,22 +10,34 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 
 ## 功能一览
 
-- 🖥️ 用户注册/登录（密码 + GitHub 登录）
-- 📝 多文件代码编辑器（Monaco，和 VS Code 同款）
-- 🤖 AI Agent：用自然语言构建/修改应用
-- 👁️ 实时预览（iframe）
-- 📁 文件分享（Cloudflare R2，带有效期）
-- 🔗 外部连接（GitHub）
-- 📚 上下文文档库（agent 参考）
-- 🛡️ 管理后台（用户/设置/AI/审计）
-- 📊 操作审计日志
-- 🔐 Cloudflare Access SSO 门禁
+**账号与登录**
+- 用户注册/登录（密码 + GitHub 登录 + Google 登录）
+- Cloudflare Access SSO 门禁（可选）
+
+**应用构建**
+- 多文件代码编辑器（Monaco，和 VS Code 同款）
+- AI Agent：用自然语言构建/修改应用
+- 实时预览（iframe）
+- 文件历史/版本回滚（每次修改自动记录，可一键恢复）
+
+**分享与协作**
+- 文件分享（Cloudflare R2，带有效期）
+- 蓝图导出/导入（.gadget.json 归档）
+- 公开蓝图分享链接（他人无需登录即可查看）
+- 收藏工作区（星标）
+
+**管理与扩展**
+- 外部连接（GitHub）
+- 上下文文档库（agent 参考）
+- 管理后台（用户/设置/AI/审计）
+- 操作审计日志
+- 多 AI Provider（DeepSeek / OpenAI / 本地等）
 
 ## 文档导航
 
 - [部署教程](deploy) — 从零开始部署到 Vercel
-- [环境变量](env) — 全部 16 个环境变量详解
-- [GitHub 登录](github-login) — 配置 OAuth 登录
+- [环境变量](env) — 全部环境变量详解
+- [登录配置](github-login) — 配置 GitHub / Google OAuth 登录
 - [文件分享 R2](r2) — 配置 Cloudflare R2 存储
 - [Cloudflare Access](cf-access) — 完整版 SSO 门禁
 - [使用说明](usage) — 怎么用这个工作区

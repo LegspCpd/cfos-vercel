@@ -1,6 +1,8 @@
-# GitHub 登录配置
+# 登录配置（GitHub + Google）
 
-> 让用户可以用 GitHub 账号登录，并连接 GitHub（agent 可调用 GitHub API）。
+> 支持用 GitHub 或 Google 账号一键登录，配置好后只需在 Vercel 环境变量填上密钥并 Redeploy 即可生效，无需改代码。
+
+## GitHub 登录
 
 ## 创建 OAuth App
 
@@ -40,9 +42,32 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 
 部署后，登录 → 侧边栏 **外部连接** → 连接 GitHub。连接后 agent 可以读取你的仓库和文件。
 
+## Google 登录
+
+在 **Google Cloud Console** 创建一个 OAuth 2.0 Client ID：
+
+1. 打开 **https://console.cloud.google.com** → 选择或新建一个项目
+2. 左侧 **APIs & Services → OAuth consent screen** → 填应用名称等，保存
+3. **Credentials → Create Credentials → OAuth client ID**
+   - Application type：**Web application**
+   - **Authorized redirect URIs**：`https://你的域名/api/auth/google/callback`（本地测试用 `http://localhost:3000/api/auth/google/callback`）
+4. 创建后复制 **Client ID** 和 **Client Secret**
+
+配置到 Vercel 环境变量：
+
+```
+GOOGLE_CLIENT_ID=你的Client ID
+GOOGLE_CLIENT_SECRET=你的Client Secret
+PUBLIC_SITE_URL=https://os.legspcpd.top
+```
+
+**Redeploy** 后生效，登录页出现"使用 Google 登录"按钮。
+
+> 说明：Google 登录会用邮箱前缀作为用户名。如果该用户名已存在（例如之前用密码注册过），会自动把 Google 账号关联到现有账号，不会重复创建。
+
 ## 常见问题
 
 | 现象 | 原因 |
 |---|---|
-| `redirect_uri_mismatch` | 回调地址不一致，检查 `PUBLIC_SITE_URL` |
-| 登录失败 | `GITHUB_CLIENT_SECRET` 填错或漏配 |
+| `redirect_uri_mismatch` | 回调地址不一致，检查 `PUBLIC_SITE_URL` 与 OAuth 控制台里填的 redirect URI |
+| 登录失败 | `GITHUB_CLIENT_SECRET` / `GOOGLE_CLIENT_SECRET` 填错或漏配 |

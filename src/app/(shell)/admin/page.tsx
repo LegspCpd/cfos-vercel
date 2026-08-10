@@ -11,6 +11,7 @@ import UserManagement from '@/components/UserManagement';
 import ProvidersManager from '@/components/ProvidersManager';
 import CfAccessStatus from '@/components/CfAccessStatus';
 import AuditLogView from '@/components/AuditLogView';
+import SignupToggle from '@/components/SignupToggle';
 import { useI18n } from '@/lib/client/i18n';
 
 export default function AdminPage() {
@@ -58,8 +59,9 @@ export default function AdminPage() {
         <p className="mt-1 text-sm text-muted-foreground">站点统计、设置、用户、AI 提供方与审计。</p>
       </div>
 
-      {/* Stats: full-width row */}
+      {/* Stats + registration toggle: prominent, full-width row */}
       <StatsCards />
+      <SignupToggle />
 
       {/* Row 1: site settings (left) + user management & audit log (right) */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
@@ -70,11 +72,11 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Row 2: AI providers + access status */}
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-        <ProvidersManager />
-        <CfAccessStatus />
-      </div>
+      {/* Row 2: Cloudflare Access (moved up) */}
+      <CfAccessStatus />
+
+      {/* Row 3: AI providers — full-width, laid flat at the bottom */}
+      <ProvidersManager />
     </div>
   );
 }

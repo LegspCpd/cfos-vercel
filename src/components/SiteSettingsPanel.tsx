@@ -173,21 +173,9 @@ export default function SiteSettingsPanel() {
         </div>
 
         {/* Agent */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">默认模型</label>
-            <input className={inputCls} placeholder="如 deepseek-chat" value={form.defaultModel} onChange={(e) => update('defaultModel', e.target.value)} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">注册开关</label>
-            <button
-              onClick={() => update('signupsEnabled', !form.signupsEnabled)}
-              className={`relative mt-1 h-6 w-11 rounded-full transition ${form.signupsEnabled ? 'bg-primary' : 'bg-secondary'}`}
-              aria-label="Toggle signups"
-            >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${form.signupsEnabled ? 'left-[22px]' : 'left-0.5'}`} />
-            </button>
-          </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">默认模型</label>
+          <input className={inputCls} placeholder="如 deepseek-chat" value={form.defaultModel} onChange={(e) => update('defaultModel', e.target.value)} />
         </div>
 
         <div>

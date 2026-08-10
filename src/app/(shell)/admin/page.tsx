@@ -61,19 +61,19 @@ export default function AdminPage() {
       {/* Stats: full-width row */}
       <StatsCards />
 
-      {/* Two-column region: site settings + user management */}
+      {/* Row 1: site settings (left) + user management & audit log (right) */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <SiteSettingsPanel />
         <div className="space-y-6">
           <UserManagement />
-          <ProvidersManager />
+          <AuditLogView />
         </div>
       </div>
 
-      {/* Second two-column region: access status + audit log */}
+      {/* Row 2: AI providers + access status */}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+        <ProvidersManager />
         <CfAccessStatus />
-        <AuditLogView />
       </div>
     </div>
   );

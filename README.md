@@ -123,7 +123,6 @@ Configure the callback exactly as below (replace `os.example.com` with your doma
 - [简体中文文档](/docs)
 - [English docs](/en/docs)
 - [Cloudflare Access setup](docs/CLOUDFLARE_ACCESS_SETUP.md)
-- [CI: hourly auto code-check](.github/AUTO_CHECK.md)
 
 ## 🏗 Architecture
 

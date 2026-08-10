@@ -54,7 +54,18 @@ export async function POST(req: Request) {
               ? 'recaptcha'
               : null;
       if (effective) {
-        await verifyCaptcha(effective, body.captchaToken);
+        if (!body.captchaToken) {
+          return NextResponse.json({ error: '请完成人机验证' }, { status: 400 });
+        }
+        try {
+          await verifyCaptcha(effective, body.captchaToken);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'Human verification failed';
+          return NextResponse.json(
+            { error: msg.startsWith('Human verification failed') ? '人机验证未通过，请重试' : msg },
+            { status: 400 },
+          );
+        }
       }
     }
 
@@ -130,6 +141,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.errors[0]?.message || 'Invalid request' }, { status: 400 });
     }
     console.error('signup error', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    // Surface a short, de-identified hint for troubleshooting (no secrets/keys).
+    const hint = e instanceof Error ? e.message : 'unknown';
+    return NextResponse.json(
+      { error: `Server error: ${hint}` },
+      { status: 500 },
+    );
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
+import { siteBaseUrl, siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -45,8 +46,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const baseUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const redirectUri = `${baseUrl}/api/auth/github/callback`;
+    const redirectUri = siteUrl('/api/auth/github/callback');
 
     // 1. Exchange code for access token.
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -104,9 +104,8 @@ export async function GET(req: Request) {
 }
 
 function redirectWithToken(token: string, req: Request): Response {
-  const frontendUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   // Clear the "from" cookie since the flow completed successfully.
-  const res = NextResponse.redirect(`${frontendUrl}/verify?token=${encodeURIComponent(token)}`);
+  const res = NextResponse.redirect(siteUrl(`/verify?token=${encodeURIComponent(token)}`));
   res.cookies.delete('oauth_from');
   return res;
 }
@@ -114,13 +113,12 @@ function redirectWithToken(token: string, req: Request): Response {
 // On an OAuth cancel/failure, send the user back to the page where they started
 // (default /login) with a clear error. Code 1001 = "OAuth sign-in cancelled/failed".
 function redirectWithError(msg: string, req: Request, code?: string): Response {
-  const frontendUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const cookie = req.headers.get('cookie') || '';
   const from = cookie.match(/oauth_from=([^;]+)/)?.[1];
   const target = from === 'signup' ? '/signup' : '/login';
   const errorCode = code || '1001';
   const res = NextResponse.redirect(
-    `${frontendUrl}${target}?error=${encodeURIComponent(`${errorCode}: ${msg}`)}`,
+    `${siteBaseUrl()}${target}?error=${encodeURIComponent(`${errorCode}: ${msg}`)}`,
   );
   res.cookies.delete('oauth_from');
   return res;

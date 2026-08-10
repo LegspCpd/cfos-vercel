@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import crypto from 'node:crypto';
+import { siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
@@ -21,8 +22,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const baseUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const redirectUri = `${baseUrl}/api/github/callback`;
+  const redirectUri = siteUrl('/api/github/callback');
 
   const state = `connect:${session.userId}:${crypto.randomBytes(12).toString('hex')}`;
   const params = new URLSearchParams({

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { saveGitHubConnection } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
+import { siteBaseUrl, siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -29,8 +30,7 @@ export async function GET(req: Request) {
   if (!userId) return redirect('/connections?error=Invalid+state');
 
   try {
-    const baseUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const redirectUri = `${baseUrl}/api/github/callback`;
+    const redirectUri = siteUrl('/api/github/callback');
 
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
@@ -59,6 +59,5 @@ export async function GET(req: Request) {
 }
 
 function redirect(to: string): Response {
-  const frontend = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  return NextResponse.redirect(`${frontend}${to}`);
+  return NextResponse.redirect(`${siteBaseUrl()}${to}`);
 }

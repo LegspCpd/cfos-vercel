@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
@@ -15,8 +16,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const baseUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const redirectUri = `${baseUrl}/api/auth/github/callback`;
+  const redirectUri = siteUrl('/api/auth/github/callback');
 
   // CSRF state
   const state = crypto.randomBytes(16).toString('hex');

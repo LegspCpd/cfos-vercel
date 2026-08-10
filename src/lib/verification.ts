@@ -23,6 +23,7 @@ function randomCode(): string {
 
 // Generate a code for an email, store it (hashing prior rows), send it, return the code
 // (so the caller can show it in dev, or return a masked result).
+// Throws if sending fails, and cleans up the just-created record in that case.
 export async function issueVerificationCode(email: string): Promise<{ sent: boolean; code: string }> {
   const code = randomCode();
   const expiresAt = new Date(Date.now() + CODE_LIFETIME_MS);
@@ -32,14 +33,20 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
     where: { email, used: false },
     data: { used: true },
   });
-  await prisma.emailVerification.create({
+  const record = await prisma.emailVerification.create({
     data: { email, code: hashCode(code), expiresAt },
   });
 
   let sent = false;
   if (resendConfigured()) {
-    await sendVerificationEmail(email, code);
-    sent = true;
+    try {
+      await sendVerificationEmail(email, code);
+      sent = true;
+    } catch (e) {
+      // Sending failed — remove the orphaned code so a retry isn't blocked, then rethrow.
+      await prisma.emailVerification.delete({ where: { id: record.id } }).catch(() => {});
+      throw e;
+    }
   }
   // If Resend isn't configured, we still return the code so a dev/self-hosted setup
   // can log it; in production the email should be sent.

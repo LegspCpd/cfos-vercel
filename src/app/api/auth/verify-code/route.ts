@@ -36,6 +36,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.errors[0]?.message || 'Invalid request' }, { status: 400 });
     }
     console.error('send verify-code error', e);
-    return NextResponse.json({ error: '发送验证码失败' }, { status: 500 });
+    // Surface a friendly but specific message so the operator can see whether it's a
+    // missing/expired key, an unverified sender domain, etc. Never expose the key itself.
+    const msg = e instanceof Error ? e.message : '未知错误';
+    const friendly = msg.includes('Resend error')
+      ? `邮件服务发送失败：${msg.slice(0, 300)}`
+      : '发送验证码失败';
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }

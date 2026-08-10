@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { UserPlus, Loader2, Check, X } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
 // Standalone, prominent "allow user registration" switch for the admin dashboard.
 // Kept separate from the site-settings form so admins can toggle it at a glance.
 export default function SignupToggle() {
+  const { t } = useI18n();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -41,8 +43,8 @@ export default function SignupToggle() {
             <UserPlus className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-sm font-medium">是否允许用户注册</p>
-            <p className="text-xs text-muted-foreground">加载中...</p>
+            <p className="text-sm font-medium">{t('signup.toggle')}</p>
+            <p className="text-xs text-muted-foreground">{t('loading')}</p>
           </div>
         </div>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -57,9 +59,9 @@ export default function SignupToggle() {
           {enabled ? <Check className="h-5 w-5" /> : <X className="h-5 w-5" />}
         </span>
         <div>
-          <p className="text-sm font-medium">是否允许用户注册</p>
+          <p className="text-sm font-medium">{t('signup.toggle')}</p>
           <p className={`text-xs ${enabled ? 'text-green-600' : 'text-destructive'}`}>
-            {enabled ? '当前允许注册（新用户可注册）' : '当前关闭注册（新用户无法注册）'}
+            {enabled ? t('signup.enabled') : t('signup.disabled')}
           </p>
         </div>
       </div>

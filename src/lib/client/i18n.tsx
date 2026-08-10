@@ -228,6 +228,18 @@ const zh: Record<string, string> = {
   'users.moveGroup': '移动分组',
   'users.editGroup': '编辑分组',
   'users.funcPerms': '功能权限',
+  // Stats cards (管理后台统计)
+  'stats.users': '用户',
+  'stats.workspaces': '工作区',
+  'stats.files': '文件',
+  'stats.shares': '分享',
+  'stats.contexts': '文档',
+  'stats.aiCalls': 'AI 调用',
+  'stats.agentRuns': 'Agent 运行',
+  // Signup toggle (注册开关)
+  'signup.toggle': '是否允许用户注册',
+  'signup.enabled': '当前允许注册（新用户可注册）',
+  'signup.disabled': '当前关闭注册（新用户无法注册）',
 
   // Nav
   'nav.home': '首页',
@@ -637,6 +649,18 @@ const en: Record<string, string> = {
   'users.moveGroup': 'Move to group',
   'users.editGroup': 'Edit group',
   'users.funcPerms': 'Permissions',
+  // Stats cards
+  'stats.users': 'Users',
+  'stats.workspaces': 'Workspaces',
+  'stats.files': 'Files',
+  'stats.shares': 'Shares',
+  'stats.contexts': 'Docs',
+  'stats.aiCalls': 'AI calls',
+  'stats.agentRuns': 'Agent runs',
+  // Signup toggle
+  'signup.toggle': 'Allow user registration',
+  'signup.enabled': 'Registration is enabled (new users can sign up)',
+  'signup.disabled': 'Registration is closed (new users cannot sign up)',
   'nav.home': 'Home',
   'nav.workspaces': 'Workspaces',
   'nav.shares': 'File Shares',

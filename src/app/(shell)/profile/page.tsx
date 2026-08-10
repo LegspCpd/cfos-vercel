@@ -202,7 +202,7 @@ export default function ProfilePage() {
     try {
       await api.sendVerificationCode(bindEmail);
       setBindCountdown(60);
-      setMessage('验证码已发送到邮箱');
+      setMessage(t('auth.codeSentToEmail'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -256,14 +256,14 @@ export default function ProfilePage() {
     setError('');
     setMessage('');
     if (!oldEmail.trim() || !/\S+@\S+\.\S+/.test(oldEmail)) {
-      setError('请输入有效的原邮箱地址');
+      setError(t('chg.invalidOldEmail'));
       return;
     }
     setOldSending(true);
     try {
       await api.sendChangeEmailCode(oldEmail);
       setOldCountdown(60);
-      setMessage('验证码已发送到原邮箱');
+      setMessage(t('chg.sentToOld'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -275,14 +275,14 @@ export default function ProfilePage() {
     setError('');
     setMessage('');
     if (!newEmail.trim() || !/\S+@\S+\.\S+/.test(newEmail)) {
-      setError('请输入有效的新邮箱地址');
+      setError(t('chg.invalidNewEmail'));
       return;
     }
     setNewSending(true);
     try {
       await api.sendVerificationCode(newEmail);
       setNewCountdown(60);
-      setMessage('验证码已发送到新邮箱');
+      setMessage(t('chg.sentToNew'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -294,11 +294,11 @@ export default function ProfilePage() {
     setError('');
     setMessage('');
     if (!oldEmail || !oldCode) {
-      setError('请先验证原邮箱');
+      setError(t('chg.verifyOldFirst'));
       return;
     }
     if (!newEmail || !newCode) {
-      setError('请先验证新邮箱');
+      setError(t('chg.verifyNewFirst'));
       return;
     }
     setChgSaving(true);
@@ -310,7 +310,7 @@ export default function ProfilePage() {
         newCode: newCode.trim(),
       });
       setMe((m) => (m ? { ...m, email: res.email } : m));
-      setMessage('邮箱更改成功');
+      setMessage(t('chg.success'));
       setChgOpen(false);
       setOldEmail('');
       setOldCode('');
@@ -341,16 +341,16 @@ export default function ProfilePage() {
     setTicketError('');
     setTicketMsg('');
     if (!ticketTitle.trim()) {
-      setTicketError('请输入工单标题');
+      setTicketError(t('ticket.titleRequired'));
       return;
     }
     if (!ticketContent.trim()) {
-      setTicketError('请输入工单内容');
+      setTicketError(t('ticket.contentRequired'));
       return;
     }
     const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
     if (captchaEnabled && !ticketCaptcha) {
-      setTicketError('请完成人机验证');
+      setTicketError(t('ticket.captchaRequired'));
       return;
     }
     setTicketSaving(true);
@@ -362,7 +362,7 @@ export default function ProfilePage() {
         captchaProvider: ticketCaptcha?.provider,
         captchaToken: ticketCaptcha?.token,
       });
-      setTicketMsg('工单已提交，管理员会尽快处理。');
+      setTicketMsg(t('ticket.submitted'));
       setTicketTitle('');
       setTicketContent('');
       setTicketCaptcha(null);
@@ -406,7 +406,7 @@ export default function ProfilePage() {
             ? 'github'
             : null;
       if (!provider) {
-        setMessage('当前账号未绑定任何登录方式，请联系管理员处理。');
+        setMessage(t('del.noLoginMethod'));
         return;
       }
       // Redirect to the provider's OAuth connect flow with purpose=delete; the callback
@@ -438,7 +438,7 @@ export default function ProfilePage() {
     setDelOauthMsg('');
     const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
     if (captchaEnabled && !delOauthCaptcha) {
-      setDelOauthError('请完成人机验证');
+      setDelOauthError(t('ticket.captchaRequired'));
       return;
     }
     setDelOauthSaving(true);
@@ -448,7 +448,7 @@ export default function ProfilePage() {
         captchaToken: delOauthCaptcha?.token,
       });
       setMe((m) => (m ? { ...m, deleteRequestedAt: new Date().toISOString(), deleteAt: res.deleteAt } : m));
-      setMessage('注销请求已提交。账号将进入 4–7 天冷静期，届时将自动删除。冷静期内可随时取消。');
+      setMessage(t('del.scheduled'));
       setDelOauthOpen(false);
     } catch (e) {
       setDelOauthError((e as Error).message);
@@ -461,14 +461,14 @@ export default function ProfilePage() {
     setDelError('');
     setDelMsg('');
     if (!delEmail.trim() || !/\S+@\S+\.\S+/.test(delEmail)) {
-      setDelError('请输入有效的邮箱地址');
+      setDelError(t('auth.invalidEmail'));
       return;
     }
     setDelSending(true);
     try {
       await api.sendDeleteAccountCode(delEmail.trim());
       setDelCountdown(60);
-      setDelMsg('验证码已发送到你的邮箱');
+      setDelMsg(t('del.sent'));
     } catch (e) {
       setDelError((e as Error).message);
     } finally {
@@ -480,12 +480,12 @@ export default function ProfilePage() {
     setDelError('');
     setDelMsg('');
     if (!delEmail.trim() || !delCode.trim()) {
-      setDelError('请先发送验证码并填写');
+      setDelError(t('del.sendFirst'));
       return;
     }
     const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
     if (captchaEnabled && !delCaptcha) {
-      setDelError('请完成人机验证');
+      setDelError(t('ticket.captchaRequired'));
       return;
     }
     setDelSaving(true);
@@ -497,7 +497,7 @@ export default function ProfilePage() {
         captchaToken: delCaptcha?.token,
       });
       setMe((m) => (m ? { ...m, deleteRequestedAt: new Date().toISOString(), deleteAt: res.deleteAt } : m));
-      setDelMsg('注销请求已提交。账号将进入 4–7 天冷静期，届时将自动删除。冷静期内可随时取消。');
+      setDelMsg(t('del.scheduled'));
       setDelOpen(false);
     } catch (e) {
       setDelError((e as Error).message);
@@ -513,7 +513,7 @@ export default function ProfilePage() {
     try {
       await api.cancelDeleteAccount();
       setMe((m) => (m ? { ...m, deleteRequestedAt: null, deleteAt: null } : m));
-      setMessage('已取消账号注销');
+      setMessage(t('del.cancelled'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -704,13 +704,13 @@ export default function ProfilePage() {
                 onClick={() => setChgOpen(true)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
               >
-                更改邮箱
+                {t('chg.changeEmail')}
               </button>
             ) : (
               <div className="space-y-3">
                 {/* Step 1: verify current email */}
                 <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-                  <p className="mb-2 text-xs font-medium text-primary">步骤 1 · 验证原邮箱</p>
+                  <p className="mb-2 text-xs font-medium text-primary">{t('chg.step1')}</p>
                   <div className="flex gap-2">
                     <input
                       type="email"
@@ -726,7 +726,7 @@ export default function ProfilePage() {
                     >
                       {oldSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : oldCountdown > 0 ? `${oldCountdown}s` : (
                         <>
-                          <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                          <RefreshCw className="h-3.5 w-3.5" /> {t('auth.sendCode')}
                         </>
                       )}
                     </button>
@@ -735,20 +735,20 @@ export default function ProfilePage() {
                     value={oldCode}
                     onChange={(e) => setOldCode(e.target.value)}
                     inputMode="numeric"
-                    placeholder="输入原邮箱验证码"
+                    placeholder={t('chg.oldCodePlaceholder')}
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
                 {/* Step 2: enter + verify new email */}
                 <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
-                  <p className="mb-2 text-xs font-medium text-primary">步骤 2 · 验证新邮箱</p>
+                  <p className="mb-2 text-xs font-medium text-primary">{t('chg.step2')}</p>
                   <div className="flex gap-2">
                     <input
                       type="email"
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="输入新邮箱地址"
+                      placeholder={t('chg.newEmailPlaceholder')}
                       className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                     />
                     <button
@@ -758,7 +758,7 @@ export default function ProfilePage() {
                     >
                       {newSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : newCountdown > 0 ? `${newCountdown}s` : (
                         <>
-                          <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                          <RefreshCw className="h-3.5 w-3.5" /> {t('auth.sendCode')}
                         </>
                       )}
                     </button>
@@ -767,7 +767,7 @@ export default function ProfilePage() {
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                     inputMode="numeric"
-                    placeholder="输入新邮箱验证码"
+                    placeholder={t('chg.newCodePlaceholder')}
                     className="mt-2 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -778,13 +778,13 @@ export default function ProfilePage() {
                     disabled={chgSaving}
                     className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
                   >
-                    {chgSaving ? '提交中...' : '确认更改邮箱'}
+                    {chgSaving ? t('submitting') : t('chg.confirmChange')}
                   </button>
                   <button
                     onClick={() => setChgOpen(false)}
                     className="rounded-md border px-4 py-2 text-sm text-muted-foreground hover:bg-secondary"
                   >
-                    取消
+                    {t('cancel')}
                   </button>
                 </div>
               </div>
@@ -839,14 +839,12 @@ export default function ProfilePage() {
 
         {/* Appeal / submit a ticket */}
         <div className="mt-5 border-t pt-4">
-          <p className="mb-2 text-sm text-muted-foreground">
-            遇到问题需要帮助？可以提交申诉或反馈工单。
-          </p>
+          <p className="mb-2 text-sm text-muted-foreground">{t('ticket.appealHint')}</p>
           <button
             onClick={openAppeal}
             className="rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
-            点我申诉
+            {t('ticket.appeal')}
           </button>
         </div>
       </section>
@@ -888,15 +886,15 @@ export default function ProfilePage() {
 
       {/* Delete account */}
       <section className="mt-6 rounded-lg border border-destructive/30 bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-destructive">注销账号</h2>
+        <h2 className="mb-1 text-base font-semibold text-destructive">{t('del.title')}</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           {me?.deleteAt
-            ? `你的账号已申请注销，将在 ${new Date(me.deleteAt).toLocaleDateString()} ${new Date(
-                me.deleteAt,
-              ).toLocaleTimeString()} 自动删除。冷静期内可随时取消。`
+            ? t('del.scheduledAt')
+                .replace('{date}', new Date(me.deleteAt).toLocaleDateString())
+                .replace('{time}', new Date(me.deleteAt).toLocaleTimeString())
             : me?.email
-              ? '注销后账号及其所有数据（工作区、聊天、分享等）将被永久删除，且无法恢复。账号删除后将释放邮箱和用户名，可重新注册。'
-              : '你的账号未绑定邮箱。点击注销后将通过你已登录的第三方账号再验证一次身份，然后进入 4–7 天冷静期，到期自动删除。'}
+              ? t('del.explainWithEmail')
+              : t('del.explainNoEmail')}
         </p>
 
         {me?.deleteAt ? (
@@ -905,14 +903,14 @@ export default function ProfilePage() {
             disabled={deleting}
             className="rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
           >
-            {deleting ? '处理中...' : '取消注销'}
+            {deleting ? t('processing') : t('del.cancelDelete')}
           </button>
         ) : (
           <button
             onClick={openDelete}
             className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90"
           >
-            注销账号
+            {t('del.deleteAccount')}
           </button>
         )}
       </section>
@@ -925,11 +923,11 @@ export default function ProfilePage() {
         >
           <div className="w-full max-w-md rounded-xl border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <span className="text-sm font-semibold text-destructive">确认注销账号</span>
+              <span className="text-sm font-semibold text-destructive">{t('del.confirm')}</span>
               <button
                 onClick={() => setDelOpen(false)}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary"
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -937,7 +935,7 @@ export default function ProfilePage() {
 
             <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
               <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                注销后所有数据将永久删除，无法恢复。请确认你的邮箱以继续。
+                {t('del.warnPermanent')}
               </div>
 
               {delMsg && <div className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{delMsg}</div>}
@@ -946,13 +944,13 @@ export default function ProfilePage() {
               )}
 
               <div>
-                <label className="mb-1 block text-sm font-medium">绑定邮箱</label>
+                <label className="mb-1 block text-sm font-medium">{t('pr.boundEmail')}</label>
                 <div className="flex gap-2">
                   <input
                     type="email"
                     value={delEmail}
                     onChange={(e) => setDelEmail(e.target.value)}
-                    placeholder={me?.email || '输入你的邮箱'}
+                    placeholder={me?.email || t('del.emailPlaceholder')}
                     className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                   <button
@@ -966,7 +964,7 @@ export default function ProfilePage() {
                       `${delCountdown}s`
                     ) : (
                       <>
-                        <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                        <RefreshCw className="h-3.5 w-3.5" /> {t('auth.sendCode')}
                       </>
                     )}
                   </button>
@@ -974,12 +972,12 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium">验证码</label>
+                <label className="mb-1 block text-sm font-medium">{t('auth.verificationCode')}</label>
                 <input
                   value={delCode}
                   onChange={(e) => setDelCode(e.target.value)}
                   inputMode="numeric"
-                  placeholder="输入邮箱验证码"
+                  placeholder={t('auth.codePlaceholder')}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -1001,7 +999,7 @@ export default function ProfilePage() {
                 disabled={delSaving}
                 className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
               >
-                {delSaving ? '提交中...' : '确认注销账号'}
+                {delSaving ? t('submitting') : t('del.confirm')}
               </button>
             </div>
           </div>
@@ -1016,11 +1014,11 @@ export default function ProfilePage() {
         >
           <div className="w-full max-w-md rounded-xl border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <span className="text-sm font-semibold text-destructive">确认注销账号</span>
+              <span className="text-sm font-semibold text-destructive">{t('del.confirm')}</span>
               <button
                 onClick={() => setDelOauthOpen(false)}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary"
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1028,7 +1026,7 @@ export default function ProfilePage() {
 
             <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
               <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                身份验证已通过。完成人机验证后，账号将进入 4–7 天冷静期，到期自动删除。
+                {t('del.oauthVerified')}
               </div>
 
               {delOauthMsg && (
@@ -1055,7 +1053,7 @@ export default function ProfilePage() {
                 disabled={delOauthSaving}
                 className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
               >
-                {delOauthSaving ? '提交中...' : '确认注销账号'}
+                {delOauthSaving ? t('submitting') : t('del.confirm')}
               </button>
             </div>
           </div>
@@ -1073,11 +1071,11 @@ export default function ProfilePage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <span className="text-sm font-semibold">提交申诉 / 反馈工单</span>
+              <span className="text-sm font-semibold">{t('ticket.title')}</span>
               <button
                 onClick={() => setAppealOpen(false)}
                 className="rounded p-1 text-muted-foreground hover:bg-secondary"
-                aria-label="Close"
+                aria-label={t('close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1089,7 +1087,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm">
                   <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span>
-                    联系管理员邮箱：<span className="font-medium">{adminEmail}</span>
+                    {t('ticket.contactAdmin')} <span className="font-medium">{adminEmail}</span>
                   </span>
                 </div>
               )}
@@ -1102,14 +1100,14 @@ export default function ProfilePage() {
               )}
 
               <div>
-                <label className="mb-1 block text-sm font-medium">工单类型</label>
+                <label className="mb-1 block text-sm font-medium">{t('ticket.type')}</label>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
-                      ['appeal', '申诉'],
-                      ['feedback', '反馈'],
-                      ['emailChange', '更改邮箱'],
-                      ['other', '其他'],
+                      ['appeal', t('ticket.typeAppeal')],
+                      ['feedback', t('ticket.typeFeedback')],
+                      ['emailChange', t('ticket.typeEmailChange')],
+                      ['other', t('ticket.typeOther')],
                     ] as const
                   ).map(([val, label]) => (
                     <button
@@ -1126,22 +1124,22 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium">标题</label>
+                <label className="mb-1 block text-sm font-medium">{t('ticket.titleLabel')}</label>
                 <input
                   value={ticketTitle}
                   onChange={(e) => setTicketTitle(e.target.value)}
-                  placeholder="简要描述问题"
+                  placeholder={t('ticket.titlePlaceholder')}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium">详细内容</label>
+                <label className="mb-1 block text-sm font-medium">{t('ticket.contentLabel')}</label>
                 <textarea
                   value={ticketContent}
                   onChange={(e) => setTicketContent(e.target.value)}
                   rows={4}
-                  placeholder="请详细描述你的问题或申诉内容"
+                  placeholder={t('ticket.contentPlaceholder')}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -1163,7 +1161,7 @@ export default function ProfilePage() {
                 disabled={ticketSaving}
                 className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
-                {ticketSaving ? '提交中...' : '提交工单'}
+                {ticketSaving ? t('submitting') : t('ticket.submit')}
               </button>
             </div>
           </div>

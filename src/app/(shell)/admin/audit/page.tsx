@@ -6,10 +6,12 @@ import { Loader2, XCircle, ScrollText } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import AuditLogView from '@/components/AuditLogView';
+import { useI18n } from '@/lib/client/i18n';
 
 // 操作日志: all audit/activity logs in one place (admin only).
 export default function AdminAuditPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [notAdmin, setNotAdmin] = useState(false);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function AdminAuditPage() {
     return (
       <div className="mx-auto max-w-2xl px-6 py-12 text-center text-muted-foreground">
         <XCircle className="mx-auto mb-4 h-10 w-10" />
-        <p>你没有权限访问操作日志。</p>
+        <p>{t('admin.noAuditAccess')}</p>
       </div>
     );
   }
@@ -39,10 +41,8 @@ export default function AdminAuditPage() {
       <div className="mb-6 flex items-center gap-3">
         <ScrollText className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">操作日志</h1>
-          <p className="text-sm text-muted-foreground">
-            记录登录（含 IP）、工作区操作、Agent 运行和 AI 调用（含 token 用量）。
-          </p>
+          <h1 className="text-2xl font-bold">{t('admin.audit')}</h1>
+          <p className="text-sm text-muted-foreground">{t('admin.auditDesc')}</p>
         </div>
       </div>
       <AuditLogView />

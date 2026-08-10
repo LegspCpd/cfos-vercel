@@ -41,23 +41,23 @@ interface AuditLog {
 const PAGE_SIZE = 50;
 
 // Map action codes to an icon + friendly label.
-function actionMeta(action: string): { icon: LucideIcon; label: string } {
+function actionMeta(t: (k: string) => string, action: string): { icon: LucideIcon; label: string } {
   const map: Record<string, { icon: LucideIcon; label: string }> = {
-    'auth.login': { icon: LogIn, label: '登录' },
-    'auth.login_failed': { icon: AlertTriangle, label: '登录失败' },
-    'auth.signup': { icon: UserPlus, label: '注册' },
-    'workspace.create': { icon: FolderPlus, label: '创建工作区' },
-    'workspace.delete': { icon: Trash2, label: '删除工作区' },
-    'agent.run': { icon: Bot, label: 'Agent 运行' },
-    'agent.run_failed': { icon: AlertTriangle, label: 'Agent 失败' },
-    'ai.call': { icon: BrainCircuit, label: 'AI 调用' },
-    'file.save': { icon: Save, label: '保存文件' },
-    'file.delete': { icon: FileX2, label: '删除文件' },
-    'favorite.add': { icon: Star, label: '收藏工作区' },
-    'favorite.remove': { icon: Star, label: '取消收藏' },
-    'file.restore': { icon: History, label: '恢复文件版本' },
-    'workspace.share': { icon: Share2, label: '公开分享蓝图' },
-    'workspace.import': { icon: Upload, label: '导入蓝图' },
+    'auth.login': { icon: LogIn, label: t('audit.login') },
+    'auth.login_failed': { icon: AlertTriangle, label: t('audit.loginFailed') },
+    'auth.signup': { icon: UserPlus, label: t('audit.signup') },
+    'workspace.create': { icon: FolderPlus, label: t('audit.workspaceCreate') },
+    'workspace.delete': { icon: Trash2, label: t('audit.workspaceDelete') },
+    'agent.run': { icon: Bot, label: t('audit.agentRun') },
+    'agent.run_failed': { icon: AlertTriangle, label: t('audit.agentFailed') },
+    'ai.call': { icon: BrainCircuit, label: t('audit.aiCall') },
+    'file.save': { icon: Save, label: t('audit.fileSave') },
+    'file.delete': { icon: FileX2, label: t('audit.fileDelete') },
+    'favorite.add': { icon: Star, label: t('audit.favoriteAdd') },
+    'favorite.remove': { icon: Star, label: t('audit.favoriteRemove') },
+    'file.restore': { icon: History, label: t('audit.fileRestore') },
+    'workspace.share': { icon: Share2, label: t('audit.workspaceShare') },
+    'workspace.import': { icon: Upload, label: t('audit.workspaceImport') },
   };
   return map[action] || { icon: LogIn, label: action };
 }
@@ -114,16 +114,16 @@ export default function AuditLogView() {
     <section className="rounded-lg border bg-card p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold">操作日志</h2>
+          <h2 className="text-base font-semibold">{t('admin.audit')}</h2>
           <p className="text-sm text-muted-foreground">
-            记录登录（含 IP）、工作区操作、Agent 运行和 AI 调用（含 token 用量）· 共 {total} 条
+            {t('admin.auditDesc')} · {t('admin.totalCount')} {total}
           </p>
         </div>
         <button
           onClick={load}
           className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
         >
-          <RefreshCw className="h-3.5 w-3.5" /> 刷新
+          <RefreshCw className="h-3.5 w-3.5" /> {t('refresh')}
         </button>
       </div>
 
@@ -137,15 +137,15 @@ export default function AuditLogView() {
           }}
           className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none"
         >
-          <option value="">所有操作</option>
-          <option value="auth.login">登录</option>
-          <option value="auth.login_failed">登录失败</option>
-          <option value="auth.signup">注册</option>
-          <option value="workspace.create">创建工作区</option>
-          <option value="workspace.delete">删除工作区</option>
-          <option value="agent.run">Agent 运行</option>
-          <option value="agent.run_failed">Agent 失败</option>
-          <option value="ai.call">AI 调用</option>
+          <option value="">{t('audit.allActions')}</option>
+          <option value="auth.login">{t('audit.login')}</option>
+          <option value="auth.login_failed">{t('audit.loginFailed')}</option>
+          <option value="auth.signup">{t('audit.signup')}</option>
+          <option value="workspace.create">{t('audit.workspaceCreate')}</option>
+          <option value="workspace.delete">{t('audit.workspaceDelete')}</option>
+          <option value="agent.run">{t('audit.agentRun')}</option>
+          <option value="agent.run_failed">{t('audit.agentFailed')}</option>
+          <option value="ai.call">{t('audit.aiCall')}</option>
         </select>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -155,7 +155,7 @@ export default function AuditLogView() {
               setUserFilter(e.target.value);
               setPage(0);
             }}
-            placeholder="按用户筛选"
+            placeholder={t('audit.filterByUser')}
             className="rounded-md border bg-background py-1.5 pl-8 pr-3 text-sm outline-none"
           />
         </div>
@@ -169,19 +169,19 @@ export default function AuditLogView() {
         </div>
       ) : logs.length === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          暂无审计日志
+          {t('audit.noLogs')}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 pr-3 font-medium">时间</th>
-                <th className="py-2 pr-3 font-medium">用户</th>
-                <th className="py-2 pr-3 font-medium">操作</th>
+                <th className="py-2 pr-3 font-medium">{t('audit.time')}</th>
+                <th className="py-2 pr-3 font-medium">{t('audit.user')}</th>
+                <th className="py-2 pr-3 font-medium">{t('audit.action')}</th>
                 <th className="py-2 pr-3 font-medium">IP</th>
                 <th className="py-2 pr-3 font-medium">Token</th>
-                <th className="py-2 font-medium">详情</th>
+                <th className="py-2 font-medium">{t('audit.detail')}</th>
               </tr>
             </thead>
             <tbody>
@@ -192,7 +192,7 @@ export default function AuditLogView() {
                   <td className="whitespace-nowrap py-2 pr-3">
                     <span className="flex items-center gap-1.5">
                       {(() => {
-                        const meta = actionMeta(log.action);
+                        const meta = actionMeta(t, log.action);
                         const Icon = meta.icon;
                         return (
                           <>
@@ -219,7 +219,7 @@ export default function AuditLogView() {
       {total > PAGE_SIZE && (
         <div className="mt-4 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            第 {page + 1} / {totalPages} 页
+            {t('audit.page')} {page + 1} / {totalPages}
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -227,14 +227,14 @@ export default function AuditLogView() {
               disabled={page === 0}
               className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs disabled:opacity-40"
             >
-              <ChevronLeft className="h-4 w-4" /> 上一页
+              <ChevronLeft className="h-4 w-4" /> {t('audit.prev')}
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
               className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs disabled:opacity-40"
             >
-              下一页 <ChevronRight className="h-4 w-4" />
+              {t('audit.next')} <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

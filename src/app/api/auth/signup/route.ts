@@ -62,7 +62,11 @@ export async function POST(req: Request) {
     let email: string | undefined;
     if (body.email) {
       email = body.email.trim().toLowerCase();
-      const existing = await prisma.user.findUnique({ where: { email } });
+      // Case-insensitive so a previously mixed-case email still blocks re-registration.
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
       if (existing) {
         return NextResponse.json({ error: '该邮箱已被注册' }, { status: 409 });
       }

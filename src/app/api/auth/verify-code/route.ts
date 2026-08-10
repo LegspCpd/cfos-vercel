@@ -16,7 +16,13 @@ export async function POST(req: Request) {
     const email = body.email.trim().toLowerCase();
 
     // If this email already belongs to a user, block re-registration.
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // Use a case-insensitive match: users may have registered with mixed-case emails, so
+    // a plain equals would miss them and let a second verification-code be issued for an
+    // already-taken address (enabling bulk signup / account probing).
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    });
     if (existing) {
       return NextResponse.json({ error: '该邮箱已被注册' }, { status: 409 });
     }

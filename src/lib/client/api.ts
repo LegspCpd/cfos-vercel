@@ -146,6 +146,8 @@ export const api = {
         turnstileSecretKey: string;
         recaptchaSiteKey: string;
         recaptchaSecretKey: string;
+        turnstileEnvManaged: boolean;
+        recaptchaEnvManaged: boolean;
       };
     }>('/api/admin/settings'),
   updateSiteSettings: (data: Record<string, unknown>) =>

@@ -89,6 +89,8 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | 用 Google 登录则必填 |
 | `RESEND_API_KEY` | 邮箱验证码发信（Resend） | 启用邮箱注册验证则必填 |
 | `RESEND_FROM_EMAIL` | 发件人邮箱，默认 `no-reply@legspcpd.top` | 可选 |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile（配置后管理面板锁定） | 用 Turnstile 则填 |
+| `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA（配置后管理面板锁定） | 用 reCAPTCHA 则填 |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM（也可部署后在管理后台配多个 provider） | 推荐 |
 
 ### 4. Build Command
@@ -179,11 +181,25 @@ Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、
 
 **默认关闭。** 新用户注册时必须通过人机验证（防机器人灌注册）。
 
-- 在管理后台 `/admin` → 站点设置 → **人机验证** 区块填写密钥
-- **Cloudflare Turnstile**：填 Site Key + Secret Key
-- **Google reCAPTCHA**：填 Site Key + Secret Key
-- 填了哪个就启用哪个；**两个都填则随机加载其中一个**
-- 密钥存在数据库（AppSetting），不在代码库或环境变量里，管理后台可随时开关
+**两种配置方式（环境变量优先级更高）：**
+
+**方式一：环境变量（推荐，安全，管理面板无法修改）**
+在 Vercel 环境变量填：
+```
+TURNSTILE_SITE_KEY=xxx
+TURNSTILE_SECRET_KEY=xxx        # Cloudflare Turnstile
+RECAPTCHA_SITE_KEY=xxx
+RECAPTCHA_SECRET_KEY=xxx        # Google reCAPTCHA
+```
+> 某个提供者一旦配置了环境变量，管理面板中该提供者会被**锁定为不可修改**（防止密钥被泄露或篡改）。
+
+**方式二：管理后台配置（补充）**
+在管理后台 `/admin` → 站点设置 → **人机验证** 填写密钥（仅当该提供者未配置环境变量时可编辑）。
+
+**规则：**
+- 填了哪个就启用哪个
+- **两个都填则随机加载其中一个**
+- 若一个用环境变量、另一个用管理面板配置，两者独立生效；环境变量配的那个在面板中锁定
 
 获取密钥：
 - Turnstile：https://dash.cloudflare.com → Turnstile → Add site

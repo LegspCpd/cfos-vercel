@@ -20,6 +20,8 @@ interface SiteSettings {
   turnstileSecretKey: string;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
+  turnstileEnvManaged: boolean;
+  recaptchaEnvManaged: boolean;
 }
 
 const BANNER_COLORS = ['blue', 'amber', 'red', 'green'];
@@ -209,15 +211,21 @@ export default function SiteSettingsPanel() {
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Cloudflare Turnstile</p>
-              <span className={`rounded px-2 py-0.5 text-xs ${form.turnstileSiteKey && form.turnstileSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
-                {form.turnstileSiteKey && form.turnstileSecretKey ? '已启用' : '未启用'}
-              </span>
+              <div className="flex items-center gap-2">
+                {form.turnstileEnvManaged && (
+                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">已由环境变量配置，不可修改</span>
+                )}
+                <span className={`rounded px-2 py-0.5 text-xs ${form.turnstileSiteKey && form.turnstileSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
+                  {form.turnstileSiteKey && form.turnstileSecretKey ? '已启用' : '未启用'}
+                </span>
+              </div>
             </div>
             <div className="mt-2 space-y-2">
               <input
                 className={inputCls}
                 placeholder="Turnstile Site Key"
                 value={form.turnstileSiteKey}
+                disabled={form.turnstileEnvManaged}
                 onChange={(e) => update('turnstileSiteKey', e.target.value)}
               />
               <input
@@ -225,24 +233,34 @@ export default function SiteSettingsPanel() {
                 placeholder="Turnstile Secret Key"
                 type="password"
                 value={form.turnstileSecretKey}
+                disabled={form.turnstileEnvManaged}
                 onChange={(e) => update('turnstileSecretKey', e.target.value)}
               />
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              也可在环境变量设置 <code className="rounded bg-secondary px-1">TURNSTILE_SITE_KEY</code> 和 <code className="rounded bg-secondary px-1">TURNSTILE_SECRET_KEY</code>，环境变量优先级更高。
+            </p>
           </div>
 
           {/* reCAPTCHA */}
           <div>
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Google reCAPTCHA</p>
-              <span className={`rounded px-2 py-0.5 text-xs ${form.recaptchaSiteKey && form.recaptchaSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
-                {form.recaptchaSiteKey && form.recaptchaSecretKey ? '已启用' : '未启用'}
-              </span>
+              <div className="flex items-center gap-2">
+                {form.recaptchaEnvManaged && (
+                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">已由环境变量配置，不可修改</span>
+                )}
+                <span className={`rounded px-2 py-0.5 text-xs ${form.recaptchaSiteKey && form.recaptchaSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
+                  {form.recaptchaSiteKey && form.recaptchaSecretKey ? '已启用' : '未启用'}
+                </span>
+              </div>
             </div>
             <div className="mt-2 space-y-2">
               <input
                 className={inputCls}
                 placeholder="reCAPTCHA Site Key"
                 value={form.recaptchaSiteKey}
+                disabled={form.recaptchaEnvManaged}
                 onChange={(e) => update('recaptchaSiteKey', e.target.value)}
               />
               <input
@@ -250,9 +268,13 @@ export default function SiteSettingsPanel() {
                 placeholder="reCAPTCHA Secret Key"
                 type="password"
                 value={form.recaptchaSecretKey}
+                disabled={form.recaptchaEnvManaged}
                 onChange={(e) => update('recaptchaSecretKey', e.target.value)}
               />
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              也可在环境变量设置 <code className="rounded bg-secondary px-1">RECAPTCHA_SITE_KEY</code> 和 <code className="rounded bg-secondary px-1">RECAPTCHA_SECRET_KEY</code>，环境变量优先级更高。
+            </p>
           </div>
         </div>
 

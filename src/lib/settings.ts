@@ -15,13 +15,24 @@ export const SETTING_AGENT_INSTRUCTIONS = 'agentInstructions';
 export const SETTING_SITE_FAVICON = 'siteFavicon';
 export const SETTING_SITE_LOGO = 'siteLogo';
 
-// CAPTCHA / human verification config (admin-configurable, default off).
-// Each stores the corresponding provider's secret (filled via admin panel → env var).
-// A provider is "enabled" when BOTH its site key and secret are set.
+// CAPTCHA / human verification config.
+// Keys can be set EITHER via environment variables (preferred, e.g. TURNSTILE_SITE_KEY)
+// OR via the admin panel (stored in the DB). Environment variables take precedence:
+// if an env var is set for a provider, the admin panel is locked for that provider.
 export const SETTING_TURNSTILE_SITE_KEY = 'turnstileSiteKey';
 export const SETTING_TURNSTILE_SECRET_KEY = 'turnstileSecretKey';
 export const SETTING_RECAPTCHA_SITE_KEY = 'recaptchaSiteKey';
 export const SETTING_RECAPTCHA_SECRET_KEY = 'recaptchaSecretKey';
+
+export const ENV_TURNSTILE_SITE_KEY = 'TURNSTILE_SITE_KEY';
+export const ENV_TURNSTILE_SECRET_KEY = 'TURNSTILE_SECRET_KEY';
+export const ENV_RECAPTCHA_SITE_KEY = 'RECAPTCHA_SITE_KEY';
+export const ENV_RECAPTCHA_SECRET_KEY = 'RECAPTCHA_SECRET_KEY';
+
+// Env helpers (kept here so tests can read the same constants).
+function env(key: string): string {
+  return process.env[key] ?? '';
+}
 
 // Defaults. Signups default OFF (secure). Site name defaults to the product name.
 const DEFAULTS: Record<string, string> = {
@@ -84,14 +95,39 @@ export interface SiteSettings {
   turnstileSecretKey: string;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
+  // Whether each captcha provider is managed (locked) by environment variables.
+  turnstileEnvManaged: boolean;
+  recaptchaEnvManaged: boolean;
 }
 
 // Human-verification provider config, derived from whether keys are present.
+// Exposed to the signup page (site keys only, never secrets).
 export interface CaptchaConfig {
   turnstileEnabled: boolean;
   turnstileSiteKey: string;
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
+}
+
+// Effective keys + env-managed flag for a captcha provider (env wins over DB).
+async function resolveCaptchaKeys(provider: 'turnstile' | 'recaptcha'): Promise<{
+  siteKey: string;
+  secretKey: string;
+  envManaged: boolean;
+}> {
+  const isTurnstile = provider === 'turnstile';
+  const envSite = isTurnstile ? env(ENV_TURNSTILE_SITE_KEY) : env(ENV_RECAPTCHA_SITE_KEY);
+  const envSecret = isTurnstile ? env(ENV_TURNSTILE_SECRET_KEY) : env(ENV_RECAPTCHA_SECRET_KEY);
+  if (envSite || envSecret) {
+    return { siteKey: envSite, secretKey: envSecret, envManaged: true };
+  }
+  const dbSite = await getSetting(
+    isTurnstile ? SETTING_TURNSTILE_SITE_KEY : SETTING_RECAPTCHA_SITE_KEY,
+  );
+  const dbSecret = await getSetting(
+    isTurnstile ? SETTING_TURNSTILE_SECRET_KEY : SETTING_RECAPTCHA_SECRET_KEY,
+  );
+  return { siteKey: dbSite, secretKey: dbSecret, envManaged: false };
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
@@ -107,10 +143,6 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     agentInstructions,
     siteFavicon,
     siteLogo,
-    turnstileSiteKey,
-    turnstileSecretKey,
-    recaptchaSiteKey,
-    recaptchaSecretKey,
   ] = await Promise.all([
     getSetting(SETTING_SIGNUPS_ENABLED),
     getSetting(SETTING_SITE_NAME),
@@ -123,10 +155,10 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     getSetting(SETTING_AGENT_INSTRUCTIONS),
     getSetting(SETTING_SITE_FAVICON),
     getSetting(SETTING_SITE_LOGO),
-    getSetting(SETTING_TURNSTILE_SITE_KEY),
-    getSetting(SETTING_TURNSTILE_SECRET_KEY),
-    getSetting(SETTING_RECAPTCHA_SITE_KEY),
-    getSetting(SETTING_RECAPTCHA_SECRET_KEY),
+  ]);
+  const [turnstile, recaptcha] = await Promise.all([
+    resolveCaptchaKeys('turnstile'),
+    resolveCaptchaKeys('recaptcha'),
   ]);
   return {
     signupsEnabled: signupsEnabled === 'true',
@@ -140,30 +172,32 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     agentInstructions,
     siteFavicon,
     siteLogo,
-    turnstileSiteKey,
-    turnstileSecretKey,
-    recaptchaSiteKey,
-    recaptchaSecretKey,
+    turnstileSiteKey: turnstile.siteKey,
+    turnstileSecretKey: turnstile.secretKey,
+    recaptchaSiteKey: recaptcha.siteKey,
+    recaptchaSecretKey: recaptcha.secretKey,
+    turnstileEnvManaged: turnstile.envManaged,
+    recaptchaEnvManaged: recaptcha.envManaged,
   };
 }
 
 // Public captcha config exposed to the signup page (site keys only, never secrets).
 export async function getPublicCaptchaConfig(): Promise<CaptchaConfig> {
-  const [turnstileSiteKey, turnstileSecretKey, recaptchaSiteKey, recaptchaSecretKey] = await Promise.all([
-    getSetting(SETTING_TURNSTILE_SITE_KEY),
-    getSetting(SETTING_TURNSTILE_SECRET_KEY),
-    getSetting(SETTING_RECAPTCHA_SITE_KEY),
-    getSetting(SETTING_RECAPTCHA_SECRET_KEY),
+  const [turnstile, recaptcha] = await Promise.all([
+    resolveCaptchaKeys('turnstile'),
+    resolveCaptchaKeys('recaptcha'),
   ]);
   return {
-    turnstileEnabled: Boolean(turnstileSiteKey && turnstileSecretKey),
-    turnstileSiteKey,
-    recaptchaEnabled: Boolean(recaptchaSiteKey && recaptchaSecretKey),
-    recaptchaSiteKey,
+    turnstileEnabled: Boolean(turnstile.siteKey && turnstile.secretKey),
+    turnstileSiteKey: turnstile.siteKey,
+    recaptchaEnabled: Boolean(recaptcha.siteKey && recaptcha.secretKey),
+    recaptchaSiteKey: recaptcha.siteKey,
   };
 }
 
 // Update a partial set of site settings. Values are stored as strings.
+// Captcha keys are only written when that provider is NOT managed by environment variables
+// (so a compromised admin session can't override or leak an env-configured secret).
 export async function updateSiteSettings(patch: Partial<SiteSettings>): Promise<void> {
   const writes: Promise<void>[] = [];
   if (patch.signupsEnabled !== undefined) writes.push(setSetting(SETTING_SIGNUPS_ENABLED, String(patch.signupsEnabled)));
@@ -177,14 +211,27 @@ export async function updateSiteSettings(patch: Partial<SiteSettings>): Promise<
   if (patch.agentInstructions !== undefined) writes.push(setSetting(SETTING_AGENT_INSTRUCTIONS, patch.agentInstructions));
   if (patch.siteFavicon !== undefined) writes.push(setSetting(SETTING_SITE_FAVICON, patch.siteFavicon));
   if (patch.siteLogo !== undefined) writes.push(setSetting(SETTING_SITE_LOGO, patch.siteLogo));
-  if (patch.turnstileSiteKey !== undefined) writes.push(setSetting(SETTING_TURNSTILE_SITE_KEY, patch.turnstileSiteKey));
-  if (patch.turnstileSecretKey !== undefined) writes.push(setSetting(SETTING_TURNSTILE_SECRET_KEY, patch.turnstileSecretKey));
-  if (patch.recaptchaSiteKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SITE_KEY, patch.recaptchaSiteKey));
-  if (patch.recaptchaSecretKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SECRET_KEY, patch.recaptchaSecretKey));
+
+  const [turnstileEnv, recaptchaEnv] = await Promise.all([
+    resolveCaptchaKeys('turnstile'),
+    resolveCaptchaKeys('recaptcha'),
+  ]);
+  // Turnstile — only writable when not env-managed.
+  if (!turnstileEnv.envManaged) {
+    if (patch.turnstileSiteKey !== undefined) writes.push(setSetting(SETTING_TURNSTILE_SITE_KEY, patch.turnstileSiteKey));
+    if (patch.turnstileSecretKey !== undefined) writes.push(setSetting(SETTING_TURNSTILE_SECRET_KEY, patch.turnstileSecretKey));
+  }
+  // reCAPTCHA — only writable when not env-managed.
+  if (!recaptchaEnv.envManaged) {
+    if (patch.recaptchaSiteKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SITE_KEY, patch.recaptchaSiteKey));
+    if (patch.recaptchaSecretKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SECRET_KEY, patch.recaptchaSecretKey));
+  }
   await Promise.all(writes);
 }
 
 // Effective captcha secret for a given provider (used server-side to verify tokens).
+// Environment variable wins over the admin-panel DB value.
 export async function getCaptchaSecret(provider: 'turnstile' | 'recaptcha'): Promise<string> {
-  return getSetting(provider === 'turnstile' ? SETTING_TURNSTILE_SECRET_KEY : SETTING_RECAPTCHA_SECRET_KEY);
+  const keys = await resolveCaptchaKeys(provider);
+  return keys.secretKey;
 }

@@ -17,6 +17,8 @@
 | `GOOGLE_CLIENT_SECRET` | Google 登录 | Google OAuth Client Secret |
 | `RESEND_API_KEY` | 邮箱验证码 | Resend API Key，如 `re_xxxxxx` |
 | `RESEND_FROM_EMAIL` | 邮箱验证码 | 发件人，默认 `no-reply@legspcpd.top` |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 人机验证 | Cloudflare Turnstile（配置后管理面板锁定） |
+| `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | 人机验证 | Google reCAPTCHA（配置后管理面板锁定） |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |
@@ -49,7 +51,12 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 - `RESEND_API_KEY`（必填才启用邮箱注册验证）
 - `RESEND_FROM_EMAIL`（可选，默认 `no-reply@legspcpd.top`，需在 Resend 已验证该域名）
 
-> 人机验证（Turnstile / reCAPTCHA）和自定义图标（favicon/logo）的密钥 **不走环境变量**，在管理后台 `/admin` → 站点设置 里配置（存数据库）。
+> 人机验证（Turnstile / reCAPTCHA）**支持环境变量配置**（推荐，管理面板会锁定）：
+> - `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`、`RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY`
+> - 也可在管理后台 `/admin` → 站点设置 配置（仅当该提供者未配置环境变量时可编辑）
+> - 环境变量优先级高于管理后台配置。
+>
+> 自定义图标（favicon/logo）在管理后台 `/admin` → 站点设置 配置（存数据库，不走环境变量）。
 
 ### 文件分享（R2）
 - `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`

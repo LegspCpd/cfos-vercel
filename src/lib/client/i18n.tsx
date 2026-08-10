@@ -179,6 +179,11 @@ const zh: Record<string, string> = {
   'audit.page': '第',
   'audit.prev': '上一页',
   'audit.next': '下一页',
+  'ad.subtitle': '站点统计、设置、AI 提供方、日志与访问控制。',
+  'ad.usersMoved': '用户管理已移到独立页面：',
+  'ad.goUsers': '进入用户管理',
+  'ad.auditMoved': '操作日志已移到独立页面：',
+  'ad.goAudit': '进入操作日志',
 
   // Nav
   'nav.home': '首页',
@@ -539,6 +544,11 @@ const en: Record<string, string> = {
   'audit.page': 'Page',
   'audit.prev': 'Previous',
   'audit.next': 'Next',
+  'ad.subtitle': 'Site statistics, settings, AI providers, logs and access control.',
+  'ad.usersMoved': 'User management has moved to a separate page:',
+  'ad.goUsers': 'Go to user management',
+  'ad.auditMoved': 'Operation log has moved to a separate page:',
+  'ad.goAudit': 'Go to operation log',
   'nav.home': 'Home',
   'nav.workspaces': 'Workspaces',
   'nav.shares': 'File Shares',

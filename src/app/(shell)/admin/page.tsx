@@ -56,11 +56,11 @@ export default function AdminPage() {
     <div className="mx-auto w-full max-w-[1600px] space-y-6 px-6 py-8">
       <div>
         <h1 className="text-2xl font-bold">{t('ad.title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">站点统计、设置、AI 提供方、日志与访问控制。</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('ad.subtitle')}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          用户管理已移到独立页面：<a href="/admin/users" className="text-primary underline">进入用户管理 →</a>
+          {t('ad.usersMoved')} <a href="/admin/users" className="text-primary underline">{t('ad.goUsers')} →</a>
           {' · '}
-          操作日志已移到独立页面：<a href="/admin/audit" className="text-primary underline">进入操作日志 →</a>
+          {t('ad.auditMoved')} <a href="/admin/audit" className="text-primary underline">{t('ad.goAudit')} →</a>
         </p>
       </div>
 
@@ -81,8 +81,8 @@ export default function AdminPage() {
                 <ScrollText className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold">操作日志</p>
-                <p className="text-xs text-muted-foreground">登录（含 IP）、Agent 运行、AI 调用（含 token 用量）</p>
+                <p className="text-sm font-semibold">{t('admin.audit')}</p>
+                <p className="text-xs text-muted-foreground">{t('admin.auditDesc')}</p>
               </div>
             </div>
             <span className="text-sm text-muted-foreground">→</span>

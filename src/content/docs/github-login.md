@@ -78,7 +78,8 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 
 ## 常见问题
 
-| 现象 | 原因 |
+| 现象 | 原因与解决 |
 |---|---|
-| `redirect_uri_mismatch` | 回调地址不一致，检查 `PUBLIC_SITE_URL` 与 OAuth 控制台里填的 redirect URI |
-| 登录失败 | `GITHUB_CLIENT_SECRET` / `GOOGLE_CLIENT_SECRET` 填错或漏配 |
+| Google 报 `redirect_uri_mismatch` | **Google Cloud Console → Credentials → 你的 OAuth Client → Authorized redirect URIs** 里没有 `https://os.legspcpd.top/api/auth/google/callback`。把它**精确添加**（一个地址一行，末尾不要多余斜杠），保存后再试。 |
+| GitHub 报 `redirect_uri_mismatch` | GitHub OAuth App 的 **Authorization callback URL** 与 `https://os.legspcpd.top/api/auth/github/callback` 不一致 |
+| 登录失败 | `GITHUB_CLIENT_SECRET` / `GOOGLE_CLIENT_SECRET` 填错或漏配，或改了环境变量后没 Redeploy |

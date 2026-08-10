@@ -150,4 +150,4 @@ Contributions are welcome. Please:
 
 ## 📄 License
 
-This is a rewrite of [Cloudflare OS](https://github.com/twilio-labs/cloudflare-os). License terms follow those of the upstream project; please review the upstream license before commercial use.
+This is a rewrite of [Cloudflare OS](https://github.com/cloudflare/cloudflare-os), which is licensed under the [Apache License 2.0](https://github.com/cloudflare/cloudflare-os/blob/master/LICENSE). This project is distributed under the same license.

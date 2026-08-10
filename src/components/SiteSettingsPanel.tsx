@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
 interface SiteSettings {
   signupsEnabled: boolean;
@@ -27,6 +28,7 @@ interface SiteSettings {
 const BANNER_COLORS = ['blue', 'amber', 'red', 'green'];
 
 export default function SiteSettingsPanel() {
+  const { t } = useI18n();
   const [form, setForm] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +54,7 @@ export default function SiteSettingsPanel() {
     setError('');
     try {
       await api.updateSiteSettings({ ...form });
-      setMessage('设置已保存');
+      setMessage(t('site.saved'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -63,9 +65,9 @@ export default function SiteSettingsPanel() {
   if (loading) {
     return (
       <section className="rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-base font-semibold">站点设置</h2>
+        <h2 className="mb-4 text-base font-semibold">{t('site.settings')}</h2>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载中...
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       </section>
     );
@@ -77,7 +79,7 @@ export default function SiteSettingsPanel() {
 
   return (
     <section className="rounded-lg border bg-card p-6">
-      <h2 className="mb-4 text-base font-semibold">站点设置</h2>
+      <h2 className="mb-4 text-base font-semibold">{t('site.settings')}</h2>
 
       {message && <div className="mb-3 rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{message}</div>}
       {error && <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
@@ -86,11 +88,11 @@ export default function SiteSettingsPanel() {
         {/* Basic info */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium">站点名称</label>
+            <label className="mb-1 block text-sm font-medium">{t('site.siteName')}</label>
             <input className={inputCls} value={form.siteName} onChange={(e) => update('siteName', e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">站点标语</label>
+            <label className="mb-1 block text-sm font-medium">{t('site.siteTagline')}</label>
             <input className={inputCls} value={form.siteTagline} onChange={(e) => update('siteTagline', e.target.value)} />
           </div>
         </div>
@@ -99,8 +101,8 @@ export default function SiteSettingsPanel() {
         <div className="rounded-md border p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">公告横幅</p>
-              <p className="text-sm text-muted-foreground">显示在页面顶部。</p>
+              <p className="font-medium">{t('site.banner')}</p>
+              <p className="text-sm text-muted-foreground">{t('site.bannerHint')}</p>
             </div>
             <button
               onClick={() => update('bannerEnabled', !form.bannerEnabled)}
@@ -114,7 +116,7 @@ export default function SiteSettingsPanel() {
             <div className="mt-3 space-y-2">
               <input
                 className={inputCls}
-                placeholder="横幅文字"
+                placeholder={t('site.bannerText')}
                 value={form.bannerText}
                 onChange={(e) => update('bannerText', e.target.value)}
               />
@@ -135,20 +137,20 @@ export default function SiteSettingsPanel() {
 
         {/* Footer */}
         <div>
-          <label className="mb-1 block text-sm font-medium">页脚文字</label>
-          <input className={inputCls} placeholder="如：© 2026 我的产品" value={form.footerText} onChange={(e) => update('footerText', e.target.value)} />
+          <label className="mb-1 block text-sm font-medium">{t('site.footer')}</label>
+          <input className={inputCls} placeholder={t('site.footerPlaceholder')} value={form.footerText} onChange={(e) => update('footerText', e.target.value)} />
         </div>
 
         {/* Branding / custom icons */}
         <div className="rounded-md border p-4">
-          <p className="font-medium">品牌与图标</p>
-          <p className="mb-3 text-sm text-muted-foreground">自定义网站图标（favicon）和 Logo，用于浏览器标签页与登录/注册页。</p>
+          <p className="font-medium">{t('site.branding')}</p>
+          <p className="mb-3 text-sm text-muted-foreground">{t('site.brandingHint')}</p>
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-sm font-medium">Favicon URL</label>
               <input
                 className={inputCls}
-                placeholder="https://.../favicon.ico 或 .svg 链接"
+                placeholder={t('site.faviconPlaceholder')}
                 value={form.siteFavicon}
                 onChange={(e) => update('siteFavicon', e.target.value)}
               />
@@ -164,7 +166,7 @@ export default function SiteSettingsPanel() {
             </div>
             {form.siteFavicon && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Favicon 预览：</span>
+                <span>{t('site.faviconPreview')}</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={form.siteFavicon} alt="favicon" className="h-6 w-6 rounded object-cover" />
               </div>
@@ -174,15 +176,15 @@ export default function SiteSettingsPanel() {
 
         {/* Agent */}
         <div>
-          <label className="mb-1 block text-sm font-medium">默认模型</label>
-          <input className={inputCls} placeholder="如 deepseek-chat" value={form.defaultModel} onChange={(e) => update('defaultModel', e.target.value)} />
+          <label className="mb-1 block text-sm font-medium">{t('site.defaultModel')}</label>
+          <input className={inputCls} placeholder="deepseek-chat" value={form.defaultModel} onChange={(e) => update('defaultModel', e.target.value)} />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Agent 附加指令</label>
+          <label className="mb-1 block text-sm font-medium">{t('site.agentInstructions')}</label>
           <textarea
             className={`${inputCls} min-h-[80px]`}
-            placeholder="附加到每次 agent 提示词的指令..."
+            placeholder={t('site.agentInstructionsPlaceholder')}
             value={form.agentInstructions}
             onChange={(e) => update('agentInstructions', e.target.value)}
           />
@@ -190,10 +192,8 @@ export default function SiteSettingsPanel() {
 
         {/* Human verification (CAPTCHA) */}
         <div className="rounded-md border p-4">
-          <p className="font-medium">人机验证</p>
-          <p className="mb-3 text-sm text-muted-foreground">
-            新用户注册时强制通过人机验证。默认关闭；填了任一提供者的 Site Key 和 Secret 即开启。两个都填则随机加载其中一个。
-          </p>
+          <p className="font-medium">{t('site.captcha')}</p>
+          <p className="mb-3 text-sm text-muted-foreground">{t('site.captchaHint')}</p>
 
           {/* Turnstile */}
           <div className="mb-4">
@@ -201,10 +201,10 @@ export default function SiteSettingsPanel() {
               <p className="text-sm font-medium">Cloudflare Turnstile</p>
               <div className="flex items-center gap-2">
                 {form.turnstileEnvManaged && (
-                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">已由环境变量配置，不可修改</span>
+                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">{t('site.envManaged')}</span>
                 )}
                 <span className={`rounded px-2 py-0.5 text-xs ${form.turnstileSiteKey && form.turnstileSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
-                  {form.turnstileSiteKey && form.turnstileSecretKey ? '已启用' : '未启用'}
+                  {form.turnstileSiteKey && form.turnstileSecretKey ? t('site.enabled') : t('site.disabled')}
                 </span>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function SiteSettingsPanel() {
               />
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              也可在环境变量设置 <code className="rounded bg-secondary px-1">TURNSTILE_SITE_KEY</code> 和 <code className="rounded bg-secondary px-1">TURNSTILE_SECRET_KEY</code>，环境变量优先级更高。
+              {t('site.envHint')} <code className="rounded bg-secondary px-1">TURNSTILE_SITE_KEY</code> / <code className="rounded bg-secondary px-1">TURNSTILE_SECRET_KEY</code>
             </p>
           </div>
 
@@ -236,10 +236,10 @@ export default function SiteSettingsPanel() {
               <p className="text-sm font-medium">Google reCAPTCHA</p>
               <div className="flex items-center gap-2">
                 {form.recaptchaEnvManaged && (
-                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">已由环境变量配置，不可修改</span>
+                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">{t('site.envManaged')}</span>
                 )}
                 <span className={`rounded px-2 py-0.5 text-xs ${form.recaptchaSiteKey && form.recaptchaSecretKey ? 'bg-green-500/10 text-green-600' : 'bg-secondary text-muted-foreground'}`}>
-                  {form.recaptchaSiteKey && form.recaptchaSecretKey ? '已启用' : '未启用'}
+                  {form.recaptchaSiteKey && form.recaptchaSecretKey ? t('site.enabled') : t('site.disabled')}
                 </span>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function SiteSettingsPanel() {
               />
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              也可在环境变量设置 <code className="rounded bg-secondary px-1">RECAPTCHA_SITE_KEY</code> 和 <code className="rounded bg-secondary px-1">RECAPTCHA_SECRET_KEY</code>，环境变量优先级更高。
+              {t('site.envHint')} <code className="rounded bg-secondary px-1">RECAPTCHA_SITE_KEY</code> / <code className="rounded bg-secondary px-1">RECAPTCHA_SECRET_KEY</code>
             </p>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function SiteSettingsPanel() {
           disabled={saving}
           className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          <Save className="h-4 w-4" /> {saving ? '保存中...' : '保存设置'}
+          <Save className="h-4 w-4" /> {saving ? t('saving') : t('site.save')}
         </button>
       </div>
     </section>

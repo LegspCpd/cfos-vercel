@@ -53,14 +53,22 @@ const NAV: NavItem[] = [
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
 ];
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children,
+  initialPermissions = [],
+  initialGroup = null,
+}: {
+  children: React.ReactNode;
+  initialPermissions?: string[];
+  initialGroup?: string | null;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { t, lang, setLang } = useI18n();
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<string[]>(initialPermissions);
   const [userName, setUserName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);

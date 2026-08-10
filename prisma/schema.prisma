@@ -33,11 +33,12 @@ model User {
   githubConnection GitHubConnection?
   contextDocs ContextDoc[]
   favorites  Favorite[]
-  emailVerifications EmailVerification[]
 }
 
 // An email verification code issued during email-based signup (or email change).
 // One row per pending email; codes expire after a short window.
+// NOTE: this deliberately has NO relation to User — a code is issued BEFORE the user
+// record exists (during signup), so a FK on User.email would fail the insert.
 model EmailVerification {
   id        String   @id @default(cuid())
   email     String
@@ -45,8 +46,6 @@ model EmailVerification {
   expiresAt DateTime // e.g. now + 10 minutes
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  user User? @relation(fields: [email], references: [email], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([email])
 }

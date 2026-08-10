@@ -35,13 +35,13 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 
 ## 文档导航
 
-- [部署教程](deploy) — 从零开始部署到 Vercel
-- [环境变量](env) — 全部环境变量详解
-- [登录配置](github-login) — 配置 GitHub / Google OAuth 登录
-- [文件分享 R2](r2) — 配置 Cloudflare R2 存储
-- [Cloudflare Access](cf-access) — 完整版 SSO 门禁
-- [使用说明](usage) — 怎么用这个工作区
-- [常见问题](faq) — 排错与技巧
+- [部署教程](/docs/deploy) — 从零开始部署到 Vercel
+- [环境变量](/docs/env) — 全部环境变量详解
+- [登录配置](/docs/github-login) — 配置 GitHub / Google OAuth 登录
+- [文件分享 R2](/docs/r2) — 配置 Cloudflare R2 存储
+- [Cloudflare Access](/docs/cf-access) — 完整版 SSO 门禁
+- [使用说明](/docs/usage) — 怎么用这个工作区
+- [常见问题](/docs/faq) — 排错与技巧
 
 ## 快速开始（3 步）
 
@@ -49,4 +49,4 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 2. **部署**：推到 GitHub → Vercel 导入，Build Command 填 `pnpm install && pnpm db:push && pnpm build`
 3. **配 AI**：管理后台 `/admin` → AI Providers 添加 DeepSeek 等
 
-详细步骤见 [部署教程](deploy)。
+详细步骤见 [部署教程](/docs/deploy)。

@@ -18,6 +18,9 @@
 | `MICROSOFT_CLIENT_ID` | Microsoft sign-in | Microsoft Entra ID Client ID |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft sign-in | Microsoft OAuth Client Secret |
 | `MICROSOFT_TENANT_ID` | Microsoft sign-in | Tenant ID, default `common` (multi-tenant) |
+| `GITLAB_CLIENT_ID` | GitLab connection | GitLab OAuth Application ID |
+| `GITLAB_CLIENT_SECRET` | GitLab connection | GitLab OAuth Secret |
+| `GITLAB_BASE_URL` | GitLab connection | Instance base URL, default `https://gitlab.com` |
 | `RESEND_API_KEY` | Email verification | Resend API key, e.g. `re_xxxxxx` |
 | `RESEND_FROM_EMAIL` | Email verification | Sender, default `no-reply@legspcpd.top` |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Human verification | Cloudflare Turnstile (locks the admin panel once set) |

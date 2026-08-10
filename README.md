@@ -95,6 +95,9 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `MICROSOFT_CLIENT_ID` | Microsoft (Entra ID) OAuth Client ID | 用 Microsoft 登录则必填 |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth Client Secret | 用 Microsoft 登录则必填 |
 | `MICROSOFT_TENANT_ID` | Microsoft 租户 ID，默认 `common`（多租户） | 可选 |
+| `GITLAB_CLIENT_ID` | GitLab OAuth Client ID（外部连接） | 用 GitLab 连接则必填 |
+| `GITLAB_CLIENT_SECRET` | GitLab OAuth Client Secret | 用 GitLab 连接则必填 |
+| `GITLAB_BASE_URL` | GitLab 实例地址，默认 `https://gitlab.com`（自托管填你的域名） | 可选 |
 | `RESEND_API_KEY` | 邮箱验证码发信（Resend） | 启用邮箱注册验证则必填 |
 | `RESEND_FROM_EMAIL` | 发件人邮箱，默认 `no-reply@legspcpd.top` | 可选 |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile（配置后管理面板锁定） | 用 Turnstile 则填 |
@@ -202,6 +205,23 @@ MICROSOFT_TENANT_ID=common      # common = 任何 Entra ID 租户 + 个人 Micro
 **Redeploy** 后，登录页出现"使用 Microsoft 登录"按钮。
 
 > 回调地址需与控制台注册完全一致，否则报 `redirect_uri_mismatch`。个人 Microsoft 账号（Outlook/消费者）用 `common` 租户。
+
+## GitLab 外部连接（可选）
+
+在 **外部连接** 页连接 GitLab，agent 可代表你访问 GitLab 项目。
+
+1. 打开 **https://gitlab.com/-/profile/applications**（自托管 GitLab：`https://你的域名/-/profile/applications`）
+2. **Name**：`Cloudflare OS`；**Redirect URI** 填 `https://os.legspcpd.top/api/gitlab/callback`
+3. **Scopes** 勾选：`read_api`、`read_user`
+4. 创建后复制 **Application ID** 和 **Secret**，填到 Vercel 环境变量：
+
+```
+GITLAB_CLIENT_ID=你的Application ID
+GITLAB_CLIENT_SECRET=你的Secret
+GITLAB_BASE_URL=https://gitlab.com     # 自托管填你的 GitLab 域名
+```
+
+**Redeploy** 后，外部连接页即可连接 GitLab。
 
 ## 邮箱验证码注册（可选）
 

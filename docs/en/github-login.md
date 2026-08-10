@@ -91,7 +91,7 @@ Sign in with a **Microsoft Entra ID (Azure AD)** account:
 ```
 MICROSOFT_CLIENT_ID=your-client-id
 MICROSOFT_CLIENT_SECRET=your-client-secret
-MICROSOFT_TENANT_ID=common      # multi-tenant; use common for personal/consumer accounts
+MICROSOFT_TENANT_ID=common      # common = any Entra ID tenant + personal Microsoft accounts (recommended)
 ```
 
 **Redeploy** to apply. The sign-in page will show "Continue with Microsoft".

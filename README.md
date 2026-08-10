@@ -196,7 +196,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 ```
 MICROSOFT_CLIENT_ID=你的Client ID
 MICROSOFT_CLIENT_SECRET=你的Client Secret
-MICROSOFT_TENANT_ID=common      # 多租户；个人账号/消费账号用 common 即可
+MICROSOFT_TENANT_ID=common      # common = 任何 Entra ID 租户 + 个人 Microsoft 帐户（推荐）
 ```
 
 **Redeploy** 后，登录页出现"使用 Microsoft 登录"按钮。

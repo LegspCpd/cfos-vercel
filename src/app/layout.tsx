@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { I18nProvider } from '@/lib/client/i18n';
+import PwaRegister from '@/components/PwaRegister';
 import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/settings';
 
 const DEFAULT_ICON = 'https://hub.legspcpd.top/file/1786217341335_logo.jpg';
@@ -18,19 +19,34 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${siteName || 'Cloudflare OS'}`,
     },
     description: 'AI productivity workspace rebuilt on Next.js + Postgres',
+    manifest: '/manifest.webmanifest',
     icons: {
       icon,
       shortcut: icon,
-      apple: icon,
+      apple: '/icon-192.png',
     },
+    appleWebApp: {
+      capable: true,
+      title: siteName || 'Cloudflare OS',
+      statusBarStyle: 'black-translucent',
+    },
+    formatDetection: { telephone: false },
   };
 }
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#0a0a0a',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh" className="dark">
       <body>
         <I18nProvider>{children}</I18nProvider>
+        <PwaRegister />
       </body>
     </html>
   );

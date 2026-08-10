@@ -1,0 +1,116 @@
+# 每小时自动代码检查（安全模式）
+#
+# 这个 Action 每小时运行一次，自动检测代码中的错误（TypeScript 类型错误、Prisma schema
+# 校验），并把发现的问题整理成一份报告，以 Pull Request 的形式提交给你**审查**。
+#
+# 安全原则（重要）：
+# - 它【绝不】直接修改 master 分支上的代码。
+# - 有错误时，只在独立分支（bot/auto-check）上写入一份错误报告并开 PR，由你手动 Review。
+# - 没有错误时静默通过，不产生任何噪音。
+# 所以这个 Action 永远不可能"乱改"你的代码——所有改动都需经你亲自合并。
+
+name: Auto Code Check
+
+on:
+  schedule:
+    # 每小时整点运行（UTC）。要改为其他频率，调整 cron 表达式。
+    - cron: '0 * * * *'
+  workflow_dispatch: {} # 也支持在 Actions 页面手动触发
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        id: tsc
+        run: |
+          set +e
+          pnpm exec tsc --noEmit > /tmp/tsc.log 2>&1
+          exit_code=$?
+          echo "exit=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "::group::tsc output"
+          cat /tmp/tsc.log
+          echo "::endgroup::"
+          exit 0
+
+      - name: Prisma validate
+        id: prisma
+        run: |
+          set +e
+          pnpm exec prisma validate > /tmp/prisma.log 2>&1
+          exit_code=$?
+          echo "exit=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "::group::prisma output"
+          cat /tmp/prisma.log
+          echo "::endgroup::"
+          exit 0
+
+      # 汇总所有检查结果；任一失败即视为"发现问题"。
+      - name: Summarize results
+        id: summary
+        run: |
+          tsc=${{ steps.tsc.outputs.exit }}
+          prisma=${{ steps.prisma.outputs.exit }}
+          if [ "$tsc" != "0" ] || [ "$prisma" != "0" ]; then
+            echo "has_errors=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 有问题时，把错误报告写入独立分支并开 PR（不碰 master）。
+      - name: Write error report
+        if: steps.summary.outputs.has_errors == 'true'
+        run: |
+          mkdir -p .auto-check
+          {
+            echo "# 自动代码检查报告"
+            echo "运行时间：$(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "检查提交：${{ github.sha }}"
+            echo
+            echo "## TypeScript 类型检查（exit=${{ steps.tsc.outputs.exit }}）"
+            echo '```'
+            cat /tmp/tsc.log || echo '（无输出）'
+            echo '```'
+            echo
+            echo "## Prisma schema 校验（exit=${{ steps.prisma.outputs.exit }}）"
+            echo '```'
+            cat /tmp/prisma.log || echo '（无输出）'
+            echo '```'
+            echo
+            echo "> 这是自动检查生成的报告，不包含任何代码改动。请审阅后修复相关错误。"
+          } > .auto-check/report.md
+
+      - name: Open report PR if errors
+        if: steps.summary.outputs.has_errors == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: bot/auto-check
+          delete-branch: true
+          commit-message: 'chore: auto-check report'
+          title: '🚨 自动代码检查发现错误'
+          body-path: .auto-check/report.md

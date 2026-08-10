@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Github, Chrome, Monitor, Mail, RefreshCw, Loader2 } from 'lucide-react';
+import { Mail, RefreshCw, Loader2 } from 'lucide-react';
+import { GithubIcon, GoogleIcon, MicrosoftIcon } from '@/components/BrandIcons';
 import { api } from '@/lib/client/api';
 import { setToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -149,21 +150,21 @@ export default function SignupPage() {
           onClick={githubLogin}
           className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
         >
-          <Github className="h-4 w-4" />
+          <GithubIcon className="h-4 w-4" />
           {t('auth.github')}
         </button>
         <button
           onClick={googleLogin}
           className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
         >
-          <Chrome className="h-4 w-4" />
+          <GoogleIcon className="h-4 w-4" />
           {t('auth.google')}
         </button>
         <button
           onClick={microsoftLogin}
           className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
         >
-          <Monitor className="h-4 w-4" />
+          <MicrosoftIcon className="h-4 w-4" />
           {t('auth.microsoft')}
         </button>
 

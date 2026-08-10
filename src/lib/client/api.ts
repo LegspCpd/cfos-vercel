@@ -146,6 +146,14 @@ export const api = {
     request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null }>('/api/github/status'),
   githubDisconnect: () =>
     request<{ ok: boolean }>('/api/github/disconnect', { method: 'POST' }),
+  googleStatus: () =>
+    request<{ connected: boolean; googleEmail: string | null; updatedAt: string | null }>('/api/google/status'),
+  googleDisconnect: () =>
+    request<{ ok: boolean }>('/api/google/disconnect', { method: 'POST' }),
+  gitlabStatus: () =>
+    request<{ connected: boolean; gitlabUsername: string | null; updatedAt: string | null }>('/api/gitlab/status'),
+  gitlabDisconnect: () =>
+    request<{ ok: boolean }>('/api/gitlab/disconnect', { method: 'POST' }),
   listContext: () =>
     request<{
       docs: { id: string; title: string; tags: string; createdAt: string; updatedAt: string }[];

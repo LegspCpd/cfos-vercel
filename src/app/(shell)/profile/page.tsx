@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Github, Chrome, Monitor, Check, Link2, Mail, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, Check, Link2, Mail, RefreshCw } from 'lucide-react';
+import { GithubIcon, GoogleIcon, MicrosoftIcon } from '@/components/BrandIcons';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -128,6 +129,10 @@ export default function ProfilePage() {
 
   function connectMicrosoft() {
     window.location.href = `/api/auth/microsoft/connect?token=${encodeURIComponent(getToken() || '')}`;
+  }
+
+  function connectGitlab() {
+    window.location.href = `/api/gitlab/connect?token=${encodeURIComponent(getToken() || '')}`;
   }
 
   // Countdown for the "resend code" button.
@@ -270,7 +275,7 @@ export default function ProfilePage() {
         <div className="mb-3 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-              <Github className="h-5 w-5" />
+              <GithubIcon className="h-5 w-5" />
             </span>
             <div>
               <p className="text-sm font-medium">GitHub</p>
@@ -299,7 +304,7 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-              <Chrome className="h-5 w-5" />
+              <GoogleIcon className="h-5 w-5" />
             </span>
             <div>
               <p className="text-sm font-medium">Google</p>
@@ -326,7 +331,7 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-              <Monitor className="h-5 w-5" />
+              <MicrosoftIcon className="h-5 w-5" />
             </span>
             <div>
               <p className="text-sm font-medium">Microsoft</p>

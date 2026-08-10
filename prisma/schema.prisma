@@ -33,6 +33,8 @@ model User {
   chats      Chat[]
   sharedFiles SharedFile[]
   githubConnection GitHubConnection?
+  googleConnection GoogleConnection?
+  gitlabConnection GitlabConnection?
   contextDocs ContextDoc[]
   favorites  Favorite[]
 }
@@ -185,6 +187,35 @@ model GitHubConnection {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("GitHubConnection")
+}
+
+// A user's OAuth connection to Google. Lets the agent call Google APIs on the user's behalf.
+model GoogleConnection {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  googleEmail String
+  accessToken String // stored; used by the agent's Google tools
+  refreshToken String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("GoogleConnection")
+}
+
+// A user's OAuth connection to GitLab. Lets the agent call GitLab APIs on the user's behalf.
+model GitlabConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  gitlabUsername String
+  accessToken  String // stored; used by the agent's GitLab tools
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("GitlabConnection")
 }
 
 // A context document the user uploads for the agent to reference when building.

@@ -107,7 +107,9 @@ export async function GET(req: Request) {
 
 function redirectWithToken(token: string): Response {
   const frontendUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  return NextResponse.redirect(`${frontendUrl}/login?token=${encodeURIComponent(token)}`);
+  // Land on /verify so a human-verification challenge runs before the session activates
+  // (blocks bulk-automated OAuth accounts). /verify auto-passes when no CAPTCHA is configured.
+  return NextResponse.redirect(`${frontendUrl}/verify?token=${encodeURIComponent(token)}`);
 }
 
 function redirectWithError(msg: string): Response {

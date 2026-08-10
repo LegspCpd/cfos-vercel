@@ -201,6 +201,11 @@ RECAPTCHA_SECRET_KEY=xxx        # Google reCAPTCHA
 - **两个都填则随机加载其中一个**
 - 若一个用环境变量、另一个用管理面板配置，两者独立生效；环境变量配的那个在面板中锁定
 
+**触发时机（配了人机验证后才生效）：**
+- **注册页**：打开 `/signup` 就显示人机验证，无需点注册
+- **OAuth 登录**（GitHub / Google）：登录成功后先进入 `/verify` 中间页，完成人机验证才进入主界面（防批量 OAuth 账号刷资源）
+- **普通密码登录**：不要求人机验证
+
 获取密钥：
 - Turnstile：https://dash.cloudflare.com → Turnstile → Add site
 - reCAPTCHA：https://www.google.com/recaptcha/admin → 创建 v2 复选框

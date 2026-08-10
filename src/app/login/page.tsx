@@ -30,7 +30,9 @@ export default function LoginPage() {
       return;
     }
     if (oauthError) {
-      setError(decodeURIComponent(oauthError));
+      // Normalize known OAuth errors to a friendly message (code 1001 = cancelled).
+      const raw = decodeURIComponent(oauthError);
+      setError(raw.startsWith('1001') ? '登录已取消，请重试。' : raw);
       window.history.replaceState({}, '', '/login');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,11 +54,11 @@ export default function LoginPage() {
   }
 
   function githubLogin() {
-    window.location.href = '/api/auth/github';
+    window.location.href = '/api/auth/github?from=login';
   }
 
   function googleLogin() {
-    window.location.href = '/api/auth/google';
+    window.location.href = '/api/auth/google?from=login';
   }
 
   return (

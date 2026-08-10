@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 // GET /api/auth/google — start Google OAuth flow.
-export async function GET() {
+export async function GET(req: Request) {
   if (!CLIENT_ID) {
     return NextResponse.json(
       { error: 'Google login is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.' },
@@ -34,5 +34,15 @@ export async function GET() {
     path: '/',
     maxAge: 600, // 10 min
   });
+  // Remember where the OAuth flow started, so a cancel/return goes back there.
+  const from = new URL(req.url).searchParams.get('from');
+  if (from === 'login' || from === 'signup') {
+    res.cookies.set('oauth_from', from, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600,
+    });
+  }
   return res;
 }

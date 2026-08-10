@@ -36,11 +36,12 @@ export async function GET(req: Request) {
   // CSRF check
   const storedState = req.headers.get('cookie')?.match(/github_oauth_state=([^;]+)/)?.[1];
   if (!state || !storedState || state !== storedState) {
-    return redirectWithError('Invalid OAuth state. Please try again.');
+    return redirectWithError('Invalid OAuth state. Please try again.', req);
   }
 
   if (error || !code) {
-    return redirectWithError('GitHub authorization failed.');
+    // User cancelled on GitHub or returned without authorizing.
+    return redirectWithError('登录已取消', req, '1001');
   }
 
   try {
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
     });
     const tokenJson = (await tokenRes.json()) as { access_token?: string; error?: string };
     if (!tokenJson.access_token) {
-      return redirectWithError('Failed to obtain GitHub token.');
+      return redirectWithError('Failed to obtain GitHub token.', req);
     }
     const accessToken = tokenJson.access_token;
 
@@ -95,22 +96,32 @@ export async function GET(req: Request) {
 
     // 5. Issue session token.
     const token = await createSessionToken({ userId: user.id, username: user.username });
-    return redirectWithToken(token);
+    return redirectWithToken(token, req);
   } catch (e) {
     console.error('github oauth error', e);
-    return redirectWithError('GitHub login failed.');
+    return redirectWithError('GitHub login failed.', req, '1001');
   }
 }
 
-function redirectWithToken(token: string): Response {
+function redirectWithToken(token: string, req: Request): Response {
   const frontendUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  // Pass the token in the URL fragment; the frontend reads it and stores it.
-  // Land on /verify so a human-verification challenge runs before the session activates
-  // (blocks bulk-automated OAuth accounts). /verify auto-passes when no CAPTCHA is configured.
-  return NextResponse.redirect(`${frontendUrl}/verify?token=${encodeURIComponent(token)}`);
+  // Clear the "from" cookie since the flow completed successfully.
+  const res = NextResponse.redirect(`${frontendUrl}/verify?token=${encodeURIComponent(token)}`);
+  res.cookies.delete('oauth_from');
+  return res;
 }
 
-function redirectWithError(msg: string): Response {
+// On an OAuth cancel/failure, send the user back to the page where they started
+// (default /login) with a clear error. Code 1001 = "OAuth sign-in cancelled/failed".
+function redirectWithError(msg: string, req: Request, code?: string): Response {
   const frontendUrl = process.env.PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  return NextResponse.redirect(`${frontendUrl}/login?error=${encodeURIComponent(msg)}`);
+  const cookie = req.headers.get('cookie') || '';
+  const from = cookie.match(/oauth_from=([^;]+)/)?.[1];
+  const target = from === 'signup' ? '/signup' : '/login';
+  const errorCode = code || '1001';
+  const res = NextResponse.redirect(
+    `${frontendUrl}${target}?error=${encodeURIComponent(`${errorCode}: ${msg}`)}`,
+  );
+  res.cookies.delete('oauth_from');
+  return res;
 }

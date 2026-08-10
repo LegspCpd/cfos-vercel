@@ -41,6 +41,17 @@ export default function SignupPage() {
     api.getPublicSite().then(setSite).catch(() => {});
   }, []);
 
+  // Handle OAuth cancel/return: ?error= on this page (e.g. code 1001).
+  useEffect(() => {
+    const params = new URL(window.location.href).searchParams;
+    const oauthError = params.get('error');
+    if (oauthError) {
+      const raw = decodeURIComponent(oauthError);
+      setError(raw.startsWith('1001') ? '登录已取消，请重试。' : raw);
+      window.history.replaceState({}, '', '/signup');
+    }
+  }, []);
+
   // Countdown timer for the "resend code" button.
   useEffect(() => {
     if (countdown <= 0) return;
@@ -107,7 +118,7 @@ export default function SignupPage() {
   }
 
   function githubLogin() {
-    window.location.href = '/api/auth/github';
+    window.location.href = '/api/auth/github?from=signup';
   }
 
   return (

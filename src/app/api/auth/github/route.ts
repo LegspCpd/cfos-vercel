@@ -5,7 +5,9 @@ const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
 // GET /api/auth/github — start GitHub OAuth flow.
 // Redirects the browser to GitHub's authorization page with a CSRF state token.
-export async function GET() {
+// Optional ?from=login|signup records which page started the flow so an OAuth
+// cancel/return can redirect the user back there with a clear error (code 1001).
+export async function GET(req: Request) {
   if (!CLIENT_ID) {
     return NextResponse.json(
       { error: 'GitHub login is not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.' },
@@ -34,5 +36,15 @@ export async function GET() {
     path: '/',
     maxAge: 600, // 10 min
   });
+  // Remember where the OAuth flow started, so a cancel/return goes back there.
+  const from = new URL(req.url).searchParams.get('from');
+  if (from === 'login' || from === 'signup') {
+    res.cookies.set('oauth_from', from, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600,
+    });
+  }
   return res;
 }

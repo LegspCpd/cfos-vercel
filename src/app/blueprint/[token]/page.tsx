@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { FileCode2, User, Clock, Copy, Check, Home } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
 interface BlueprintData {
   id: string;
@@ -16,6 +17,7 @@ interface BlueprintData {
 
 export default function PublicBlueprintPage() {
   const { token } = useParams<{ token: string }>();
+  const { t } = useI18n();
   const [bp, setBp] = useState<BlueprintData | null>(null);
   const [error, setError] = useState('');
   const [activePath, setActivePath] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export default function PublicBlueprintPage() {
         <FileCode2 className="h-10 w-10 text-muted-foreground" />
         <p className="text-muted-foreground">{error}</p>
         <Link href="/" className="text-sm text-primary hover:underline">
-          ← 返回首页
+          ← {t('blueprint.back')}
         </Link>
       </div>
     );
@@ -81,9 +83,9 @@ export default function PublicBlueprintPage() {
 
       {/* Preview banner */}
       <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-        <span>这是一个公开的只读蓝图预览。你可以查看和复制代码，但不能编辑。</span>
+        <span>{t('blueprint.readonly')}</span>
         <span className="ml-auto flex items-center gap-1">
-          <Clock className="h-3 w-3" /> 更新于 {new Date(bp.updatedAt).toLocaleDateString()}
+          <Clock className="h-3 w-3" /> {t('ctx.updatedAt')} {new Date(bp.updatedAt).toLocaleDateString()}
         </span>
       </div>
 

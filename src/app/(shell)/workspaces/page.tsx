@@ -34,7 +34,7 @@ export default function WorkspacesPage() {
   }, [router]);
 
   async function createWorkspace() {
-    const res = await api.createWorkspace(newTitle.trim() || '未命名工作区');
+    const res = await api.createWorkspace(newTitle.trim() || t('ws.untitled'));
     router.push(`/workspace/${res.workspace.id}`);
   }
 

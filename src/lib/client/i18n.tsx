@@ -301,6 +301,8 @@ const zh: Record<string, string> = {
   'comments.title': '公开聊天',
   'comments.placeholder': '欢迎在公开聊天区发言…',
   'comments.loading': '加载评论区…',
+  'blueprint.back': '返回首页',
+  'blueprint.readonly': '这是一个公开的只读蓝图预览。你可以查看和复制代码，但不能编辑。',
 
   // Nav
   'nav.home': '首页',
@@ -815,6 +817,8 @@ const en: Record<string, string> = {
   'comments.title': 'Public chat',
   'comments.placeholder': 'Say something in the public chat…',
   'comments.loading': 'Loading comments…',
+  'blueprint.back': 'Back to home',
+  'blueprint.readonly': 'This is a public read-only blueprint preview. You can view and copy the code, but not edit it.',
   'nav.home': 'Home',
   'nav.workspaces': 'Workspaces',
   'nav.shares': 'File Shares',

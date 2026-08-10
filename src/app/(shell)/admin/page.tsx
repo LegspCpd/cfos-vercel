@@ -72,11 +72,11 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Row 2: Cloudflare Access (moved up) */}
-      <CfAccessStatus />
-
-      {/* Row 3: AI providers — full-width, laid flat at the bottom */}
+      {/* Row 2: AI providers — right below the audit log */}
       <ProvidersManager />
+
+      {/* Row 3: Cloudflare Access — at the bottom */}
+      <CfAccessStatus />
     </div>
   );
 }

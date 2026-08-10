@@ -31,7 +31,7 @@
 | `ALLOW_SIGNUPS` | Registration toggle | `enabled` allows signup / `disabled` blocks (env takes precedence over the admin toggle) |
 | `NEXT_PUBLIC_COMMENTS_ENABLED` | Public comments/chat | `true` enables the bottom-right Waline comment widget, off by default |
 | `NEXT_PUBLIC_BEIJIN` | Site-wide background | Background image URL, re-requested on every refresh; client components need the `NEXT_PUBLIC_` prefix |
-| `SITE_IMG_URL` | Site icon / logo | Image URL for a custom favicon/logo. `SITE_IMG_URL` is used server-side for the favicon; for the client-side logo use `NEXT_PUBLIC_SITE_IMG_URL` (recommended: set both to the same value) |
+| `SITE_IMG_URL` | Site icon / logo | Image URL for a custom favicon/logo. At build time it is downloaded and converted to PNG for the site icon (works even if the source is JPG). `SITE_IMG_URL` is used server-side for the favicon; for the client-side logo use `NEXT_PUBLIC_SITE_IMG_URL` (recommended: set both to the same value) |
 | `NEXT_PUBLIC_COMMENTS_SERVER_URL` | Comment service | Waline comment server URL (used when comments are enabled) |
 | `NEXT_PUBLIC_WALINE_CSS` / `NEXT_PUBLIC_WALINE_JS` | Comment assets | Waline front-end asset CDN URLs (default: unpkg official) |
 | `VERIFY_CODE_TTL_MINUTES` | Code lifetime | Email verification-code lifetime in minutes (default 10) |

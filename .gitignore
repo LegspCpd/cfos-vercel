@@ -36,3 +36,7 @@ next-env.d.ts
 # prisma
 # NOTE: some teams commit the generated client; we generate on install instead.
 prisma/dev.db
+
+# build-time generated site icons (see scripts/fetch-favicon.mjs)
+public/site-icon.png
+public/apple-touch-icon.png

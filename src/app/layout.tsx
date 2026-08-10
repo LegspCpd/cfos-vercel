@@ -15,7 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
     getSetting(SETTING_SITE_FAVICON).catch(() => ''),
     getSetting(SETTING_SITE_NAME).catch(() => ''),
   ]);
-  const icon = favicon || process.env.SITE_IMG_URL || DEFAULT_ICON;
+  // Favicon priority: admin-set favicon (DB) -> build-generated site-icon.png (from
+  // SITE_IMG_URL, converted to PNG at build time by scripts/fetch-favicon.mjs) -> default.
+  const icon =
+    favicon ||
+    (process.env.SITE_IMG_URL ? '/site-icon.png' : '') ||
+    DEFAULT_ICON;
   return {
     title: {
       default: siteName || 'Cloudflare OS',
@@ -26,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon,
       shortcut: icon,
-      apple: '/icon-192.png',
+      apple: process.env.SITE_IMG_URL ? '/apple-touch-icon.png' : '/icon-192.png',
     },
     appleWebApp: {
       capable: true,

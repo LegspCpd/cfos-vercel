@@ -19,6 +19,9 @@
 | `RESEND_FROM_EMAIL` | 邮箱验证码 | 发件人，默认 `no-reply@legspcpd.top` |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 人机验证 | Cloudflare Turnstile（配置后管理面板锁定） |
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | 人机验证 | Google reCAPTCHA（配置后管理面板锁定） |
+| `IMGHOST_BASE_URL` | 头像图床 | 默认 `https://hub.legspcpd.top` |
+| `IMGHOST_TOKEN` | 头像图床 | 图床 API token，如 `imgbed_xxx` |
+| `IMGHOST_FOLDER` | 头像图床 | 上传文件夹，默认 `photos/avatars` |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |

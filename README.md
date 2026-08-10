@@ -91,6 +91,9 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `RESEND_FROM_EMAIL` | 发件人邮箱，默认 `no-reply@legspcpd.top` | 可选 |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile（配置后管理面板锁定） | 用 Turnstile 则填 |
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA（配置后管理面板锁定） | 用 reCAPTCHA 则填 |
+| `IMGHOST_BASE_URL` | 头像图床，默认 `https://hub.legspcpd.top` | 用图床则填 |
+| `IMGHOST_TOKEN` | 头像图床 API token（如 `imgbed_xxx`） | 用图床则必填 |
+| `IMGHOST_FOLDER` | 上传文件夹，默认 `photos/avatars` | 可选 |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM（也可部署后在管理后台配多个 provider） | 推荐 |
 
 ### 4. Build Command
@@ -200,6 +203,18 @@ Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、
 **临时快速测试**：把 `RESEND_FROM_EMAIL` 改成 Resend 的免费测试发件人 `onboarding@resend.dev`（无需验证域名），Redeploy 后再试。如果能收到邮件，就说明是域名验证问题，把 `legspcpd.top` 验证好再改回即可。
 
 > 若仍报错，前端会显示 Resend 返回的具体错误（如 "Invalid `from` email"），照提示处理即可。
+
+## 头像图床（可选）
+
+用户可在个人设置上传头像。上传会代理到你的图床（默认 **Linya ImgHub**，`hub.legspcpd.top`），token 存环境变量（不暴露给前端）。
+
+```
+IMGHOST_BASE_URL=https://hub.legspcpd.top
+IMGHOST_TOKEN=imgbed_xxx            # 你的图床 API token
+IMGHOST_FOLDER=photos/avatars       # 可选，上传文件夹
+```
+
+> 若未配置 `IMGHOST_TOKEN`，头像上传会提示"图床未配置"。
 
 ## 人机验证（Cloudflare Turnstile + Google reCAPTCHA，可选）
 

@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { getMsalClient } from '@/lib/msal';
 import { verifySessionToken } from '@/lib/auth';
 import { siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
-const TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
+const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
 
-// GET /api/auth/microsoft/connect?token=... — start "connect Microsoft to my account" flow.
-// Requires an authenticated user. The userId is embedded in the state so the callback
-// links the Microsoft identity back to this account.
+// GET /api/auth/microsoft/connect?token=... — start "connect Microsoft to my account" flow
+// using MSAL (so the Microsoft login screen shows correctly).
 export async function GET(req: Request) {
-  if (!CLIENT_ID) {
+  if (!CLIENT_ID || !CLIENT_SECRET) {
     return NextResponse.json({ error: 'Microsoft is not configured' }, { status: 500 });
   }
   const url = new URL(req.url);
@@ -21,19 +21,15 @@ export async function GET(req: Request) {
 
   const state = `connect:${session.userId}:${crypto.randomBytes(8).toString('hex')}`;
   const redirectUri = siteUrl('/api/auth/microsoft/callback');
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: redirectUri,
-    response_mode: 'query',
-    scope: 'openid email profile',
+
+  const authUrl = await getMsalClient().getAuthCodeUrl({
+    scopes: ['openid', 'profile', 'email', 'User.Read'],
+    redirectUri,
     state,
     prompt: 'select_account',
   });
 
-  const res = NextResponse.redirect(
-    `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`,
-  );
+  const res = NextResponse.redirect(authUrl);
   res.cookies.set('microsoft_oauth_state', state, {
     httpOnly: true,
     sameSite: 'lax',

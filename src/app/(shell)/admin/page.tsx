@@ -52,18 +52,29 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 px-6 py-8">
       <div>
         <h1 className="text-2xl font-bold">{t('ad.title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">站点统计、设置、用户、AI 提供方与审计。</p>
       </div>
 
+      {/* Stats: full-width row */}
       <StatsCards />
-      <SiteSettingsPanel />
-      <UserManagement />
-      <ProvidersManager />
-      <CfAccessStatus />
-      <AuditLogView />
+
+      {/* Two-column region: site settings + user management */}
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+        <SiteSettingsPanel />
+        <div className="space-y-6">
+          <UserManagement />
+          <ProvidersManager />
+        </div>
+      </div>
+
+      {/* Second two-column region: access status + audit log */}
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+        <CfAccessStatus />
+        <AuditLogView />
+      </div>
     </div>
   );
 }

@@ -297,3 +297,43 @@ body, .card, button, input, textarea, iframe {
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
 }
+
+/* ===== Docs: larger, screen-adaptive typography (2K-friendly) =====
+   The old `prose-sm` base was too small on high-DPI screens. prose-cfos
+   bumps the base size and scales it up further on very wide displays. */
+.prose-cfos {
+  font-size: 1.0625rem; /* 17px base */
+}
+.prose-cfos p,
+.prose-cfos li,
+.prose-cfos td,
+.prose-cfos th {
+  line-height: 1.8;
+}
+.prose-cfos h1 {
+  font-size: 1.9em;
+}
+.prose-cfos h2 {
+  font-size: 1.5em;
+}
+.prose-cfos h3 {
+  font-size: 1.25em;
+}
+.prose-cfos pre {
+  font-size: 0.95em;
+}
+.prose-cfos table {
+  font-size: 1em;
+}
+@media (min-width: 1536px) {
+  /* 2K and up */
+  .prose-cfos {
+    font-size: 1.1875rem; /* 19px */
+  }
+}
+@media (min-width: 2200px) {
+  /* 4K-ish */
+  .prose-cfos {
+    font-size: 1.3125rem; /* 21px */
+  }
+}

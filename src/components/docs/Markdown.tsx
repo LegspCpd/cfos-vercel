@@ -21,7 +21,7 @@ function resolveDocsHref(href: string): string {
 // Renders markdown with the docs styling (prose).
 export default function Markdown({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm max-w-none prose-invert">
+    <div className="prose prose-cfos max-w-none prose-invert">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, FileText, Loader2, BookOpen, X, Pencil, Save } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import { useI18n } from '@/lib/client/i18n';
 
 interface ContextDoc {
   id: string;
@@ -17,6 +18,7 @@ interface ContextDoc {
 
 export default function ContextPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [docs, setDocs] = useState<ContextDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -53,7 +55,7 @@ export default function ContextPage() {
 
   async function create() {
     if (!title.trim() || !content.trim()) {
-      setError('标题和内容都是必填的');
+      setError(t('ctx.titleContentRequired'));
       return;
     }
     setSaving(true);
@@ -92,7 +94,7 @@ export default function ContextPage() {
 
   async function saveEdit() {
     if (!viewing || !editTitle.trim() || !editContent.trim()) {
-      setError('标题和内容都是必填的');
+      setError(t('ctx.titleContentRequired'));
       return;
     }
     setSaving(true);
@@ -123,17 +125,15 @@ export default function ContextPage() {
     <div className="mx-auto max-w-3xl px-6 py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">上下文文档库</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            上传参考文档，agent 构建应用时会自动参考它们。
-          </p>
+          <h1 className="text-2xl font-bold">{t('ctx.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('ctx.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowCreate((v) => !v)}
           className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
           {showCreate ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {showCreate ? '取消' : '新建文档'}
+          {showCreate ? t('cancel') : t('ctx.newDoc')}
         </button>
       </div>
 
@@ -145,19 +145,19 @@ export default function ContextPage() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="文档标题"
+            placeholder={t('ctx.titlePlaceholder')}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
           <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            placeholder="标签（逗号分隔，可选）"
+            placeholder={t('ctx.tagsPlaceholder')}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="文档内容 / 参考资料..."
+            placeholder={t('ctx.contentPlaceholder')}
             rows={6}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
@@ -167,18 +167,18 @@ export default function ContextPage() {
             className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            保存文档
+            {t('save')}
           </button>
         </div>
       )}
 
       {/* List */}
       {loading ? (
-        <p className="mt-6 text-muted-foreground">加载中...</p>
+        <p className="mt-6 text-muted-foreground">{t('loading')}</p>
       ) : docs.length === 0 ? (
         <div className="mt-6 flex flex-col items-center rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <BookOpen className="mb-2 h-8 w-8" />
-          <p>还没有文档。添加一些参考文档，agent 构建时会更懂你。</p>
+          <p>{t('ctx.empty')}</p>
         </div>
       ) : (
         <div className="mt-6 space-y-2">
@@ -191,7 +191,7 @@ export default function ContextPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{d.title}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    更新于 {d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : ''}
+                    {t('ctx.updatedAt')} {d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : ''}
                     {d.tags ? ` · ${d.tags.split(',').map((t) => `#${t.trim()}`).join(' ')}` : ''}
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export default function ContextPage() {
               <button
                 onClick={() => remove(d.id)}
                 className="shrink-0 rounded p-2 text-destructive hover:bg-destructive/10"
-                title="删除"
+                title={t('delete')}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -223,7 +223,7 @@ export default function ContextPage() {
                     onClick={startEditing}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary"
                   >
-                    <Pencil className="h-3.5 w-3.5" /> 编辑
+                    <Pencil className="h-3.5 w-3.5" /> {t('edit')}
                   </button>
                 ) : (
                   <>
@@ -232,13 +232,13 @@ export default function ContextPage() {
                       disabled={saving}
                       className="press flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
                     >
-                      <Save className="h-3.5 w-3.5" /> {saving ? '保存中...' : '保存'}
+                      <Save className="h-3.5 w-3.5" /> {saving ? t('saving') : t('save')}
                     </button>
                     <button
                       onClick={() => setEditing(false)}
                       className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
                     >
-                      取消
+                      {t('cancel')}
                     </button>
                   </>
                 )}
@@ -252,19 +252,19 @@ export default function ContextPage() {
                 <input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="文档标题"
+                  placeholder={t('ctx.titlePlaceholder')}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
                 <input
                   value={editTags}
                   onChange={(e) => setEditTags(e.target.value)}
-                  placeholder="标签（逗号分隔，可选）"
+                  placeholder={t('ctx.tagsPlaceholder')}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
                 <textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="文档内容 / 参考资料..."
+                  placeholder={t('ctx.contentPlaceholder')}
                   rows={10}
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />

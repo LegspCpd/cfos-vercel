@@ -6,14 +6,15 @@ import { Sparkles, Send, FileText, CheckSquare, Gamepad2, BarChart3, Timer } fro
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 
-// Task cards — Chinese titles for display, English prompts for the agent.
-const TASKS = [
-  { icon: FileText, title: '做一个单页落地页', prompt: 'Create a modern landing page for my product with a hero, features, and footer.' },
-  { icon: CheckSquare, title: '做一个待办事项应用', prompt: 'Build a todo list app with add, complete, and delete. Nice design.' },
-  { icon: Gamepad2, title: '做一个井字棋游戏', prompt: 'Make a tic-tac-toe game with a clean UI and win detection.' },
-  { icon: BarChart3, title: '创建一个数据看板', prompt: 'Build a dashboard with some charts and stat cards using sample data.' },
-  { icon: Timer, title: '做一个番茄钟', prompt: 'Create a pomodoro timer with start/pause/reset.' },
+// Task cards — English prompts for the agent; titles are localized.
+const TASK_PROMPTS = [
+  'Create a modern landing page for my product with a hero, features, and footer.',
+  'Build a todo list app with add, complete, and delete. Nice design.',
+  'Make a tic-tac-toe game with a clean UI and win detection.',
+  'Build a dashboard with some charts and stat cards using sample data.',
+  'Create a pomodoro timer with start/pause/reset.',
 ];
+const TASK_ICONS = [FileText, CheckSquare, Gamepad2, BarChart3, Timer];
 
 export default function HomePage() {
   const router = useRouter();
@@ -21,6 +22,11 @@ export default function HomePage() {
   const [prompt, setPrompt] = useState('');
   const [creating, setCreating] = useState(false);
   const [tagline, setTagline] = useState('');
+  const TASKS = TASK_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`home.task${i}`),
+    prompt: TASK_PROMPTS[i],
+  }));
 
   // Prefill from ?prompt= (e.g. from Explore page).
   useEffect(() => {
@@ -39,7 +45,7 @@ export default function HomePage() {
     if (!text.trim() || creating) return;
     setCreating(true);
     try {
-      const res = await api.createWorkspace('未命名工作区');
+      const res = await api.createWorkspace(t('ws.untitled'));
       // Pass the prompt so the workspace page can auto-run the agent on load.
       router.push(`/workspace/${res.workspace.id}?prompt=${encodeURIComponent(text)}`);
     } finally {

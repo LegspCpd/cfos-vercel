@@ -22,11 +22,11 @@ interface ChatPanelProps {
   autoPromptNonce?: number;
 }
 
-const SUGGESTIONS = [
-  { label: '做一个待办应用', prompt: 'Build me a todo app with add, complete, and delete. Nice design.' },
-  { label: '做一个井字棋游戏', prompt: 'Make a tic-tac-toe game with a clean UI and win detection.' },
-  { label: '做一个落地页', prompt: 'Create a modern landing page for my product with a hero, features, and footer.' },
-  { label: '做一个计数器', prompt: 'Build a counter with a nice design.' },
+const SUGGESTION_PROMPTS = [
+  'Build me a todo app with add, complete, and delete. Nice design.',
+  'Make a tic-tac-toe game with a clean UI and win detection.',
+  'Create a modern landing page for my product with a hero, features, and footer.',
+  'Build a counter with a nice design.',
 ];
 
 function MessageContent({ content }: { content: string }) {
@@ -145,15 +145,15 @@ export default function ChatPanel({
             <p className="text-sm text-muted-foreground">
               {t('ws.agentHint')}
             </p>
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTION_PROMPTS.map((p, i) => (
               <button
-                key={s.label}
-                onClick={() => send(s.prompt)}
+                key={p}
+                onClick={() => send(p)}
                 disabled={busy}
                 className="press block w-full rounded-md border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-primary/50 disabled:opacity-50"
               >
                 <Sparkles className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-                {s.label}
+                {t(`ws.suggest${i}`)}
               </button>
             ))}
           </div>

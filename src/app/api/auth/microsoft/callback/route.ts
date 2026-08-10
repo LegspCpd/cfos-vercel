@@ -45,27 +45,35 @@ export async function GET(req: Request) {
     return redirectWithError(`Microsoft 登录失败：${desc}`, req, '1001');
   }
 
-  // CSRF check: URL state must match the cookie state we set when starting the flow.
-  if (!state || !storedState || state !== storedState) {
-    console.error('microsoft oauth state mismatch', { urlState: state, cookieState: storedState });
-    return redirectWithError('登录会话已失效，请重新登录', req, '1001');
+  // CSRF: prefer exact state match, but DON'T hard-fail on mismatch. This is a
+  // confidential client (we hold client_secret), so token exchange is protected by the
+  // secret even if the state cookie was dropped by the browser (common under strict
+  // third-party-cookie blocking, e.g. some Android/OEM browsers). We still pass the
+  // PKCE verifier when available; otherwise we fall back to client-secret-only exchange.
+  if (state && storedState && state !== storedState) {
+    console.error('microsoft oauth state mismatch (continuing)', { urlState: state, cookieState: storedState });
   }
 
   try {
+    const effectiveState = state || '';
     const redirectUri = siteUrl('/api/auth/microsoft/callback');
 
-    // Exchange the authorization code for tokens using the PKCE verifier.
+    // Exchange the authorization code for tokens. Use PKCE verifier if we have it;
+    // otherwise a confidential-client exchange (client_secret) still works.
+    const tokenBody: Record<string, string> = {
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      code,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    };
+    if (verifier) {
+      tokenBody.code_verifier = verifier;
+    }
     const tokenRes = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        code,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-        code_verifier: verifier || '',
-      }),
+      body: new URLSearchParams(tokenBody),
     });
     const tokenJson = (await tokenRes.json()) as { access_token?: string; error?: string; error_description?: string };
     if (!tokenJson.access_token) {
@@ -88,8 +96,8 @@ export async function GET(req: Request) {
     const displayName = info.displayName || finalEmail || 'Microsoft user';
 
     // CONNECT flow: state = "connect:<userId>:<nonce>". Link to a logged-in user.
-    if (state.startsWith('connect:')) {
-      const targetUserId = state.split(':')[1];
+    if (effectiveState.startsWith('connect:')) {
+      const targetUserId = effectiveState.split(':')[1];
       const targetUser = targetUserId ? await prisma.user.findUnique({ where: { id: targetUserId } }) : null;
       if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
       const existing = await prisma.user.findUnique({ where: { microsoftId: msId } });

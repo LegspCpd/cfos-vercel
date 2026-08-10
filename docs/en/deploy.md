@@ -63,7 +63,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### Attach a custom domain (recommended)
 
-1. Vercel → Settings → Domains → add `os.legspcpd.top`
+1. Vercel → Settings → Domains → add `os.your-domain.com`
 2. Get the CNAME record: `os → cname.vercel-dns.com`
 3. Add that record at your DNS provider
 4. Wait for it to propagate

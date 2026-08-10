@@ -63,7 +63,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### 绑定域名（推荐）
 
-1. Vercel → Settings → Domains → 添加 `os.legspcpd.top`
+1. Vercel → Settings → Domains → 添加 `os.your-domain.com`
 2. 得到 CNAME 记录：`os → cname.vercel-dns.com`
 3. 去域名 DNS 服务商加这条记录
 4. 等生效

@@ -10,7 +10,7 @@ import { X } from 'lucide-react';
 // GATED BY ENV VAR: the feature is OFF by default (it's still in beta / unstable).
 // Set NEXT_PUBLIC_COMMENTS_ENABLED=true in Vercel to turn it on.
 
-const SERVER_URL = 'https://chat.api.legspcpd.top';
+const SERVER_URL = 'https://chat.example.com';
 const WALINE_CSS = 'https://unpkg.com/@waline/client@v3/dist/waline.css';
 const WALINE_JS = 'https://unpkg.com/@waline/client@v3/dist/waline.js';
 // Off unless explicitly enabled via env var (inlined by Next at build time).

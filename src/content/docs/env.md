@@ -22,10 +22,10 @@
 | `GITLAB_CLIENT_SECRET` | GitLab 外部连接 | GitLab OAuth Secret |
 | `GITLAB_BASE_URL` | GitLab 外部连接 | 实例地址，默认 `https://gitlab.com` |
 | `RESEND_API_KEY` | 邮箱验证码 | Resend API Key，如 `re_xxxxxx` |
-| `RESEND_FROM_EMAIL` | 邮箱验证码 | 发件人，默认 `no-reply@legspcpd.top` |
+| `RESEND_FROM_EMAIL` | 邮箱验证码 | 发件人，默认 `no-reply@your-domain.com` |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 人机验证 | Cloudflare Turnstile（配置后管理面板锁定） |
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | 人机验证 | Google reCAPTCHA（配置后管理面板锁定） |
-| `IMGHOST_BASE_URL` | 头像图床 | 默认 `https://hub.legspcpd.top` |
+| `IMGHOST_BASE_URL` | 头像图床 | 默认 `https://hub.your-domain.com` |
 | `IMGHOST_TOKEN` | 头像图床 | 图床 API token，如 `imgbed_xxx` |
 | `IMGHOST_FOLDER` | 头像图床 | 上传文件夹，默认 `photos/avatars` |
 | `ALLOW_SIGNUPS` | 注册开关 | `enabled` 允许注册 / `disabled` 禁止（环境变量优先于管理面板开关） |
@@ -61,7 +61,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ### 邮箱验证码（Resend）
 - `RESEND_API_KEY`（必填才启用邮箱注册验证）
-- `RESEND_FROM_EMAIL`（可选，默认 `no-reply@legspcpd.top`，需在 Resend 已验证该域名）
+- `RESEND_FROM_EMAIL`（可选，默认 `no-reply@your-domain.com`，需在 Resend 已验证该域名）
 
 > 人机验证（Turnstile / reCAPTCHA）**支持环境变量配置**（推荐，管理面板会锁定）：
 > - `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`、`RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY`

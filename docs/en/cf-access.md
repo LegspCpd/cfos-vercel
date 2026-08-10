@@ -7,7 +7,7 @@
 ## How it works
 
 ```
-User visits https://os.legspcpd.top
+User visits https://os.your-domain.com
   │
   ▼
 Cloudflare edge (domain proxied through CF)
@@ -22,7 +22,7 @@ Vercel backend → validate JWT (signature/iss/aud/exp) → allow
 
 ## Step 1: make sure the domain is proxied (orange cloud)
 
-1. Log in to the **Cloudflare dashboard** → select the domain `legspcpd.top`
+1. Log in to the **Cloudflare dashboard** → select the domain `your-domain.com`
 2. **DNS → Records**, find the `os` record
 3. **Proxy status** must be **Proxied (orange cloud)**
 4. If not, switch it to Proxied and wait 1–2 minutes
@@ -36,7 +36,7 @@ Vercel backend → validate JWT (signature/iss/aud/exp) → allow
 3. Click **Add an application** → choose **Self-hosted** → click **Next** / **Continue**
 4. Fill in the app config:
    - **Application name**: `Cloudflare OS` (e.g. `os`)
-   - **Application domain**: `os.legspcpd.top` (**note**: must be your **custom** domain; default domains like `xxx.pages.dev` / `xxx.vercel.app` **cannot** use Access)
+   - **Application domain**: `os.your-domain.com` (**note**: must be your **custom** domain; default domains like `xxx.pages.dev` / `xxx.vercel.app` **cannot** use Access)
    - **Session duration**: e.g. `24 hours`
    - Keep the rest default → **Next**
 

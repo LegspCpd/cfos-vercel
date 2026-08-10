@@ -2,11 +2,11 @@
 //
 // PUBLIC_SITE_URL is used to build OAuth redirect URIs and frontend redirect targets.
 // A trailing slash on PUBLIC_SITE_URL would otherwise produce a double-slash path
-// (e.g. https://os.legspcpd.top//api/auth/google/callback), which Google/GitHub
+// (e.g. https://os.example.com//api/auth/google/callback), which Google/GitHub
 // treat as a DIFFERENT redirect URI from the registered one — causing
 // `redirect_uri_mismatch`. This normalizes it so redirect URIs are always clean.
 
-/** The public base URL with any trailing slash removed, e.g. "https://os.legspcpd.top". */
+/** The public base URL with any trailing slash removed, e.g. "https://os.example.com". */
 export function siteBaseUrl(): string {
   const base =
     process.env.PUBLIC_SITE_URL ||
@@ -25,9 +25,9 @@ export function siteUrl(path: string): string {
  * The home page URL users are sent to from docs etc.
  * - Server: reads HOME_URL.
  * - Client: Next.js inlines NEXT_PUBLIC_HOME_URL (set it to the same value as HOME_URL).
- * Defaults to https://os.legspcpd.top.
+ * Defaults to https://os.example.com.
  */
 export function homeUrl(): string {
-  const home = process.env.HOME_URL || process.env.NEXT_PUBLIC_HOME_URL || 'https://os.legspcpd.top';
+  const home = process.env.HOME_URL || process.env.NEXT_PUBLIC_HOME_URL || 'https://os.example.com';
   return home.replace(/\/+$/, '');
 }

@@ -2,7 +2,7 @@ import { prisma } from './db';
 import { ensureDefaultGroups, DEFAULT_GROUP, SUPER_ADMIN_GROUP } from './groups';
 
 // ADMIN_USERNAME may be a single username or a comma-separated list, e.g.
-//   ADMIN_USERNAME="LegspCpd,admin"
+//   ADMIN_USERNAME="admin,ops"
 function adminUsernameSet(): Set<string> {
   const raw = process.env.ADMIN_USERNAME ?? '';
   return new Set(

@@ -4,15 +4,15 @@
 
 ## 回调地址（Callback / Redirect URI）速查
 
-在 GitHub / Google 控制台配置 OAuth 应用时，**回调地址必须与下面完全一致**（否则报 `redirect_uri_mismatch`）。把 `os.legspcpd.top` 换成你自己的域名即可。
+在 GitHub / Google 控制台配置 OAuth 应用时，**回调地址必须与下面完全一致**（否则报 `redirect_uri_mismatch`）。把 `os.your-domain.com` 换成你自己的域名即可。
 
 | 服务 | 生产环境（Vercel） | 本地开发 |
 |---|---|---|
-| **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
-| **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
-| **Microsoft** | `https://os.legspcpd.top/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
+| **GitHub** | `https://os.your-domain.com/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
+| **Google** | `https://os.your-domain.com/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+| **Microsoft** | `https://os.your-domain.com/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
 
-对应的环境变量：`PUBLIC_SITE_URL` 必须与回调里的域名一致（如 `https://os.legspcpd.top`）。
+对应的环境变量：`PUBLIC_SITE_URL` 必须与回调里的域名一致（如 `https://os.your-domain.com`）。
 
 ## GitHub 登录（详细手把手教程）
 
@@ -21,8 +21,8 @@
 2. 点 **"New OAuth App"（新 OAuth 应用）**
 3. 填写：
    - **Application name（应用名称）**：`Cloudflare OS`
-   - **Homepage URL（主页 URL）**：`https://os.legspcpd.top`
-   - **Authorization callback URL（授权回调 URL）**：`https://os.legspcpd.top/api/auth/github/callback`
+   - **Homepage URL（主页 URL）**：`https://os.your-domain.com`
+   - **Authorization callback URL（授权回调 URL）**：`https://os.your-domain.com/api/auth/github/callback`
      > **必须精确到 `/api/auth/github/callback`**，不能只填域名，否则报 `redirect_uri_mismatch`
 4. 点 **Register application（注册应用）**
 
@@ -35,7 +35,7 @@
 ```
 GITHUB_CLIENT_ID=你的Client ID
 GITHUB_CLIENT_SECRET=你的Client Secret
-PUBLIC_SITE_URL=https://os.legspcpd.top
+PUBLIC_SITE_URL=https://os.your-domain.com
 ```
 
 **Redeploy** 后生效。现在登录页有"使用 GitHub 登录"按钮。
@@ -52,7 +52,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 
 | 报错 | 原因 | 解决 |
 |---|---|---|
-| `redirect_uri_mismatch` | 回调 URL 不对 | GitHub OAuth App 的 **Authorization callback URL** 精确改为 `https://os.legspcpd.top/api/auth/github/callback` |
+| `redirect_uri_mismatch` | 回调 URL 不对 | GitHub OAuth App 的 **Authorization callback URL** 精确改为 `https://os.your-domain.com/api/auth/github/callback` |
 | `bad_verification_code` | 回调 URL 前后不一致 | 检查授权时用的回调 URL 与代码里的完全一致 |
 | 登录页没按钮 | 环境变量没配/没 Redeploy | 检查 `GITHUB_CLIENT_ID` 并 Redeploy |
 
@@ -80,7 +80,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 4. **Name**：随便填（如 `web`）
 5. **Authorized redirect URIs（已获授权的重定向 URI）**：点 **+ ADD URI**，填：
    ```
-   https://os.legspcpd.top/api/auth/google/callback
+   https://os.your-domain.com/api/auth/google/callback
    ```
    （本地测试再填一条 `http://localhost:3000/api/auth/google/callback`）
 6. 点 **CREATE（创建）**
@@ -97,7 +97,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 ```
 GOOGLE_CLIENT_ID=你的Client ID
 GOOGLE_CLIENT_SECRET=你的Client Secret
-PUBLIC_SITE_URL=https://os.legspcpd.top
+PUBLIC_SITE_URL=https://os.your-domain.com
 ```
 
 **Redeploy** 后生效，登录页出现"使用 Google 登录"按钮。
@@ -108,7 +108,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 
 | 报错 | 原因 | 解决 |
 |---|---|---|
-| `redirect_uri_mismatch` | 回调地址不在授权列表 | Credentials → 你的 Client → **Authorized redirect URIs** 精确添加 `https://os.legspcpd.top/api/auth/google/callback` |
+| `redirect_uri_mismatch` | 回调地址不在授权列表 | Credentials → 你的 Client → **Authorized redirect URIs** 精确添加 `https://os.your-domain.com/api/auth/google/callback` |
 | `invalid_client` | Client ID/Secret 错 | 检查 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` |
 | `access_denied`（页面报） | OAuth 同意屏幕未发布为生产 | OAuth consent screen → 点 **Publish app（发布应用）** |
 | 登录页没按钮 | 环境变量没配/没 Redeploy | 检查并 Redeploy |
@@ -132,11 +132,11 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
      > 只有选这一项，才能支持**任何公司租户 + 个人 Microsoft 账号（Outlook/消费者）**登录。选错会导致别人登录时报错。
    - **Redirect URI（重定向 URI）**：
      - 下拉选 **Web**
-     - 后面填 `https://os.legspcpd.top/api/auth/microsoft/callback`
+     - 后面填 `https://os.your-domain.com/api/auth/microsoft/callback`
      - （本地测试再点 **"Add a URI"** 加一条 `http://localhost:3000/api/auth/microsoft/callback`）
 5. 点 **Register（注册）**
 
-> **回调地址必须精确到 `/api/auth/microsoft/callback`**，不能只填 `https://os.legspcpd.top`，否则报 `redirect_uri_mismatch`。
+> **回调地址必须精确到 `/api/auth/microsoft/callback`**，不能只填 `https://os.your-domain.com`，否则报 `redirect_uri_mismatch`。
 
 ### 第 2 步：复制 Client ID
 
@@ -180,7 +180,7 @@ Vercel → 你的项目 → **Settings → Environment Variables**，添加：
 
 | 报错 | 原因 | 解决 |
 |---|---|---|
-| `AADSTS50011`（redirect_uri 不在列表） | Azure 回调 URI 没配对 | 检查 Redirect URI 是否**精确**等于 `https://os.legspcpd.top/api/auth/microsoft/callback` |
+| `AADSTS50011`（redirect_uri 不在列表） | Azure 回调 URI 没配对 | 检查 Redirect URI 是否**精确**等于 `https://os.your-domain.com/api/auth/microsoft/callback` |
 | `AADSTS700016`（应用不存在） | Client ID 填错 | 检查 `MICROSOFT_CLIENT_ID` |
 | `AADSTS7000215`（secret 无效/过期） | Client Secret 错或过期 | 重新创建 secret 并更新 |
 | `AADSTS90002`（租户不存在） | Tenant ID 填错 | 用 `common` 或正确的租户 ID |
@@ -190,6 +190,6 @@ Vercel → 你的项目 → **Settings → Environment Variables**，添加：
 
 | 现象 | 原因与解决 |
 |---|---|
-| Google 报 `redirect_uri_mismatch` | **Google Cloud Console → Credentials → 你的 OAuth Client → Authorized redirect URIs** 里没有 `https://os.legspcpd.top/api/auth/google/callback`。把它**精确添加**（一个地址一行，末尾不要多余斜杠），保存后再试。 |
-| GitHub 报 `redirect_uri_mismatch` | GitHub OAuth App 的 **Authorization callback URL** 与 `https://os.legspcpd.top/api/auth/github/callback` 不一致 |
+| Google 报 `redirect_uri_mismatch` | **Google Cloud Console → Credentials → 你的 OAuth Client → Authorized redirect URIs** 里没有 `https://os.your-domain.com/api/auth/google/callback`。把它**精确添加**（一个地址一行，末尾不要多余斜杠），保存后再试。 |
+| GitHub 报 `redirect_uri_mismatch` | GitHub OAuth App 的 **Authorization callback URL** 与 `https://os.your-domain.com/api/auth/github/callback` 不一致 |
 | 登录失败 | `GITHUB_CLIENT_SECRET` / `GOOGLE_CLIENT_SECRET` 填错或漏配，或改了环境变量后没 Redeploy |

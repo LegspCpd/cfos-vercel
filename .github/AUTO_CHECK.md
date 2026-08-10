@@ -1,51 +1,47 @@
-# 每小时自动代码检查（Auto Check）
+# Automated Code Check
 
-## 这个 Action 是做什么的？
+This repository includes a scheduled CI workflow that continuously validates the codebase and reports issues via pull requests.
 
-`.github/workflows/auto-check.yml` 自动检测代码中的错误：
+## Overview
 
-- **TypeScript 类型检查**：`pnpm exec tsc --noEmit`
-- **Prisma schema 校验**：`pnpm exec prisma validate`
+`.github/workflows/auto-check.yml` runs automatic checks:
 
-它会在**两种时机**运行：
-1. **每次 push 到 `master`**：提交后立刻检查，迭代反馈最快
-2. **每小时整点**：即使没有新提交，也会定时复查
+- **TypeScript type check**: `pnpm exec tsc --noEmit`
+- **Prisma schema validation**: `pnpm exec prisma validate`
 
-如果发现问题，它会把错误详情整理成一份报告，开一个 **Pull Request** 给你审查。
+It runs on two triggers:
 
-## 它为什么安全？（重点）
+1. **On every push to `master`** — instant feedback during development.
+2. **On an hourly schedule** — periodic re-validation even without new commits.
+3. **Manually** — via the Actions tab (`Run workflow`).
 
-这个 Action **不会乱改你的代码**，原因：
+## Behavior
 
-1. **它不直接修改 `master` 分支**。有错误时，只在独立的 `bot/auto-check` 分支上写一份**错误报告**（不是修复代码），然后开 PR。
-2. **所有改动都要你亲自 Review 并合并**。Action 永远不会自动把修复合并进主分支。
-3. **没有错误时静默通过**，不产生任何噪音，也不会开多余的 PR。
+- **On success**: the workflow exits quietly and opens nothing.
+- **On failure**: it writes a report to `.auto-check/report.md` and opens a pull request titled **"🚨 自动代码检查发现错误"** from the `bot/auto-check` branch to `master`.
 
-> 你担心的"乱改代码"不会发生：它只负责**检测 + 报告**，真正的修复由你（或你确认后的 AI）完成。
+The report PR is **report-only** — it contains the error details, not code changes. Review the report, fix the underlying issues, then merge (or close) the PR.
 
-## 为什么不能直接用 GitHub Copilot？
+## Safety
 
-**GitHub Copilot 无法在 GitHub Action 里自动运行**。Copilot 是 IDE 里的代码补全助手，不是命令行工具，也没有供 Action 调用的 API。因此"每小时让 Copilot 自动改代码"这个能力目前不存在。
+This workflow is intentionally conservative:
 
-如果你想让它**自动修复**（而不是只报告），更安全的做法是：由你（或你明确授权的工具）查看本 Action 开出的报告 PR，确认问题后再修复。这个流程既省心又可控。
+- It **never modifies `master` directly**.
+- It only writes a report into the `bot/auto-check` branch and opens a PR for review.
+- All actual code changes must go through a normal PR review.
 
-## 使用说明
+> Note: GitHub Copilot cannot be invoked from a GitHub Action — it is an IDE assistant without a CI-usable API. If automated *fixing* is desired, a safer approach is to have the workflow generate candidate fixes in a separate branch and open a PR for review, rather than mutating the main branch directly.
 
-1. 把这个文件（`.github/workflows/auto-check.yml`）推到 `master`。
-2. 之后**每次你 push 到 master 都会自动跑一次**，同时每小时整点也会复查；也可到 **Actions** 页面手动触发（`Run workflow`）。
-3. 检查通过则不开 PR；发现错误时会收到一个"🚨 自动代码检查发现错误"的 PR，打开 **Files changed** 查看详细错误（报告在 `.auto-check/report.md`）。
-4. 根据报告修复代码后，合并该 PR 即可（或关闭它、在本地修复再另开 PR）。
+## Configuring the schedule
 
-## 调整检查频率
+Edit the `cron` expression in `auto-check.yml`:
 
-修改 `auto-check.yml` 里的 cron 表达式即可：
+- Every 30 minutes: `*/30 * * * *`
+- Every hour on weekdays: `0 * * * 1-5`
+- Daily at 03:00: `0 3 * * *`
 
-- 每 30 分钟：`*/30 * * * *`
-- 每天凌晨 3 点：`0 3 * * *`
-- 只在工作日每小时：`0 * * * 1-5`
+## FAQ
 
-## 常见问题
-
-- **我的改动还没提交，会被检查吗？** 不会，Action 只检查已推送到 `master` 的代码。
-- **Action 开了 PR 但我没空处理怎么办？** 直接关掉那个 PR 即可，下次发现问题会再开新的。
-- **能改成自动修复吗？** 技术上可以，但不建议由无人值守的脚本直接改主代码。如果你确实想要，建议先让它在独立分支生成修复并开 PR 供你审查。
+- **Are uncommitted changes checked?** No — only code already pushed to `master`.
+- **What if a report PR is stale?** Close it; a new one will open if issues persist.
+- **Can it auto-fix instead of reporting?** Not recommended for an unattended workflow. If desired, have it propose fixes in a separate branch and open a PR for review.

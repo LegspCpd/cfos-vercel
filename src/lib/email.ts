@@ -45,7 +45,7 @@ export async function sendEmail(payload: ResendPayload): Promise<void> {
 
 // Compose + send a verification-code email.
 export async function sendVerificationEmail(to: string, code: string): Promise<void> {
-  const from = process.env.RESEND_FROM_EMAIL || 'no-reply@legspcpd.top';
+  const from = process.env.RESEND_FROM_EMAIL || 'no-reply@example.com';
   await sendEmail({
     from,
     to,

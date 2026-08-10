@@ -4,10 +4,10 @@ import { prisma } from '@/lib/db';
 
 // Image-hosting configuration. The token + base URL live in env vars so they're never
 // exposed to the browser or stored in the admin panel.
-//  - IMGHOST_BASE_URL: e.g. https://hub.legspcpd.top
+//  - IMGHOST_BASE_URL: e.g. https://hub.example.com
 //  - IMGHOST_TOKEN: the API token
 //  - IMGHOST_FOLDER: target folder, default "photos/avatars"
-const IMGHOST_BASE = (process.env.IMGHOST_BASE_URL || 'https://hub.legspcpd.top').replace(/\/+$/, '');
+const IMGHOST_BASE = (process.env.IMGHOST_BASE_URL || 'https://hub.example.com').replace(/\/+$/, '');
 const IMGHOST_TOKEN = process.env.IMGHOST_TOKEN;
 const IMGHOST_FOLDER = process.env.IMGHOST_FOLDER || 'photos/avatars';
 
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Image must be smaller than 5 MB' }, { status: 400 });
   }
 
-  // Build the upload request to the image host (Linya ImgHub: POST /upload?uploadFolder=).
+  // Build the upload request to the image host (POST /upload?uploadFolder=).
   const uploadUrl = new URL('/upload', IMGHOST_BASE);
   uploadUrl.searchParams.set('uploadFolder', IMGHOST_FOLDER);
 
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     console.error('image host upload error', upRes.status, text);
     return NextResponse.json({ error: 'Image upload failed, please try again' }, { status: 502 });
   }
-  // Linya ImgHub returns an array: [{ src, url, fileId }].
+  // The image host returns an array: [{ src, url, fileId }].
   const data = (await upRes.json()) as { url?: string; src?: string }[];
   const first = Array.isArray(data) ? data[0] : undefined;
   const imageUrl =

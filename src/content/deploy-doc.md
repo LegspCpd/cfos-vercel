@@ -127,7 +127,7 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 |---|---|
 | `DATABASE_URL` | 第一步 Neon 的连接串 |
 | `AUTH_SECRET` | 随机长字符串（见下方生成方法） |
-| `ADMIN_USERNAME` | 管理员用户名（可多个，用逗号分隔，如 `admin,legspcpd`） |
+| `ADMIN_USERNAME` | 管理员用户名（可多个，用逗号分隔，如 `admin`） |
 
 **生成 `AUTH_SECRET`**：在电脑终端（PowerShell/CMD）运行：
 
@@ -140,7 +140,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ### 2.5 绑定域名（推荐）
 
 1. Vercel 项目 → **Settings → Domains**
-2. 输入你的域名 `os.legspcpd.top` → 点 **Add**
+2. 输入你的域名 `os.your-domain.com` → 点 **Add**
 3. Vercel 会给一条 DNS 记录，类似：
    ```
    CNAME  os  →  cname.vercel-dns.com
@@ -205,8 +205,8 @@ API Key: sk-你的key
 2. 点 **"New OAuth App"**
 3. 填写：
    - **Application name**：`Cloudflare OS`
-   - **Homepage URL**：`https://os.legspcpd.top`（你的域名）
-   - **Authorization callback URL**：`https://os.legspcpd.top/api/auth/github/callback`
+   - **Homepage URL**：`https://os.your-domain.com`（你的域名）
+   - **Authorization callback URL**：`https://os.your-domain.com/api/auth/github/callback`
 4. 点 **Register application**
 
 ### 5.2 拿到 Client ID 和 Secret
@@ -220,7 +220,7 @@ API Key: sk-你的key
 ```
 GITHUB_CLIENT_ID=你的Client ID
 GITHUB_CLIENT_SECRET=你的Client Secret
-PUBLIC_SITE_URL=https://os.legspcpd.top
+PUBLIC_SITE_URL=https://os.your-domain.com
 ```
 
 Redeploy 后生效。现在登录页有"使用 GitHub 登录"按钮。
@@ -267,12 +267,12 @@ Redeploy 后生效。侧边栏"文件分享"就能用了。
 
 ## 第七步：Cloudflare Access（可选）
 
-> 📖 **详细教程见 [Cloudflare Access 配置](https://os.legspcpd.top/docs/cf-access)**（如已部署本文档站）。
+> 📖 **详细教程见 [Cloudflare Access 配置](https://os.your-domain.com/docs/cf-access)**（如已部署本文档站）。
 
 简短版：
 
-1. 域名 `os.legspcpd.top` 在 Cloudflare DNS 里设为 **Proxied（橙云）**
-2. 打开 **https://one.dash.cloudflare.com** → 左侧 **Networks → Access → Applications**（或 **Access → Applications**）→ 新建 **Self-hosted** 应用，域名填 `os.legspcpd.top`
+1. 域名 `os.your-domain.com` 在 Cloudflare DNS 里设为 **Proxied（橙云）**
+2. 打开 **https://one.dash.cloudflare.com** → 左侧 **Networks → Access → Applications**（或 **Access → Applications**）→ 新建 **Self-hosted** 应用，域名填 `os.your-domain.com`
 3. 向导里勾选身份提供程序（如 GitHub），再配置登录策略（Everyone / 指定邮箱）
 4. 找到你的 **team name**（Access 域名 `xxx.cloudflareaccess.com` 的前段，如 `lapdsss`）——**这是必填项**
 5. Vercel 环境变量加（**只配这一个即可**）：

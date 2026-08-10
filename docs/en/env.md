@@ -22,10 +22,10 @@
 | `GITLAB_CLIENT_SECRET` | GitLab connection | GitLab OAuth Secret |
 | `GITLAB_BASE_URL` | GitLab connection | Instance base URL, default `https://gitlab.com` |
 | `RESEND_API_KEY` | Email verification | Resend API key, e.g. `re_xxxxxx` |
-| `RESEND_FROM_EMAIL` | Email verification | Sender, default `no-reply@legspcpd.top` |
+| `RESEND_FROM_EMAIL` | Email verification | Sender, default `no-reply@your-domain.com` |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Human verification | Cloudflare Turnstile (locks the admin panel once set) |
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Human verification | Google reCAPTCHA (locks the admin panel once set) |
-| `IMGHOST_BASE_URL` | Avatar image host | Default `https://hub.legspcpd.top` |
+| `IMGHOST_BASE_URL` | Avatar image host | Default `https://hub.your-domain.com` |
 | `IMGHOST_TOKEN` | Avatar image host | Image host API token, e.g. `imgbed_xxx` |
 | `IMGHOST_FOLDER` | Avatar image host | Upload folder, default `photos/avatars` |
 | `ALLOW_SIGNUPS` | Registration toggle | `enabled` allows signup / `disabled` blocks (env takes precedence over the admin toggle) |
@@ -61,7 +61,7 @@ Paste the output into `AUTH_SECRET`.
 
 ### Email verification (Resend)
 - `RESEND_API_KEY` (required to enable email signup verification)
-- `RESEND_FROM_EMAIL` (optional, default `no-reply@legspcpd.top`, the domain must be verified in Resend)
+- `RESEND_FROM_EMAIL` (optional, default `no-reply@your-domain.com`, the domain must be verified in Resend)
 
 > Human verification (Turnstile / reCAPTCHA) **supports env var config** (recommended; the admin panel locks once set):
 > - `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`, `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY`

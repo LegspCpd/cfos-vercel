@@ -11,8 +11,8 @@
 | 条件 | 说明 |
 |---|---|
 | Cloudflare 账户 | 免费版即可 |
-| 域名托管在 Cloudflare | `legspcpd.top` 的 DNS 在 Cloudflare 控制台 |
-| 子域名 `os` | 用于 `os.legspcpd.top`（或你自己的子域名） |
+| 域名托管在 Cloudflare | `your-domain.com` 的 DNS 在 Cloudflare 控制台 |
+| 子域名 `os` | 用于 `os.your-domain.com`（或你自己的子域名） |
 | Vercel 项目已部署 | `cfos-vercel` 已成功部署，可正常访问 |
 
 ---
@@ -20,7 +20,7 @@
 ## 二、工作原理（了解即可）
 
 ```
-用户访问 https://os.legspcpd.top
+用户访问 https://os.your-domain.com
         │
         ▼
 Cloudflare 边缘节点（域名走 CF 代理）
@@ -48,7 +48,7 @@ Vercel 后端（你的应用）
 ### 第 1 步：确认域名走 Cloudflare 代理（橙云）
 
 1. 登录 **Cloudflare 控制台**：https://dash.cloudflare.com
-2. 选择你的域名 **`legspcpd.top`**
+2. 选择你的域名 **`your-domain.com`**
 3. 左侧菜单点 **DNS → Records**
 4. 找到 `os` 这条记录，看 **Proxy status**：
    - ✅ 应该是 **Proxied**（橙色云朵图标）
@@ -66,7 +66,7 @@ Vercel 后端（你的应用）
 2. 点 **Add an application**，选择 **Self-hosted**（自托管）类型，点 **Next / Continue**
 3. **填写应用配置**（新版向导第一步）：
    - **Application name**：`Cloudflare OS`（随便，如 `os`）
-   - **Application domain**：`os.legspcpd.top`（选择你的域名 `legspcpd.top` + 子域名 `os`）
+   - **Application domain**：`os.your-domain.com`（选择你的域名 `your-domain.com` + 子域名 `os`）
      - ⚠️ 必须填**自定义**域名，`*.vercel.app` / `*.pages.dev` 这类默认域名**无法**被 Access 保护
    - **Session duration**：登录有效期，如 `24 hours`
    - 其余保持默认 → **Next**
@@ -102,7 +102,7 @@ Vercel 后端（你的应用）
 
 ### 第 5 步：验证
 
-1. 用**无痕/隐私窗口**打开 `https://os.legspcpd.top`
+1. 用**无痕/隐私窗口**打开 `https://os.your-domain.com`
 2. 应被重定向到 Cloudflare 登录页
 3. 用你配置的 IdP 登录（如 GitHub）
 4. 登录成功后进入你的应用
@@ -137,7 +137,7 @@ Vercel 后端（你的应用）
 ## 六、配置速查表
 
 ```
-域名           : os.legspcpd.top
+域名           : os.your-domain.com
 CF 代理        : Proxied（橙云）✅ 必须
 Access 应用    : Cloudflare OS（Self-hosted）
 Policy         : allow-all / Everyone

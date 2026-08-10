@@ -9,7 +9,7 @@ import { LOGO_URL } from '@/lib/brand';
 
 // Home link target (docs "back to home"). NEXT_PUBLIC_HOME_URL is inlined by Next at build
 // time so it works in this client component; keep it in sync with the server HOME_URL.
-const HOME_URL = process.env.NEXT_PUBLIC_HOME_URL || 'https://os.legspcpd.top';
+const HOME_URL = process.env.NEXT_PUBLIC_HOME_URL || 'https://os.example.com';
 
 interface DocLayoutProps {
   children: React.ReactNode;

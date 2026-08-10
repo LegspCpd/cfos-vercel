@@ -4,15 +4,15 @@
 
 ## Callback / Redirect URI quick reference
 
-When configuring an OAuth app in the GitHub/Google console, **the callback URL must match exactly** (otherwise you'll get `redirect_uri_mismatch`). Replace `os.legspcpd.top` with your own domain.
+When configuring an OAuth app in the GitHub/Google console, **the callback URL must match exactly** (otherwise you'll get `redirect_uri_mismatch`). Replace `os.your-domain.com` with your own domain.
 
 | Service | Production (Vercel) | Local dev |
 |---|---|---|
-| **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
-| **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
-| **Microsoft** | `https://os.legspcpd.top/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
+| **GitHub** | `https://os.your-domain.com/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
+| **Google** | `https://os.your-domain.com/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+| **Microsoft** | `https://os.your-domain.com/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
 
-The `PUBLIC_SITE_URL` env var must match the callback domain (e.g. `https://os.legspcpd.top`).
+The `PUBLIC_SITE_URL` env var must match the callback domain (e.g. `https://os.your-domain.com`).
 
 ## GitHub sign-in
 
@@ -22,8 +22,8 @@ The `PUBLIC_SITE_URL` env var must match the callback domain (e.g. `https://os.l
 2. Click **"New OAuth App"**
 3. Fill in:
    - **Application name**: `Cloudflare OS`
-   - **Homepage URL**: `https://os.legspcpd.top`
-   - **Authorization callback URL**: `https://os.legspcpd.top/api/auth/github/callback`
+   - **Homepage URL**: `https://os.your-domain.com`
+   - **Authorization callback URL**: `https://os.your-domain.com/api/auth/github/callback`
 4. Click **Register application**
 
 ## Get credentials
@@ -38,7 +38,7 @@ Add environment variables:
 ```
 GITHUB_CLIENT_ID=your-client-id
 GITHUB_CLIENT_SECRET=your-client-secret
-PUBLIC_SITE_URL=https://os.legspcpd.top
+PUBLIC_SITE_URL=https://os.your-domain.com
 ```
 
 **Redeploy** to apply. The sign-in page will now show "Continue with GitHub".
@@ -62,7 +62,7 @@ Create an OAuth 2.0 Client ID in **Google Cloud Console**:
 2. Left side **APIs & Services → OAuth consent screen** → fill in app name etc., save
 3. **Credentials → Create Credentials → OAuth client ID**
    - Application type: **Web application**
-   - **Authorized redirect URIs**: `https://os.legspcpd.top/api/auth/google/callback` (local test: `http://localhost:3000/api/auth/google/callback`)
+   - **Authorized redirect URIs**: `https://os.your-domain.com/api/auth/google/callback` (local test: `http://localhost:3000/api/auth/google/callback`)
 4. After creation, copy the **Client ID** and **Client Secret**
 
 Configure in Vercel env vars:
@@ -70,7 +70,7 @@ Configure in Vercel env vars:
 ```
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
-PUBLIC_SITE_URL=https://os.legspcpd.top
+PUBLIC_SITE_URL=https://os.your-domain.com
 ```
 
 **Redeploy** to apply. The sign-in page will show "Continue with Google".
@@ -93,7 +93,7 @@ Sign in with a **Microsoft Entra ID (Azure AD)** account. Full step-by-step:
      and personal Microsoft accounts (e.g. Skype, Xbox)
      ```
      > Only this option allows **any company tenant + personal Microsoft accounts (Outlook/consumer)** to sign in.
-   - **Redirect URI**: choose platform **Web**, enter `https://os.legspcpd.top/api/auth/microsoft/callback`
+   - **Redirect URI**: choose platform **Web**, enter `https://os.your-domain.com/api/auth/microsoft/callback`
      - For local testing, click **"Add a URI"** and add `http://localhost:3000/api/auth/microsoft/callback`
 5. Click **Register**
 
@@ -135,7 +135,7 @@ Then **Redeploy**.
 
 | Error | Cause | Fix |
 |---|---|---|
-| `AADSTS50011` (redirect_uri not in list) | Azure callback URI wrong | Make sure Redirect URI is **exactly** `https://os.legspcpd.top/api/auth/microsoft/callback` |
+| `AADSTS50011` (redirect_uri not in list) | Azure callback URI wrong | Make sure Redirect URI is **exactly** `https://os.your-domain.com/api/auth/microsoft/callback` |
 | `AADSTS700016` (app not found) | Wrong Client ID | Check `MICROSOFT_CLIENT_ID` |
 | `AADSTS7000215` (invalid/expired secret) | Secret wrong or expired | Create a new secret and update |
 | `AADSTS90002` (tenant not found) | Wrong Tenant ID | Use `common` or the correct tenant ID |
@@ -145,6 +145,6 @@ Then **Redeploy**.
 
 | Symptom | Cause & fix |
 |---|---|
-| Google `redirect_uri_mismatch` | **Google Cloud Console → Credentials → your OAuth Client → Authorized redirect URIs** is missing `https://os.legspcpd.top/api/auth/google/callback`. Add it **exactly** (one URL per line, no trailing slash), save, retry. |
-| GitHub `redirect_uri_mismatch` | The GitHub OAuth App's **Authorization callback URL** doesn't match `https://os.legspcpd.top/api/auth/github/callback` |
+| Google `redirect_uri_mismatch` | **Google Cloud Console → Credentials → your OAuth Client → Authorized redirect URIs** is missing `https://os.your-domain.com/api/auth/google/callback`. Add it **exactly** (one URL per line, no trailing slash), save, retry. |
+| GitHub `redirect_uri_mismatch` | The GitHub OAuth App's **Authorization callback URL** doesn't match `https://os.your-domain.com/api/auth/github/callback` |
 | Sign-in fails | `GITHUB_CLIENT_SECRET` / `GOOGLE_CLIENT_SECRET` is wrong/missing, or env vars were changed without Redeploy |

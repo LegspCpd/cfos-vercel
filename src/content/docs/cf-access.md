@@ -7,7 +7,7 @@
 ## 工作原理
 
 ```
-用户访问 https://os.legspcpd.top
+用户访问 https://os.your-domain.com
   │
   ▼
 Cloudflare 边缘节点（域名走 CF 代理）
@@ -22,7 +22,7 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 
 ## 第一步：确认域名走 CF 代理（橙云）
 
-1. 登录 **Cloudflare 控制台** → 选域名 `legspcpd.top`
+1. 登录 **Cloudflare 控制台** → 选域名 `your-domain.com`
 2. **DNS → Records**，找到 `os` 记录
 3. **Proxy status** 必须是 **Proxied（橙云）**
 4. 如果不是，点击切换为 Proxied，等 1-2 分钟生效
@@ -39,7 +39,7 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 3. 点 **Add an application** → 选择 **Self-hosted** → 点 **Next** / **Continue**
 4. 填写应用配置：
    - **Application name**：`Cloudflare OS`（如 `os`）
-   - **Application domain**：`os.legspcpd.top`（**注意**：必须填你**自定义**的域名，`xxx.pages.dev` / `xxx.vercel.app` 这类默认域名**无法**用 Access）
+   - **Application domain**：`os.your-domain.com`（**注意**：必须填你**自定义**的域名，`xxx.pages.dev` / `xxx.vercel.app` 这类默认域名**无法**用 Access）
    - **Session duration**：登录有效期，如 `24 hours`
    - 其余保持默认 → **Next**
 

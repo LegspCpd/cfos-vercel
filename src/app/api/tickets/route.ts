@@ -158,7 +158,7 @@ async function notifyAdmins(args: {
   if (emails.length === 0) return;
 
   const typeLabel = TYPE_LABELS[args.type] || args.type;
-  const from = process.env.RESEND_FROM_EMAIL || 'no-reply@legspcpd.top';
+  const from = process.env.RESEND_FROM_EMAIL || 'no-reply@example.com';
   const link = siteUrl('/admin/tickets');
   const handleLink = `${link}?focus=${args.ticketId}`;
 

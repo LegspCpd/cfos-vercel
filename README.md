@@ -112,6 +112,8 @@ pnpm dev
 | `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA (locks the admin toggle once set) | For reCAPTCHA |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM (or add providers from the admin panel) | Recommended |
 | `NEXT_PUBLIC_BEIJIN` | Full-site background image URL (re-fetched on each refresh) | Optional |
+| `NEXT_PUBLIC_LOGO_URL` | Custom site logo (defaults to a placeholder) | Optional |
+| `NEXT_PUBLIC_COMMENTS_SERVER_URL` | Waline comment server URL | Optional |
 | `NEXT_PUBLIC_COMMENTS_ENABLED` | `true` enables the Waline comment widget (off by default) | Optional |
 
 ## 🔐 OAuth Callback URLs

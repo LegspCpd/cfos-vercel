@@ -109,6 +109,17 @@ pnpm install && pnpm db:push && pnpm build
 
 ## GitHub 登录配置（详细）
 
+### 回调地址（Callback / Redirect URI）速查
+
+在 GitHub / Google 控制台配置 OAuth 应用时，**回调地址必须与下面完全一致**（把 `os.legspcpd.top` 换成你自己的域名）。
+
+| 服务 | 生产环境（Vercel） | 本地开发 |
+|---|---|---|
+| **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
+| **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+
+> `PUBLIC_SITE_URL` 环境变量必须与回调里的域名一致（如 `https://os.legspcpd.top`）。
+
 ### 在 GitHub 创建 OAuth App
 
 1. 打开 **https://github.com/settings/developers** → 点 **"New OAuth App"**。
@@ -146,7 +157,7 @@ pnpm install && pnpm db:push && pnpm build
 1. 打开 **https://console.cloud.google.com** → 选择或新建项目
 2. 左侧 **APIs & Services → OAuth consent screen** → 填应用名称并保存
 3. **Credentials → Create Credentials → OAuth client ID** → 类型选 **Web application**
-   - **Authorized redirect URIs**：`https://你的域名/api/auth/google/callback`
+   - **Authorized redirect URIs**：`https://os.legspcpd.top/api/auth/google/callback`（**必须精确到这个路径**）
    - （本地测试：`http://localhost:3000/api/auth/google/callback`）
 4. 复制 **Client ID** 和 **Client Secret**，填到 Vercel 环境变量：
 

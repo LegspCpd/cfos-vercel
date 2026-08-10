@@ -2,6 +2,17 @@
 
 > 支持用 GitHub 或 Google 账号一键登录，配置好后只需在 Vercel 环境变量填上密钥并 Redeploy 即可生效，无需改代码。
 
+## 回调地址（Callback / Redirect URI）速查
+
+在 GitHub / Google 控制台配置 OAuth 应用时，**回调地址必须与下面完全一致**（否则报 `redirect_uri_mismatch`）。把 `os.legspcpd.top` 换成你自己的域名即可。
+
+| 服务 | 生产环境（Vercel） | 本地开发 |
+|---|---|---|
+| **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
+| **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+
+对应的环境变量：`PUBLIC_SITE_URL` 必须与回调里的域名一致（如 `https://os.legspcpd.top`）。
+
 ## GitHub 登录
 
 ## 创建 OAuth App
@@ -50,7 +61,7 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 2. 左侧 **APIs & Services → OAuth consent screen** → 填应用名称等，保存
 3. **Credentials → Create Credentials → OAuth client ID**
    - Application type：**Web application**
-   - **Authorized redirect URIs**：`https://你的域名/api/auth/google/callback`（本地测试用 `http://localhost:3000/api/auth/google/callback`）
+   - **Authorized redirect URIs**：`https://os.legspcpd.top/api/auth/google/callback`（本地测试用 `http://localhost:3000/api/auth/google/callback`）
 4. 创建后复制 **Client ID** 和 **Client Secret**
 
 配置到 Vercel 环境变量：

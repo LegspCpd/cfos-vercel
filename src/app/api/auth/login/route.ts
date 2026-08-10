@@ -7,19 +7,27 @@ import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  username: z.string().min(1).max(64),
+  // Accept either "identifier" (new) or "username" (legacy). identifier may be a
+  // username OR an email address.
+  identifier: z.string().min(1).max(128).optional(),
+  username: z.string().min(1).max(128).optional(),
   password: z.string().min(1),
 });
 
 export async function POST(req: Request) {
   try {
     const body = loginSchema.parse(await req.json());
-    const username = body.username.trim().toLowerCase();
+    const identifier = (body.identifier ?? body.username ?? '').trim().toLowerCase();
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    // Resolve the user by email (case-insensitive) first, then by username.
+    let user =
+      (await prisma.user.findFirst({
+        where: { email: { equals: identifier, mode: 'insensitive' } },
+      })) ??
+      (await prisma.user.findUnique({ where: { username: identifier } }));
     if (!user) {
-      await writeAudit({ username, action: 'auth.login_failed', detail: 'User not found' });
-      return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+      await writeAudit({ username: identifier, action: 'auth.login_failed', detail: 'User not found' });
+      return NextResponse.json({ error: 'Invalid username/email or password' }, { status: 401 });
     }
     const ok = await verifyPassword(user.passwordHash, body.password);
     if (!ok) {

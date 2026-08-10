@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Github, Chrome, Check, Link2 } from 'lucide-react';
+import { Loader2, Upload, Github, Chrome, Check, Link2, Mail, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -32,6 +32,14 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Bind-email flow
+  const [bindEmail, setBindEmail] = useState('');
+  const [bindCode, setBindCode] = useState('');
+  const [bindPw, setBindPw] = useState('');
+  const [bindSending, setBindSending] = useState(false);
+  const [bindCountdown, setBindCountdown] = useState(0);
+  const [binding, setBinding] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
@@ -115,6 +123,62 @@ export default function ProfilePage() {
 
   function connectGoogle() {
     window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(getToken() || '')}`;
+  }
+
+  // Countdown for the "resend code" button.
+  useEffect(() => {
+    if (bindCountdown <= 0) return;
+    const id = setInterval(() => setBindCountdown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [bindCountdown]);
+
+  async function sendBindCode() {
+    setError('');
+    setMessage('');
+    if (!bindEmail.trim() || !/\S+@\S+\.\S+/.test(bindEmail)) {
+      setError(t('auth.invalidEmail'));
+      return;
+    }
+    setBindSending(true);
+    try {
+      await api.sendVerificationCode(bindEmail);
+      setBindCountdown(60);
+      setMessage('验证码已发送到邮箱');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBindSending(false);
+    }
+  }
+
+  async function bindEmailAccount() {
+    setError('');
+    setMessage('');
+    if (!bindEmail.trim() || !bindCode.trim()) {
+      setError(t('auth.emailRequired'));
+      return;
+    }
+    if (bindPw.length < 6) {
+      setError(t('auth.pwTooShort'));
+      return;
+    }
+    setBinding(true);
+    try {
+      await api.updateProfile({
+        email: bindEmail,
+        verificationCode: bindCode,
+        newPassword: bindPw,
+      });
+      setMe((m) => (m ? { ...m, email: bindEmail, githubConnected: m.githubConnected } : m));
+      setMessage(t('pr.emailBound'));
+      setBindEmail('');
+      setBindCode('');
+      setBindPw('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBinding(false);
+    }
   }
 
   if (loading) {
@@ -251,6 +315,73 @@ export default function ProfilePage() {
               <Link2 className="h-3.5 w-3.5" /> {t('pr.connectGoogle')}
             </button>
           )}
+        </div>
+      </section>
+
+      {/* Bind email */}
+      <section className="mb-6 rounded-lg border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold">{t('pr.bindEmail')}</h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('pr.bindEmailHint')}</p>
+
+        {me?.email && (
+          <div className="mb-3 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{t('pr.boundEmail')}:</span>
+            <span>{me.email}</span>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('auth.email')}</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={bindEmail}
+                onChange={(e) => setBindEmail(e.target.value)}
+                placeholder={t('auth.emailPlaceholder')}
+                className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <button
+                onClick={sendBindCode}
+                disabled={bindSending || bindCountdown > 0}
+                className="flex shrink-0 items-center gap-1 rounded-md border px-3 py-2 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+              >
+                {bindSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : bindCountdown > 0 ? `${bindCountdown}s` : (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5" /> {t('auth.sendCode')}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('auth.verificationCode')}</label>
+            <input
+              value={bindCode}
+              onChange={(e) => setBindCode(e.target.value)}
+              inputMode="numeric"
+              placeholder={t('auth.codePlaceholder')}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('pr.setPasswordForEmail')}</label>
+            <input
+              type="password"
+              value={bindPw}
+              onChange={(e) => setBindPw(e.target.value)}
+              placeholder={t('auth.pwPlaceholder')}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <button
+            onClick={bindEmailAccount}
+            disabled={binding}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {binding ? t('pr.binding') : t('pr.bind')}
+          </button>
         </div>
       </section>
 

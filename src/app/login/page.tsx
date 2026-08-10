@@ -98,11 +98,12 @@ export default function LoginPage() {
             <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium">{t('auth.username')}</label>
+            <label className="mb-1 block text-sm font-medium">{t('auth.usernameOrEmail')}</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              placeholder={t('auth.usernameOrEmailPlaceholder')}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>

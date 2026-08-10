@@ -92,10 +92,12 @@ export const api = {
     displayName?: string;
     currentPassword?: string;
     newPassword?: string;
-  }) => request<{ user: { displayName: string; username: string } }>('/api/profile', {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
+    email?: string;
+    verificationCode?: string;
+  }) => request<{ user: { displayName: string; username: string; email: string | null } }>(
+    '/api/profile',
+    { method: 'PATCH', body: JSON.stringify(data) },
+  ),
   uploadAvatar: async (file: File) => {
     const fd = new FormData();
     fd.append('file', file, file.name);

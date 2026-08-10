@@ -5,7 +5,8 @@
 **注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留并尽量还原了原版功能：
 
 **核心能力：**
-- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth + 邮箱验证码注册）
+- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth + 邮箱验证码注册 + 邮箱+密码登录）
+- **绑定邮箱**：任意注册方式的用户可在个人设置绑定邮箱并设置密码，之后可用"邮箱 + 密码"直接登录
 - **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
 - **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
 - **命令面板 ⌘K**：搜索/跳转 workspace、新建文档

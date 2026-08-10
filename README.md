@@ -98,23 +98,11 @@ pnpm dev
 |---|---|---|
 | `DATABASE_URL` | Neon/Postgres connection string | ✅ |
 | `AUTH_SECRET` | Session signing secret (`openssl rand -base64 32`) | ✅ |
-| `PUBLIC_SITE_URL` | Public origin, e.g. `https://os.example.com` | ✅ (GitHub sign-in) |
+| `PUBLIC_SITE_URL` | Public origin, e.g. `https://os.example.com` | ✅ |
 | `ADMIN_USERNAME` | Admin usernames, comma-separated | Recommended |
-| `ALLOW_SIGNUPS` | `enabled` / `disabled` (overrides the admin-panel toggle) | Optional |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth app | For GitHub sign-in |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client | For Google sign-in |
-| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | Microsoft Entra ID OAuth client | For Microsoft sign-in |
-| `MICROSOFT_TENANT_ID` | `common` for multi-tenant + personal accounts (recommended) | Optional |
-| `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` / `GITLAB_BASE_URL` | GitLab connection | For GitLab connections |
-| `RESEND_API_KEY` | Email verification (Resend) | For email registration |
-| `RESEND_FROM_EMAIL` | Sender address (default `no-reply@your-domain.com`) | Optional |
-| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile (locks the admin toggle once set) | For Turnstile |
-| `RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA (locks the admin toggle once set) | For reCAPTCHA |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM (or add providers from the admin panel) | Recommended |
-| `NEXT_PUBLIC_BEIJIN` | Full-site background image URL (re-fetched on each refresh) | Optional |
-| `NEXT_PUBLIC_LOGO_URL` | Custom site logo (defaults to a placeholder) | Optional |
-| `NEXT_PUBLIC_COMMENTS_SERVER_URL` | Waline comment server URL | Optional |
-| `NEXT_PUBLIC_COMMENTS_ENABLED` | `true` enables the Waline comment widget (off by default) | Optional |
+
+See the **[简体中文配置文档](/docs/env)** / **[English configuration docs](/en/docs/env)** for the full list of optional variables (OAuth, email, human verification, branding, comments, etc.).
 
 ## 🔐 OAuth Callback URLs
 

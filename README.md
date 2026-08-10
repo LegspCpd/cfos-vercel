@@ -84,6 +84,8 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `PUBLIC_SITE_URL` | 你的公开地址，如 `https://os.legspcpd.top` | ✅（GitHub 登录必需） |
 | `ADMIN_USERNAME` | 管理员用户名，多个用逗号分隔，如 `legspcpd,admin` | 推荐 |
 | `ALLOW_SIGNUPS` | 是否允许注册，`enabled` / `disabled`（环境变量优先于管理面板开关） | 可选 |
+| `HOME_URL` | 文档"返回主页"跳转地址（服务端），默认 `https://os.legspcpd.top` | 可选 |
+| `NEXT_PUBLIC_HOME_URL` | 同上，供文档前端客户端链接使用（与 `HOME_URL` 保持一致） | 可选 |
 | `GITHUB_CLIENT_ID` | GitHub OAuth App 的 Client ID | 用 GitHub 登录则必填 |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App 的 Client Secret | 用 GitHub 登录则必填 |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 用 Google 登录则必填 |

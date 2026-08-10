@@ -20,3 +20,14 @@ export function siteBaseUrl(): string {
 export function siteUrl(path: string): string {
   return `${siteBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 }
+
+/**
+ * The home page URL users are sent to from docs etc.
+ * - Server: reads HOME_URL.
+ * - Client: Next.js inlines NEXT_PUBLIC_HOME_URL (set it to the same value as HOME_URL).
+ * Defaults to https://os.legspcpd.top.
+ */
+export function homeUrl(): string {
+  const home = process.env.HOME_URL || process.env.NEXT_PUBLIC_HOME_URL || 'https://os.legspcpd.top';
+  return home.replace(/\/+$/, '');
+}

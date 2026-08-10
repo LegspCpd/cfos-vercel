@@ -7,6 +7,10 @@ import { Menu, X, Home, ChevronRight } from 'lucide-react';
 import { DOC_NAV } from '@/content/docs/nav';
 import { LOGO_URL } from '@/lib/brand';
 
+// Home link target (docs "back to home"). NEXT_PUBLIC_HOME_URL is inlined by Next at build
+// time so it works in this client component; keep it in sync with the server HOME_URL.
+const HOME_URL = process.env.NEXT_PUBLIC_HOME_URL || 'https://os.legspcpd.top';
+
 export default function DocLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,18 +77,18 @@ export default function DocLayout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setMenuOpen(true)} className="rounded p-1 hover:bg-secondary">
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/" className="flex items-center gap-2">
+          <a href={HOME_URL} className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
             <span className="text-sm font-semibold">文档</span>
-          </Link>
+          </a>
         </div>
 
         {/* Breadcrumb */}
         <div className="mx-auto flex max-w-3xl items-center gap-1 px-6 pt-6 text-sm text-muted-foreground">
-          <Link href="/" className="flex items-center gap-1 hover:text-foreground">
+          <a href={HOME_URL} className="flex items-center gap-1 hover:text-foreground">
             <Home className="h-3.5 w-3.5" /> 首页
-          </Link>
+          </a>
           <ChevronRight className="h-3.5 w-3.5" />
           <Link href="/docs" className="hover:text-foreground">文档</Link>
         </div>

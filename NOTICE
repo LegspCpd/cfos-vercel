@@ -1,0 +1,18 @@
+Cloudflare OS — Vercel Edition
+==============================
+
+This project is a rewrite/derivative work of Cloudflare OS,
+Copyright 2024 Cloudflare, Inc.
+https://github.com/cloudflare/cloudflare-os
+
+Changes made:
+-------------
+This repository re-implements Cloudflare OS for a standard Vercel/Next.js
+runtime (Next.js 14 + Postgres + Prisma). It replaces the original
+Cloudflare Durable Objects, Dynamic Workers, Workers RPC, and KV/R2
+persistence with equivalent functionality running on classic serverless
+infrastructure. It is not the original Cloudflare OS code, and is provided
+"as is" under the Apache License 2.0 (see LICENSE).
+
+The original Cloudflare OS is licensed under the Apache License 2.0.
+This project is distributed under the same license.

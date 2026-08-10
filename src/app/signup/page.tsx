@@ -48,7 +48,10 @@ export default function SignupPage() {
     const oauthError = params.get('error');
     if (oauthError) {
       const raw = decodeURIComponent(oauthError);
-      setError(raw.startsWith('1001') ? '登录已取消，请重试。' : raw);
+      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, '登录已取消');
+      const cancelled =
+        stripped === '登录已取消' || stripped === 'access_denied' || /登录已取消|access_denied/i.test(raw);
+      setError(cancelled ? '登录已取消，请重试。' : stripped);
       window.history.replaceState({}, '', '/signup');
     }
   }, []);

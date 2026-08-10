@@ -48,35 +48,36 @@ export async function GET(req: Request) {
   try {
     const redirectUri = siteUrl('/api/auth/microsoft/callback');
 
-    // MSAL acquires the token + account (validates the authorization code correctly).
+    // MSAL acquires the token (validates the authorization code correctly).
     const tokenRequest: AuthorizationCodeRequest = {
       code,
       scopes: ['openid', 'profile', 'email', 'User.Read'],
       redirectUri,
     };
     const result = await getMsalClient().acquireTokenByCode(tokenRequest);
-
-    // Determine user id: prefer graph account id, fall back to localAccountId.
-    const msId = result?.account?.localAccountId || result?.account?.homeAccountId || '';
-    const email = (result?.account?.username || '').toLowerCase();
-    const displayName = result?.account?.name || email || 'Microsoft user';
-
-    // If localAccountId is empty, try Graph for the id/mail.
-    let info: MsUserInfo = {};
-    if (!msId) {
-      try {
-        const infoRes = await fetch('https://graph.microsoft.com/v1.0/me', {
-          headers: { Authorization: `Bearer ${result?.accessToken}` },
-        });
-        info = (await infoRes.json()) as MsUserInfo;
-      } catch {
-        /* ignore */
-      }
+    if (!result?.accessToken) {
+      throw new Error('No access token from Microsoft');
     }
-    const finalMsId = msId || info.id || '';
 
-    const username = email.split('@')[0] || `ms_${finalMsId.slice(0, 12).toLowerCase()}`;
-    const finalEmail = email || (info.mail || info.userPrincipalName || '').toLowerCase();
+    // Always fetch the user profile from Microsoft Graph — this gives the stable
+    // object id (used as microsoftId), email and display name, independent of whether
+    // MSAL returned an account object. Avoids an empty microsoftId (which would break
+    // the @unique column for subsequent users).
+    const infoRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${result.accessToken}` },
+    });
+    if (!infoRes.ok) {
+      throw new Error(`Graph /me failed: ${infoRes.status}`);
+    }
+    const info = (await infoRes.json()) as MsUserInfo;
+    const finalMsId = (info.id || '').trim();
+    if (!finalMsId) {
+      throw new Error('Microsoft user id is empty');
+    }
+
+    const finalEmail = (info.mail || info.userPrincipalName || result?.account?.username || '').toLowerCase();
+    const username = finalEmail.split('@')[0] || `ms_${finalMsId.slice(0, 12).toLowerCase()}`;
+    const displayName = info.displayName || result?.account?.name || finalEmail || 'Microsoft user';
 
     // CONNECT flow: state = "connect:<userId>:<nonce>". Link to a logged-in user.
     if (state.startsWith('connect:')) {
@@ -125,7 +126,10 @@ export async function GET(req: Request) {
     return redirectWithToken(token, req);
   } catch (e) {
     console.error('microsoft oauth error', e);
-    return redirectWithError('Microsoft login failed.', req, '1001');
+    const hint = e instanceof Error ? e.message : 'unknown error';
+    // Surface the real reason (de-identified) so ops can diagnose — e.g. AADSTS codes,
+    // Graph errors, unique-constraint issues — instead of a vague failure.
+    return redirectWithError(`Microsoft 登录失败：${hint}`, req, '1001');
   }
 }
 

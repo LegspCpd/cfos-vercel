@@ -31,9 +31,16 @@ export default function LoginPage() {
       return;
     }
     if (oauthError) {
-      // Normalize known OAuth errors to a friendly message (code 1001 = cancelled).
+      // Show the real error. Only a genuine cancel (access_denied / the literal cancel
+      // message) maps to "登录已取消"; anything else is surfaced verbatim so real
+      // failures (e.g. Microsoft token errors) are visible instead of being swallowed.
       const raw = decodeURIComponent(oauthError);
-      setError(raw.startsWith('1001') ? '登录已取消，请重试。' : raw);
+      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, '登录已取消');
+      const cancelled =
+        stripped === '登录已取消' ||
+        stripped === 'access_denied' ||
+        /登录已取消|access_denied/i.test(raw);
+      setError(cancelled ? '登录已取消，请重试。' : stripped);
       window.history.replaceState({}, '', '/login');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -67,10 +67,42 @@ Admin sign-in → left sidebar **Admin**:
 
 - Statistics
 - Site settings (name / tagline / banner / footer / default model / agent instructions)
-- User management (delete / promote)
+- Registration toggle, human verification, brand icons
 - AI Providers
 - Cloudflare Access status
 - Audit log
+
+## User groups & permissions
+
+The system uses **user groups** to control what each user can do. **A group fully decides permissions** — move a user into a group and they get all of that group's features.
+
+Permission items (ticked when creating a group):
+
+- **Workspace & AI agent**: create/edit/delete workspaces
+- **File sharing / Blueprints**: R2 sharing, blueprint export/import
+- **Context doc library**: upload/edit reference docs
+- **External connections**: GitHub / Google / GitLab
+- **Admin panel access** (management): enter the admin panel
+- **User management** (management): manage users and groups
+
+> Management permissions (`admin.access`, `admin.users`) are only visible to users in the "Super Admin" group or a group with these permissions ticked. Regular users can't see admin entries.
+
+Built-in groups:
+- **Super Admin**: has all permissions
+- **Regular User**: only workspace & AI
+
+The first user automatically joins the Super Admin group; users named in `ADMIN_USERNAME` also join it.
+
+### User management (/admin/users)
+Users with `admin.users` permission can use the **Users** page in the sidebar:
+- Create users (username / display name / password / email / group)
+- Edit users: change password, email, move group
+- Delete users
+- Create groups (tick feature permissions), edit group permissions, delete groups
+
+## Analytics page (/analytics)
+
+Every signed-in user can view personal usage stats in the **Analytics** page: number of workspaces, total files, recent activity, and a list of recent workspaces.
 
 ## Mobile
 

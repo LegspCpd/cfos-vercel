@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { AuthorizationCodeRequest } from '@azure/msal-node';
-import { getMsalClient } from '@/lib/msal';
 import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
@@ -8,6 +6,7 @@ import { siteBaseUrl, siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
+const TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
 
 interface MsUserInfo {
   id?: string;
@@ -16,14 +15,16 @@ interface MsUserInfo {
   displayName?: string;
 }
 
-// GET /api/auth/microsoft/callback — handle the Microsoft OAuth callback (MSAL).
-// State format is either "{from}:{nonce}" (login/signup) or "connect:{userId}:{nonce}".
+function getCookie(cookie: string, name: string): string | undefined {
+  return cookie.match(new RegExp(`${name}=([^;]+)`))?.[1];
+}
+
+// GET /api/auth/microsoft/callback — handle the Microsoft OAuth callback.
+// State format: "{from}:{nonce}" (login/signup) or "connect:{userId}:{nonce}".
+// Uses PKCE (code_verifier from cookie) to exchange the code — serverless-safe.
 export async function GET(req: Request) {
   if (!CLIENT_ID || !CLIENT_SECRET) {
-    return NextResponse.json(
-      { error: 'Microsoft login is not configured.' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Microsoft login is not configured.' }, { status: 500 });
   }
 
   const url = new URL(req.url);
@@ -31,12 +32,11 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
-  const storedState = req.headers.get('cookie')?.match(/microsoft_oauth_state=([^;]+)/)?.[1];
-  if (!state || !storedState || state !== storedState) {
-    return redirectWithError('Invalid OAuth state. Please try again.', req);
-  }
+  const cookieHeader = req.headers.get('cookie') || '';
+  const storedState = getCookie(cookieHeader, 'microsoft_oauth_state');
+  const verifier = getCookie(cookieHeader, 'microsoft_verifier');
 
-  // Distinguish a genuine user cancel from a real error so we can surface the latter.
+  // Distinguish a genuine cancel from a real error so we can surface the latter.
   if (error || !code) {
     if (error === 'access_denied' || !error) {
       return redirectWithError('登录已取消', req, '1001');
@@ -45,78 +45,76 @@ export async function GET(req: Request) {
     return redirectWithError(`Microsoft 登录失败：${desc}`, req, '1001');
   }
 
+  // CSRF check: URL state must match the cookie state we set when starting the flow.
+  if (!state || !storedState || state !== storedState) {
+    console.error('microsoft oauth state mismatch', { urlState: state, cookieState: storedState });
+    return redirectWithError('登录会话已失效，请重新登录', req, '1001');
+  }
+
   try {
     const redirectUri = siteUrl('/api/auth/microsoft/callback');
 
-    // MSAL acquires the token (validates the authorization code correctly).
-    const tokenRequest: AuthorizationCodeRequest = {
-      code,
-      scopes: ['openid', 'profile', 'email', 'User.Read'],
-      redirectUri,
-    };
-    const result = await getMsalClient().acquireTokenByCode(tokenRequest);
-    if (!result?.accessToken) {
-      throw new Error('No access token from Microsoft');
-    }
-
-    // Always fetch the user profile from Microsoft Graph — this gives the stable
-    // object id (used as microsoftId), email and display name, independent of whether
-    // MSAL returned an account object. Avoids an empty microsoftId (which would break
-    // the @unique column for subsequent users).
-    const infoRes = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: { Authorization: `Bearer ${result.accessToken}` },
+    // Exchange the authorization code for tokens using the PKCE verifier.
+    const tokenRes = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+        code_verifier: verifier || '',
+      }),
     });
-    if (!infoRes.ok) {
-      throw new Error(`Graph /me failed: ${infoRes.status}`);
+    const tokenJson = (await tokenRes.json()) as { access_token?: string; error?: string; error_description?: string };
+    if (!tokenJson.access_token) {
+      throw new Error(tokenJson.error_description || tokenJson.error || 'token exchange failed');
     }
-    const info = (await infoRes.json()) as MsUserInfo;
-    const finalMsId = (info.id || '').trim();
-    if (!finalMsId) {
-      throw new Error('Microsoft user id is empty');
-    }
+    const accessToken = tokenJson.access_token;
 
-    const finalEmail = (info.mail || info.userPrincipalName || result?.account?.username || '').toLowerCase();
-    const username = finalEmail.split('@')[0] || `ms_${finalMsId.slice(0, 12).toLowerCase()}`;
-    const displayName = info.displayName || result?.account?.name || finalEmail || 'Microsoft user';
+    // Fetch the stable user profile from Microsoft Graph.
+    const infoRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!infoRes.ok) throw new Error(`Graph /me failed: ${infoRes.status}`);
+    const info = (await infoRes.json()) as MsUserInfo;
+
+    const msId = (info.id || '').trim();
+    if (!msId) throw new Error('Microsoft user id is empty');
+
+    const finalEmail = (info.mail || info.userPrincipalName || '').toLowerCase();
+    const username = finalEmail.split('@')[0] || `ms_${msId.slice(0, 12).toLowerCase()}`;
+    const displayName = info.displayName || finalEmail || 'Microsoft user';
 
     // CONNECT flow: state = "connect:<userId>:<nonce>". Link to a logged-in user.
     if (state.startsWith('connect:')) {
       const targetUserId = state.split(':')[1];
-      const targetUser = targetUserId
-        ? await prisma.user.findUnique({ where: { id: targetUserId } })
-        : null;
+      const targetUser = targetUserId ? await prisma.user.findUnique({ where: { id: targetUserId } }) : null;
       if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
-      const existing = finalMsId
-        ? await prisma.user.findUnique({ where: { microsoftId: finalMsId } })
-        : null;
+      const existing = await prisma.user.findUnique({ where: { microsoftId: msId } });
       if (existing && existing.id !== targetUser.id) {
         return redirectWithError('该 Microsoft 账号已绑定到另一个用户', req, '1001');
       }
-      await prisma.user.update({ where: { id: targetUser.id }, data: { microsoftId: finalMsId } });
+      await prisma.user.update({ where: { id: targetUser.id }, data: { microsoftId: msId } });
       const res = NextResponse.redirect(`${siteBaseUrl()}/profile?msLinked=1`);
       res.cookies.delete('oauth_from');
       res.cookies.delete('microsoft_oauth_state');
+      res.cookies.delete('microsoft_verifier');
       return res;
     }
 
-    // Login/signup flow.
-    let user = finalMsId
-      ? await prisma.user.findUnique({ where: { microsoftId: finalMsId } })
-      : null;
+    // Login/signup flow: find-or-create by microsoftId → username → new account.
+    let user = await prisma.user.findUnique({ where: { microsoftId: msId } });
     if (!user) {
       user = await prisma.user.findUnique({ where: { username } });
       if (user && user.microsoftId === null) {
-        user = await prisma.user.update({ where: { id: user.id }, data: { microsoftId: finalMsId } });
+        user = await prisma.user.update({ where: { id: user.id }, data: { microsoftId: msId } });
       }
     }
     if (!user) {
       user = await prisma.user.create({
-        data: {
-          username,
-          displayName: displayName || username,
-          passwordHash: 'microsoft-oauth-no-password',
-          microsoftId: finalMsId,
-        },
+        data: { username, displayName: displayName || username, passwordHash: 'microsoft-oauth-no-password', microsoftId: msId },
       });
       await maybeBootstrapAdmin(username);
       await promoteEnvAdmins();
@@ -127,8 +125,6 @@ export async function GET(req: Request) {
   } catch (e) {
     console.error('microsoft oauth error', e);
     const hint = e instanceof Error ? e.message : 'unknown error';
-    // Surface the real reason (de-identified) so ops can diagnose — e.g. AADSTS codes,
-    // Graph errors, unique-constraint issues — instead of a vague failure.
     return redirectWithError(`Microsoft 登录失败：${hint}`, req, '1001');
   }
 }
@@ -136,17 +132,19 @@ export async function GET(req: Request) {
 function redirectWithToken(token: string, req: Request): Response {
   const res = NextResponse.redirect(siteUrl(`/verify?token=${encodeURIComponent(token)}`));
   res.cookies.delete('oauth_from');
+  res.cookies.delete('microsoft_verifier');
   return res;
 }
 
 function redirectWithError(msg: string, req: Request, code?: string): Response {
-  const cookie = req.headers.get('cookie') || '';
-  const from = cookie.match(/oauth_from=([^;]+)/)?.[1];
+  const cookieHeader = req.headers.get('cookie') || '';
+  const from = getCookie(cookieHeader, 'oauth_from');
   const target = from === 'signup' ? '/signup' : '/login';
   const errorCode = code || '1001';
   const res = NextResponse.redirect(
     `${siteBaseUrl()}${target}?error=${encodeURIComponent(`${errorCode}: ${msg}`)}`,
   );
   res.cookies.delete('oauth_from');
+  res.cookies.delete('microsoft_verifier');
   return res;
 }

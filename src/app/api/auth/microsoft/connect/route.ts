@@ -26,7 +26,10 @@ export async function GET(req: Request) {
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-  const state = `connect:${session.userId}:${crypto.randomBytes(16).toString('hex')}`;
+  // purpose=delete → OAuth re-authentication used to confirm account deletion.
+  const purpose = url.searchParams.get('purpose');
+  const kind = purpose === 'delete' ? 'delete' : 'connect';
+  const state = `${kind}:${session.userId}:${crypto.randomBytes(16).toString('hex')}`;
   const verifier = b64url(crypto.randomBytes(32));
   const challenge = b64url(sha256(verifier));
   const redirectUri = siteUrl('/api/auth/microsoft/callback');

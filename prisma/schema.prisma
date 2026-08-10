@@ -40,6 +40,10 @@ model User {
   // account and all its data are permanently deleted (the email/username free up).
   deleteRequestedAt DateTime?
   deleteAt           DateTime?
+  // For accounts WITHOUT a bound email: set when the user re-authenticates via OAuth to
+  // confirm account deletion (valid for a short window). Null for accounts that delete
+  // via email code.
+  deleteOauthVerifiedAt DateTime?
 
   workspaces Workspace[]
   chats      Chat[]

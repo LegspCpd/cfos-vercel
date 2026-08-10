@@ -20,7 +20,10 @@ export async function GET(req: Request) {
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-  const state = `connect:${session.userId}:${crypto.randomBytes(8).toString('hex')}`;
+  // purpose=delete → OAuth re-authentication used to confirm account deletion.
+  const purpose = url.searchParams.get('purpose');
+  const kind = purpose === 'delete' ? 'delete' : 'connect';
+  const state = `${kind}:${session.userId}:${crypto.randomBytes(8).toString('hex')}`;
   const redirectUri = siteUrl('/api/auth/google/callback');
   const params = new URLSearchParams({
     client_id: CLIENT_ID,

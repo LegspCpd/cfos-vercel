@@ -89,6 +89,27 @@ export async function GET(req: Request) {
       return res;
     }
 
+    // DELETE flow (no-email accounts): re-authenticate via Google to confirm deletion.
+    if (state.startsWith('delete:')) {
+      const targetUserId = state.split(':')[1];
+      const targetUser = targetUserId
+        ? await prisma.user.findUnique({ where: { id: targetUserId } })
+        : null;
+      if (!targetUser) return redirectWithError('注销确认失败：用户不存在', req, '1001');
+      // The authenticated Google identity must belong to the target account.
+      if (targetUser.googleId !== info.sub) {
+        return redirectWithError('注销确认失败：Google 身份不匹配', req, '1001');
+      }
+      await prisma.user.update({
+        where: { id: targetUser.id },
+        data: { deleteOauthVerifiedAt: new Date() },
+      });
+      const res = NextResponse.redirect(`${siteBaseUrl()}/profile?deleteOauth=1`);
+      res.cookies.delete('oauth_from');
+      res.cookies.delete('google_oauth_state');
+      return res;
+    }
+
     // 3. Find or create local user.
     // Prefer linking by googleId; fall back to email so a previously password-created
     // account with the same email can still log in via Google (we attach the googleId).

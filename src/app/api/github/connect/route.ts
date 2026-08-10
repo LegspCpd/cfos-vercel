@@ -27,7 +27,10 @@ export async function GET(req: Request) {
   // the connect flow instead of a sign-in, avoiding a second callback URL to register.
   const redirectUri = siteUrl('/api/auth/github/callback');
 
-  const state = `connect:${session.userId}:${crypto.randomBytes(12).toString('hex')}`;
+  // purpose=delete → OAuth re-authentication used to confirm account deletion.
+  const purpose = url.searchParams.get('purpose');
+  const kind = purpose === 'delete' ? 'delete' : 'connect';
+  const state = `${kind}:${session.userId}:${crypto.randomBytes(12).toString('hex')}`;
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,

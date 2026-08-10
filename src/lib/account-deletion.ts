@@ -16,6 +16,16 @@ export function deletionDeadline(): Date {
   return new Date(Date.now() + DELETE_COOLDOWN_MS);
 }
 
+// How long an OAuth deletion-confirmation stays valid (10 minutes) before the user must
+// re-authenticate. Mirrors the OAuth state cookie lifetime.
+export const DELETE_OAUTH_CONFIRM_MS = 10 * 60 * 1000;
+
+/** True if the OAuth deletion confirmation is still fresh (within 10 minutes). */
+export function oauthConfirmFresh(at: Date | null): boolean {
+  if (!at) return false;
+  return Date.now() - at.getTime() <= DELETE_OAUTH_CONFIRM_MS;
+}
+
 /**
  * If this user is past their deletion deadline, permanently delete them. Call this on
  * every authenticated entry point (login, /api/me, shell layout) so the account is

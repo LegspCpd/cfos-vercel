@@ -109,10 +109,10 @@ The sidebar **"Tickets"** (needs `tickets.manage`):
 
 In **Profile → Delete account**:
 
-1. Enter your bound email → send a code
-2. Enter the code + **human verification** → submit
-3. Enter a **4–7 day cooldown**, cancel anytime during it
-4. After the deadline the account and all its data are **permanently deleted**; the **email/username free up and can be re-registered**
+- **With a bound email**: enter it → send a code → enter the code + **human verification** → submit
+- **Without a bound email** (pure OAuth account): click delete → re-authenticate through one of your connected **third-party logins** (Microsoft / Google / GitHub) → on return, complete **human verification** → submit
+- The account then enters a **4–7 day cooldown**; cancel anytime during it
+- After the deadline the account and all its data are **permanently deleted**; the **email/username free up and can be re-registered**
 
 ## Custom site background
 

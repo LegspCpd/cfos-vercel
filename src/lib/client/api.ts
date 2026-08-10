@@ -201,6 +201,15 @@ export const api = {
     }),
   cancelDeleteAccount: () =>
     request<{ ok: boolean }>('/api/profile/delete-account/cancel', { method: 'POST' }),
+  // For accounts without a bound email: request deletion after OAuth re-auth + captcha.
+  requestDeleteAccountOauth: (data: {
+    captchaProvider?: 'turnstile' | 'recaptcha';
+    captchaToken?: string;
+  }) =>
+    request<{ ok: boolean; deleteAt: string }>('/api/profile/delete-account/oauth', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   uploadAvatar: async (file: File) => {
     const fd = new FormData();
     fd.append('file', file, file.name);

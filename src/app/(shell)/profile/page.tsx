@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Upload, Check, Link2, Mail, RefreshCw, X, HelpCircle } from 'lucide-react';
 import { GithubIcon, GoogleIcon, MicrosoftIcon } from '@/components/BrandIcons';
 import CaptchaWidget from '@/components/CaptchaWidget';
@@ -26,6 +26,7 @@ interface MeInfo {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [me, setMe] = useState<MeInfo | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -81,6 +82,15 @@ export default function ProfilePage() {
   const [delMsg, setDelMsg] = useState('');
   const [delError, setDelError] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // No-email account deletion: OAuth re-auth + captcha.
+  const [delOauthOpen, setDelOauthOpen] = useState(false);
+  const [delOauthCaptcha, setDelOauthCaptcha] = useState<{ provider: 'turnstile' | 'recaptcha'; token: string } | null>(
+    null,
+  );
+  const [delOauthSaving, setDelOauthSaving] = useState(false);
+  const [delOauthError, setDelOauthError] = useState('');
+  const [delOauthMsg, setDelOauthMsg] = useState('');
 
   useEffect(() => {
     if (!getToken()) {
@@ -370,9 +380,40 @@ export default function ProfilePage() {
     return () => clearInterval(id);
   }, [delCountdown]);
 
+  // When OAuth delete-confirmation redirects back with ?deleteOauth=1, show the captcha
+  // step. Clean the query param so a refresh doesn't re-trigger it.
+  useEffect(() => {
+    if (searchParams.get('deleteOauth') === '1' && me && !me.email) {
+      openOauthDeleteConfirm();
+      window.history.replaceState({}, '', '/profile');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, me]);
+
   function openDelete() {
     setError('');
     setMessage('');
+    // No email bound → the user must re-authenticate via one of their OAuth providers.
+    if (!me || !me.email) {
+      if (!me) return;
+      const token = encodeURIComponent(getToken() || '');
+      // Use the first connected OAuth provider to confirm identity.
+      const provider = me.microsoftConnected
+        ? 'auth/microsoft'
+        : me.googleConnected
+          ? 'auth/google'
+          : me.githubConnected
+            ? 'github'
+            : null;
+      if (!provider) {
+        setMessage('当前账号未绑定任何登录方式，请联系管理员处理。');
+        return;
+      }
+      // Redirect to the provider's OAuth connect flow with purpose=delete; the callback
+      // verifies identity and returns to /profile?deleteOauth=1.
+      window.location.href = `/api/${provider}/connect?purpose=delete&token=${token}`;
+      return;
+    }
     setDelError('');
     setDelMsg('');
     setDelEmail(me?.email || '');
@@ -380,6 +421,40 @@ export default function ProfilePage() {
     setDelCaptcha(null);
     setDelOpen(true);
     if (!site) api.getPublicSite().then(setSite).catch(() => {});
+  }
+
+  // After OAuth delete-confirmation redirects back with ?deleteOauth=1, open the captcha
+  // step to actually schedule the deletion.
+  function openOauthDeleteConfirm() {
+    setDelOauthOpen(true);
+    setDelOauthError('');
+    setDelOauthMsg('');
+    setDelOauthCaptcha(null);
+    if (!site) api.getPublicSite().then(setSite).catch(() => {});
+  }
+
+  async function confirmOauthDelete() {
+    setDelOauthError('');
+    setDelOauthMsg('');
+    const captchaEnabled = site && (site.turnstileEnabled || site.recaptchaEnabled);
+    if (captchaEnabled && !delOauthCaptcha) {
+      setDelOauthError('请完成人机验证');
+      return;
+    }
+    setDelOauthSaving(true);
+    try {
+      const res = await api.requestDeleteAccountOauth({
+        captchaProvider: delOauthCaptcha?.provider,
+        captchaToken: delOauthCaptcha?.token,
+      });
+      setMe((m) => (m ? { ...m, deleteRequestedAt: new Date().toISOString(), deleteAt: res.deleteAt } : m));
+      setMessage('注销请求已提交。账号将进入 4–7 天冷静期，届时将自动删除。冷静期内可随时取消。');
+      setDelOauthOpen(false);
+    } catch (e) {
+      setDelOauthError((e as Error).message);
+    } finally {
+      setDelOauthSaving(false);
+    }
   }
 
   async function sendDelCode() {
@@ -819,7 +894,9 @@ export default function ProfilePage() {
             ? `你的账号已申请注销，将在 ${new Date(me.deleteAt).toLocaleDateString()} ${new Date(
                 me.deleteAt,
               ).toLocaleTimeString()} 自动删除。冷静期内可随时取消。`
-            : '注销后账号及其所有数据（工作区、聊天、分享等）将被永久删除，且无法恢复。账号删除后将释放邮箱和用户名，可重新注册。'}
+            : me?.email
+              ? '注销后账号及其所有数据（工作区、聊天、分享等）将被永久删除，且无法恢复。账号删除后将释放邮箱和用户名，可重新注册。'
+              : '你的账号未绑定邮箱。点击注销后将通过你已登录的第三方账号再验证一次身份，然后进入 4–7 天冷静期，到期自动删除。'}
         </p>
 
         {me?.deleteAt ? (
@@ -925,6 +1002,60 @@ export default function ProfilePage() {
                 className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {delSaving ? '提交中...' : '确认注销账号'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete-account confirm via OAuth (no-email accounts) */}
+      {delOauthOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[10vh]"
+          onClick={() => setDelOauthOpen(false)}
+        >
+          <div className="w-full max-w-md rounded-xl border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <span className="text-sm font-semibold text-destructive">确认注销账号</span>
+              <button
+                onClick={() => setDelOauthOpen(false)}
+                className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+              <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                身份验证已通过。完成人机验证后，账号将进入 4–7 天冷静期，到期自动删除。
+              </div>
+
+              {delOauthMsg && (
+                <div className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-600">{delOauthMsg}</div>
+              )}
+              {delOauthError && (
+                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{delOauthError}</div>
+              )}
+
+              {site && (site.turnstileEnabled || site.recaptchaEnabled) && (
+                <CaptchaWidget
+                  config={{
+                    turnstileEnabled: site.turnstileEnabled,
+                    turnstileSiteKey: site.turnstileSiteKey,
+                    recaptchaEnabled: site.recaptchaEnabled,
+                    recaptchaSiteKey: site.recaptchaSiteKey,
+                  }}
+                  onVerify={(provider, token) => setDelOauthCaptcha({ provider, token })}
+                />
+              )}
+
+              <button
+                onClick={confirmOauthDelete}
+                disabled={delOauthSaving}
+                className="w-full rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {delOauthSaving ? '提交中...' : '确认注销账号'}
               </button>
             </div>
           </div>

@@ -28,6 +28,7 @@ import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
 import { api } from '@/lib/client/api';
 import CommandPalette from './CommandPalette';
+import WalComment from './WalComment';
 import { useI18n, type Lang } from '@/lib/client/i18n';
 import { LOGO_URL } from '@/lib/brand';
 import { clsx } from 'clsx';
@@ -371,6 +372,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      {/* Public chat (Waline) floating widget — only rendered when logged in (AppShell is post-login) */}
+      <WalComment />
     </div>
   );
 }

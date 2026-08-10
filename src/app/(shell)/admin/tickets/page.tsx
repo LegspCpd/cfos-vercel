@@ -42,15 +42,15 @@ export default function AdminTicketsPage() {
           setNotAdmin(true);
           return;
         }
+        api
+          .listTickets()
+          .then((res) => {
+            setTickets(res.tickets);
+            if (focusId) setSelectedId(focusId);
+          })
+          .catch(() => setTickets([]));
       })
       .catch(() => setNotAdmin(true));
-    api
-      .listTickets()
-      .then((res) => {
-        setTickets(res.tickets);
-        if (focusId) setSelectedId(focusId);
-      })
-      .catch(() => setTickets([]));
   };
 
   useEffect(() => {

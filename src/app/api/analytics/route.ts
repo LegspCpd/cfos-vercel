@@ -22,9 +22,10 @@ export async function GET(req: Request) {
   todayStart.setHours(0, 0, 0, 0);
 
   // Own stats.
-  const [workspaceCount, fileCount, todayLoginLogs, todayTokenAgg] = await Promise.all([
+  const [workspaceCount, fileCount, todayLoginCount, todayLoginLogs, todayTokenAgg] = await Promise.all([
     prisma.workspace.count({ where: { ownerId: user.id } }),
     prisma.workspaceFile.count({ where: { workspace: { ownerId: user.id } } }),
+    prisma.auditLog.count({ where: { userId: user.id, action: 'auth.login', createdAt: { gte: todayStart } } }),
     prisma.auditLog.findMany({
       where: { userId: user.id, action: 'auth.login', createdAt: { gte: todayStart } },
       orderBy: { createdAt: 'desc' },
@@ -92,7 +93,7 @@ export async function GET(req: Request) {
     workspaces: workspaceCount,
     files: fileCount,
     today: {
-      loginCount: todayLoginLogs.length,
+      loginCount: todayLoginCount,
       logins: todayLoginLogs.map((l) => ({ at: l.createdAt.toISOString(), ip: l.ip })),
       aiCalls: todayAiCalls,
       tokens: todayTokenTotal,

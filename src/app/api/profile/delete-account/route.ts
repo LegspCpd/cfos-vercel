@@ -4,7 +4,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { verifyCode } from '@/lib/verification';
 import { getPublicCaptchaConfig } from '@/lib/settings';
 import { verifyCaptcha, type CaptchaProvider } from '@/lib/captcha';
-import { deletionDeadline } from '@/lib/account-deletion';
+import { deletionDeadline, applyDueDeletion } from '@/lib/account-deletion';
 import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
 
@@ -25,6 +25,10 @@ export async function POST(req: Request) {
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     const session = await verifySessionToken(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    // If the deletion deadline already passed, remove the account first (it's already gone).
+    if (await applyDueDeletion(session.userId)) {
+      return NextResponse.json({ error: 'Account has been deleted' }, { status: 401 });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

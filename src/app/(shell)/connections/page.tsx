@@ -6,6 +6,7 @@ import { Link2, Unlink, CheckCircle2, Loader2 } from 'lucide-react';
 import { GithubIcon, GoogleIcon, GitlabIcon } from '@/components/BrandIcons';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
+import { useI18n } from '@/lib/client/i18n';
 
 interface ConnState {
   connected: boolean;
@@ -16,6 +17,7 @@ const EMPTY: ConnState = { connected: false, label: null };
 
 export default function ConnectionsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [github, setGithub] = useState<ConnState>(EMPTY);
   const [google, setGoogle] = useState<ConnState>(EMPTY);
   const [gitlab, setGitlab] = useState<ConnState>(EMPTY);
@@ -46,8 +48,8 @@ export default function ConnectionsPage() {
       return;
     }
     const params = new URL(window.location.href).searchParams;
-    if (params.get('connected')) setMessage('连接成功！agent 现在可以访问该服务了。');
-    if (params.get('error')) setMessage(`连接失败：${params.get('error')}`);
+    if (params.get('connected')) setMessage(t('conn.success'));
+    if (params.get('error')) setMessage(`${t('conn.fail')}：${params.get('error')}`);
     if (params.get('connected') || params.get('error')) {
       window.history.replaceState({}, '', '/connections');
     }
@@ -74,7 +76,7 @@ export default function ConnectionsPage() {
         await api.gitlabDisconnect();
         setGitlab(EMPTY);
       }
-      setMessage('已断开连接。');
+      setMessage(t('conn.disconnected'));
     } finally {
       setBusyKey(null);
     }
@@ -85,7 +87,9 @@ export default function ConnectionsPage() {
       key: 'github',
       name: 'GitHub',
       desc: (connected: boolean) =>
-        connected ? `已连接到 @${github.label}。agent 可以读取你的仓库和文件。` : '连接后 agent 可以列出你的仓库、读取文件内容。',
+        connected
+          ? t('conn.githubConnected').replace('{name}', `@${github.label}`)
+          : t('conn.githubDisconnected'),
       Icon: GithubIcon,
       state: github,
     },
@@ -93,7 +97,9 @@ export default function ConnectionsPage() {
       key: 'google',
       name: 'Google',
       desc: (connected: boolean) =>
-        connected ? `已连接到 ${google.label}。agent 可以访问你的 Google 资料。` : '连接后 agent 可以读取你的 Google 账号资料。',
+        connected
+          ? t('conn.googleConnected').replace('{name}', `${google.label}`)
+          : t('conn.googleDisconnected'),
       Icon: GoogleIcon,
       state: google,
     },
@@ -101,7 +107,9 @@ export default function ConnectionsPage() {
       key: 'gitlab',
       name: 'GitLab',
       desc: (connected: boolean) =>
-        connected ? `已连接到 @${gitlab.label}。agent 可以访问你的 GitLab 项目。` : '连接后 agent 可以列出你的 GitLab 项目、读取仓库。',
+        connected
+          ? t('conn.gitlabConnected').replace('{name}', `@${gitlab.label}`)
+          : t('conn.gitlabDisconnected'),
       Icon: GitlabIcon,
       state: gitlab,
     },
@@ -109,10 +117,8 @@ export default function ConnectionsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
-      <h1 className="text-2xl font-bold">外部连接</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        连接外部服务后，agent 可以代表你调用它们的 API。
-      </p>
+      <h1 className="text-2xl font-bold">{t('conn.title')}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t('conn.subtitle')}</p>
 
       {message && (
         <div className="mt-4 rounded-md bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>
@@ -120,7 +126,7 @@ export default function ConnectionsPage() {
 
       {loading ? (
         <div className="mt-6 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载中...
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       ) : (
         <div className="mt-6 space-y-4">
@@ -135,7 +141,7 @@ export default function ConnectionsPage() {
                     <p className="font-medium">{p.name}</p>
                     {p.state.connected && (
                       <span className="flex items-center gap-1 rounded bg-green-500/15 px-2 py-0.5 text-xs text-green-600">
-                        <CheckCircle2 className="h-3 w-3" /> 已连接
+                        <CheckCircle2 className="h-3 w-3" /> {t('pr.connected')}
                       </span>
                     )}
                   </div>
@@ -149,7 +155,7 @@ export default function ConnectionsPage() {
                     disabled={busyKey === p.key}
                     className="flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
                   >
-                    <Unlink className="h-4 w-4" /> 断开连接
+                    <Unlink className="h-4 w-4" /> {t('conn.disconnect')}
                   </button>
                 ) : (
                   <button
@@ -157,7 +163,7 @@ export default function ConnectionsPage() {
                     disabled={busyKey === p.key}
                     className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
                   >
-                    <Link2 className="h-4 w-4" /> 连接 {p.name}
+                    <Link2 className="h-4 w-4" /> {t('conn.connect')} {p.name}
                   </button>
                 )}
               </div>
@@ -167,7 +173,7 @@ export default function ConnectionsPage() {
       )}
 
       <p className="mt-6 text-xs text-muted-foreground">
-        当前支持：GitHub、Google、GitLab。连接后 agent 可代表你调用对应服务的 API。
+        {t('conn.footer')}
       </p>
     </div>
   );

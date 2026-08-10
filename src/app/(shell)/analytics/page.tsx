@@ -68,15 +68,15 @@ export default function AnalyticsPage() {
   const myCards = [
     { label: t('an.workspaces'), value: data.workspaces, icon: FolderOpen, color: 'text-primary' },
     { label: t('an.files'), value: data.files, icon: FileCode2, color: 'text-amber-500' },
-    { label: '今日登录', value: data.today.loginCount, icon: LogIn, color: 'text-blue-500' },
-    { label: '今日 AI 调用', value: data.today.aiCalls, icon: BrainCircuit, color: 'text-green-500' },
-    { label: '今日 Token', value: data.today.tokens, icon: BrainCircuit, color: 'text-violet-500' },
+    { label: t('an.todayLogins'), value: data.today.loginCount, icon: LogIn, color: 'text-blue-500' },
+    { label: t('an.todayAiCalls'), value: data.today.aiCalls, icon: BrainCircuit, color: 'text-green-500' },
+    { label: t('an.todayTokens'), value: data.today.tokens, icon: BrainCircuit, color: 'text-violet-500' },
   ];
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
       <h1 className="text-2xl font-bold">{t('an.title')}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">注册时间：{joinedDate}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t('an.joinedAt')}：{joinedDate}</p>
 
       {/* Personal stat cards */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -94,18 +94,18 @@ export default function AnalyticsPage() {
       {/* Today's login activity (my IPs) */}
       <section className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
-          <LogIn className="h-4 w-4 text-blue-500" /> 今日登录记录（我的 IP）
+          <LogIn className="h-4 w-4 text-blue-500" /> {t('an.todayLoginsTitle')}
         </h2>
-        <p className="mb-4 text-sm text-muted-foreground">你今天登录这个网站所使用的 IP 地址。</p>
+        <p className="mb-4 text-sm text-muted-foreground">{t('an.todayLoginsHint')}</p>
         {data.today.logins.length === 0 ? (
-          <p className="text-sm text-muted-foreground">今天还没有登录记录。</p>
+          <p className="text-sm text-muted-foreground">{t('an.noLogins')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 pr-3 font-medium">时间</th>
-                  <th className="py-2 font-medium">IP 地址</th>
+                  <th className="py-2 pr-3 font-medium">{t('an.time')}</th>
+                  <th className="py-2 font-medium">IP</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
                     <td className="whitespace-nowrap py-2 pr-3 text-xs text-muted-foreground">
                       {new Date(l.at).toLocaleString()}
                     </td>
-                    <td className="py-2 font-mono text-xs">{l.ip ?? '未知'}</td>
+                    <td className="py-2 font-mono text-xs">{l.ip ?? t('an.unknown')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -127,34 +127,34 @@ export default function AnalyticsPage() {
       {data.site && (
         <section className="mt-8 rounded-lg border bg-card p-6">
           <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
-            <ShieldCheck className="h-4 w-4 text-primary" /> 全站今日概览（管理员）
+            <ShieldCheck className="h-4 w-4 text-primary" /> {t('an.siteOverview')}
           </h2>
-          <p className="mb-4 text-sm text-muted-foreground">今日全站登录、AI 调用与 token 用量。</p>
+          <p className="mb-4 text-sm text-muted-foreground">{t('an.siteOverviewHint')}</p>
 
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-md bg-secondary/50 p-4">
-              <p className="text-xs text-muted-foreground">今日登录</p>
+              <p className="text-xs text-muted-foreground">{t('an.todayLogins')}</p>
               <p className="mt-1 text-2xl font-bold">{data.site.todayLogins}</p>
             </div>
             <div className="rounded-md bg-secondary/50 p-4">
-              <p className="text-xs text-muted-foreground">活跃用户</p>
+              <p className="text-xs text-muted-foreground">{t('an.activeUsers')}</p>
               <p className="mt-1 text-2xl font-bold">{data.site.todayUsersActive}</p>
             </div>
             <div className="rounded-md bg-secondary/50 p-4">
-              <p className="text-xs text-muted-foreground">AI 调用</p>
+              <p className="text-xs text-muted-foreground">{t('an.todayAiCalls')}</p>
               <p className="mt-1 text-2xl font-bold">{data.site.todayAiCalls}</p>
             </div>
             <div className="rounded-md bg-secondary/50 p-4">
-              <p className="text-xs text-muted-foreground">Token 用量</p>
+              <p className="text-xs text-muted-foreground">{t('an.todayTokens')}</p>
               <p className="mt-1 text-2xl font-bold">{data.site.todayTokens.toLocaleString()}</p>
             </div>
           </div>
 
           <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <MapPin className="h-4 w-4" /> 今日登录 IP 分布
+            <MapPin className="h-4 w-4" /> {t('an.loginIps')}
           </h3>
           {data.site.topLoginIps.length === 0 ? (
-            <p className="text-sm text-muted-foreground">今日暂无登录记录。</p>
+            <p className="text-sm text-muted-foreground">{t('an.noLogins')}</p>
           ) : (
             <div className="space-y-2">
               {data.site.topLoginIps.map((row, i) => {
@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
         href="/workspaces"
         className="inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary"
       >
-        查看全部工作区 →
+        {t('an.viewAllWorkspaces')} →
       </Link>
 
       <p className="mt-10 text-center text-xs text-muted-foreground">{t('an.footer')}</p>

@@ -198,9 +198,9 @@ export default function ProfilePage() {
         </p>
 
         {/* GitHub */}
-        <div className="mb-3 flex items-center justify-between rounded-md border p-3">
+        <div className="mb-3 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
               <Github className="h-5 w-5" />
             </span>
             <div>
@@ -227,9 +227,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Google */}
-        <div className="flex items-center justify-between rounded-md border p-3">
+        <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
               <Chrome className="h-5 w-5" />
             </span>
             <div>

@@ -85,6 +85,7 @@ export default function UserManagement() {
 
       {error && <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
 
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
@@ -142,6 +143,7 @@ export default function UserManagement() {
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

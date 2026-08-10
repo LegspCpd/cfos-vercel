@@ -28,13 +28,21 @@ export async function GET(req: Request) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
+  const errorDesc = url.searchParams.get('error_description');
 
   const storedState = req.headers.get('cookie')?.match(/microsoft_oauth_state=([^;]+)/)?.[1];
   if (!state || !storedState || state !== storedState) {
     return redirectWithError('Invalid OAuth state. Please try again.', req);
   }
   if (error || !code) {
-    return redirectWithError('登录已取消', req, '1001');
+    // Only a genuine user cancel ("access_denied") is treated as a cancel; any other
+    // error is surfaced verbatim so a misconfiguration (e.g. redirect_uri_mismatch,
+    // invalid_scope) is easy to diagnose.
+    if (error === 'access_denied' || !error) {
+      return redirectWithError('登录已取消', req, '1001');
+    }
+    const detail = errorDesc || error;
+    return redirectWithError(`Microsoft 登录失败：${detail}`, req, '1001');
   }
 
   try {

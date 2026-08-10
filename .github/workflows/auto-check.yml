@@ -12,6 +12,9 @@
 name: Auto Code Check
 
 on:
+  # 每次 push 到 master 都会跑一次（迭代时即时反馈）。
+  push:
+    branches: [master]
   schedule:
     # 每小时整点运行（UTC）。要改为其他频率，调整 cron 表达式。
     - cron: '0 * * * *'

@@ -2,10 +2,14 @@
 
 ## 这个 Action 是做什么的？
 
-`.github/workflows/auto-check.yml` 每小时自动运行一次，检测代码中的错误：
+`.github/workflows/auto-check.yml` 自动检测代码中的错误：
 
 - **TypeScript 类型检查**：`pnpm exec tsc --noEmit`
 - **Prisma schema 校验**：`pnpm exec prisma validate`
+
+它会在**两种时机**运行：
+1. **每次 push 到 `master`**：提交后立刻检查，迭代反馈最快
+2. **每小时整点**：即使没有新提交，也会定时复查
 
 如果发现问题，它会把错误详情整理成一份报告，开一个 **Pull Request** 给你审查。
 
@@ -28,8 +32,8 @@
 ## 使用说明
 
 1. 把这个文件（`.github/workflows/auto-check.yml`）推到 `master`。
-2. 每小时整点会自动运行；也可以到仓库 **Actions** 页面手动触发（`Run workflow`）。
-3. 若某个小时检查通过，不会开 PR；若发现错误，会收到一个"🚨 自动代码检查发现错误"的 PR，打开 **Files changed** 查看详细错误（报告在 `.auto-check/report.md`）。
+2. 之后**每次你 push 到 master 都会自动跑一次**，同时每小时整点也会复查；也可到 **Actions** 页面手动触发（`Run workflow`）。
+3. 检查通过则不开 PR；发现错误时会收到一个"🚨 自动代码检查发现错误"的 PR，打开 **Files changed** 查看详细错误（报告在 `.auto-check/report.md`）。
 4. 根据报告修复代码后，合并该 PR 即可（或关闭它、在本地修复再另开 PR）。
 
 ## 调整检查频率

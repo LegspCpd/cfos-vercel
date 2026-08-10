@@ -7,6 +7,7 @@ import { ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { setToken } from '@/lib/client/auth';
 import CaptchaWidget from '@/components/CaptchaWidget';
+import { useI18n } from '@/lib/client/i18n';
 
 interface PublicSite {
   turnstileEnabled: boolean;
@@ -19,12 +20,13 @@ interface PublicSite {
 // is activated. This blocks bulk-automated accounts (e.g. many Google/GitHub accounts)
 // from consuming resources. If no CAPTCHA is configured, the user is passed straight through.
 export default function VerifyPage() {
+  const { t } = useI18n();
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> 正在加载...
+            <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
           </div>
         </div>
       }
@@ -37,6 +39,7 @@ export default function VerifyPage() {
 function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   const token = searchParams.get('token');
 
   const [site, setSite] = useState<PublicSite | null>(null);
@@ -105,10 +108,8 @@ function VerifyContent() {
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <ShieldCheck className="h-8 w-8" />
           </div>
-          <h1 className="text-xl font-bold">完成安全验证</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            为了保障服务稳定，请在进入前完成一次人机验证。
-          </p>
+          <h1 className="text-xl font-bold">{t('verify.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('verify.sub')}</p>
         </div>
 
         <div className="rounded-lg border bg-card p-6">
@@ -128,13 +129,11 @@ function VerifyContent() {
             />
           ) : (
             <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> 正在进入...
+              <Loader2 className="h-4 w-4 animate-spin" /> {t('verify.entering')}
             </div>
           )}
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            验证通过后将自动进入工作区。
-          </p>
+          <p className="mt-4 text-center text-xs text-muted-foreground">{t('verify.done')}</p>
         </div>
       </div>
     </main>

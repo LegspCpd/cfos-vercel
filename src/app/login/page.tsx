@@ -35,12 +35,12 @@ export default function LoginPage() {
       // message) maps to "登录已取消"; anything else is surfaced verbatim so real
       // failures (e.g. Microsoft token errors) are visible instead of being swallowed.
       const raw = decodeURIComponent(oauthError);
-      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, '登录已取消');
+      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, t('auth.cancelError'));
       const cancelled =
-        stripped === '登录已取消' ||
+        stripped === t('auth.cancelError') ||
         stripped === 'access_denied' ||
         /登录已取消|access_denied/i.test(raw);
-      setError(cancelled ? '登录已取消，请重试。' : stripped);
+      setError(cancelled ? t('auth.retryCancel') : stripped);
       window.history.replaceState({}, '', '/login');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,7 +153,7 @@ export default function LoginPage() {
         <p className="mt-2 flex items-center justify-center gap-1 text-center text-sm">
           <BookOpen className="h-3.5 w-3.5 text-primary/70" />
           <Link href="/docs" className="text-primary/70 hover:underline">
-            查看部署文档
+            {t('auth.docs')}
           </Link>
         </p>
       </div>

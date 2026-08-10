@@ -6,7 +6,9 @@
 
 Cloudflare OS is an **AI coding workspace**: describe an app in natural language and an AI agent builds it for you, with a live preview, file sharing, and external service connections.
 
-This version is **rebuilt for Vercel** using Next.js + Postgres. It needs no paid Cloudflare plan and can be self-hosted for free.
+> ⚠️ **Derivative work**: This project is developed based on (二次开发自) [Cloudflare OS](https://github.com/cloudflare/cloudflare-os) under the Apache License 2.0.
+
+This version is a **secondary development (二次开发) rebuilt for Vercel** using Next.js + Postgres. It needs no paid Cloudflare plan and can be self-hosted for free.
 
 ## Feature overview
 

@@ -1,8 +1,10 @@
 # Cloudflare OS — Vercel Edition
 
-> A full-stack rewrite of [Cloudflare OS](https://github.com/cloudflare/cloudflare-os) for Vercel (Next.js 14 + Postgres), removing the dependency on Cloudflare Durable Objects, Dynamic Workers, and Workers RPC.
+> ⚠️ **二次开发 (Derivative work)**: This project is developed based on (二次开发自) [Cloudflare OS](https://github.com/cloudflare/cloudflare-os) under the [Apache License 2.0](LICENSE).
 
-**This is a clean-room re-implementation** built on the standard `next` runtime. It preserves and restores the original product's capabilities while adapting the architecture to a classic serverless setup.
+A full-stack rewrite of Cloudflare OS for Vercel (Next.js 14 + Postgres), removing the dependency on Cloudflare Durable Objects, Dynamic Workers, and Workers RPC.
+
+This is a **derivative / secondary-development (二次开发)** of the original project, built on the standard `next` runtime. It preserves and restores the original product's capabilities while adapting the architecture to a classic serverless setup. See [NOTICE](NOTICE) for copyright and modification details.
 
 ## ✨ Features
 

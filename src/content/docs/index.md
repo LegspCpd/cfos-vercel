@@ -6,7 +6,9 @@
 
 Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮你构建网页应用，实时预览，还能分享文件、连接外部服务。
 
-本版本是**重构到 Vercel 的版本**，使用 Next.js + Postgres，不需要 Cloudflare 付费计划，可以免费自托管。
+> ⚠️ **本项目基于 [Cloudflare OS](https://github.com/cloudflare/cloudflare-os) 二次开发而来**（Apache-2.0 协议）。
+
+本版本是**基于 Cloudflare OS 二次开发、并重构到 Vercel 的版本**，使用 Next.js + Postgres，不需要 Cloudflare 付费计划，可以免费自托管。
 
 ## 功能一览
 

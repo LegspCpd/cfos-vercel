@@ -6,6 +6,7 @@ import { Loader2, UserRound, KeyRound, Mail, RefreshCw, CheckCircle2 } from 'luc
 import { api } from '@/lib/client/api';
 import { getToken, setToken } from '@/lib/client/auth';
 import CaptchaWidget from '@/components/CaptchaWidget';
+import { useI18n } from '@/lib/client/i18n';
 
 interface PublicSite {
   turnstileEnabled: boolean;
@@ -18,6 +19,7 @@ interface PublicSite {
 // The user must pick a username, set a password, and pass human verification.
 export default function CompleteProfilePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [me, setMe] = useState<{ username: string; displayName: string; email: string } | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -67,7 +69,7 @@ export default function CompleteProfilePage() {
   async function sendCode() {
     setError('');
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      setError('请输入有效的邮箱地址');
+      setError(t('auth.invalidEmail') || '请输入有效的邮箱地址');
       return;
     }
     setCodeSending(true);
@@ -84,19 +86,19 @@ export default function CompleteProfilePage() {
   async function submit() {
     setError('');
     if (username.trim().length < 3) {
-      setError('用户名至少 3 个字符');
+      setError(t('complete.usernameShort'));
       return;
     }
     if (password.length < 6) {
-      setError('密码至少 6 位');
+      setError(t('auth.pwTooShort'));
       return;
     }
     if (email.trim() && !code.trim()) {
-      setError('绑定邮箱需输入验证码');
+      setError(t('complete.emailCodeRequired'));
       return;
     }
     if (captchaEnabled && !captcha) {
-      setError('请完成人机验证');
+      setError(t('auth.captchaRequired') || '请完成人机验证');
       return;
     }
     setSaving(true);
@@ -133,13 +135,13 @@ export default function CompleteProfilePage() {
       <main className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-sm text-center">
           <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-green-500" />
-          <h1 className="text-xl font-bold">资料已完善</h1>
-          <p className="mt-2 text-sm text-muted-foreground">你的账号已设置完成，即将进入工作区...</p>
+          <h1 className="text-xl font-bold">{t('complete.done')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('complete.doneSub')}</p>
           <button
             onClick={() => router.push('/')}
             className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
-            进入工作区
+            {t('complete.enter')}
           </button>
         </div>
       </main>
@@ -153,9 +155,9 @@ export default function CompleteProfilePage() {
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <UserRound className="h-8 w-8" />
           </div>
-          <h1 className="text-xl font-bold">完善你的资料</h1>
+          <h1 className="text-xl font-bold">{t('complete.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            欢迎 {me?.displayName}！首次登录请设置用户名和密码，以保障账号安全。
+            {t('complete.welcome').replace('{name}', me?.displayName || '')}
           </p>
         </div>
 
@@ -165,13 +167,13 @@ export default function CompleteProfilePage() {
           <div className="space-y-4">
             {/* Username */}
             <div>
-              <label className="mb-1 block text-sm font-medium">用户名</label>
+              <label className="mb-1 block text-sm font-medium">{t('complete.username')}</label>
               <div className="flex items-center gap-2 rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
                 <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="输入你的用户名"
+                  placeholder={t('complete.usernamePlaceholder')}
                   className="w-full bg-transparent py-2 text-sm outline-none"
                 />
               </div>
@@ -179,14 +181,14 @@ export default function CompleteProfilePage() {
 
             {/* Password */}
             <div>
-              <label className="mb-1 block text-sm font-medium">设置密码</label>
+              <label className="mb-1 block text-sm font-medium">{t('complete.password')}</label>
               <div className="flex items-center gap-2 rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
                 <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="至少 6 位"
+                  placeholder={t('complete.passwordPlaceholder')}
                   className="w-full bg-transparent py-2 text-sm outline-none"
                 />
               </div>
@@ -194,7 +196,7 @@ export default function CompleteProfilePage() {
 
             {/* Optional email binding */}
             <div>
-              <label className="mb-1 block text-sm font-medium">绑定邮箱（可选）</label>
+              <label className="mb-1 block text-sm font-medium">{t('complete.email')}</label>
               <div className="flex gap-2">
                 <div className="flex flex-1 items-center gap-2 rounded-md border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
                   <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -202,7 +204,7 @@ export default function CompleteProfilePage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="用于找回密码与更改邮箱"
+                    placeholder={t('complete.emailPlaceholder')}
                     className="w-full bg-transparent py-2 text-sm outline-none"
                   />
                 </div>
@@ -217,7 +219,7 @@ export default function CompleteProfilePage() {
                     `${codeCountdown}s`
                   ) : (
                     <>
-                      <RefreshCw className="h-3.5 w-3.5" /> 发送验证码
+                      <RefreshCw className="h-3.5 w-3.5" /> {t('auth.sendCode')}
                     </>
                   )}
                 </button>
@@ -228,7 +230,7 @@ export default function CompleteProfilePage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     inputMode="numeric"
-                    placeholder="输入邮箱验证码"
+                    placeholder={t('complete.codePlaceholder')}
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -253,7 +255,7 @@ export default function CompleteProfilePage() {
               disabled={saving}
               className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
-              {saving ? '保存中...' : '完成设置'}
+              {saving ? t('saving') : t('complete.submit')}
             </button>
           </div>
         </div>

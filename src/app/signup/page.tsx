@@ -48,10 +48,10 @@ export default function SignupPage() {
     const oauthError = params.get('error');
     if (oauthError) {
       const raw = decodeURIComponent(oauthError);
-      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, '登录已取消');
+      const stripped = raw.replace(/^1001:\s*/, '').replace(/^1001$/, t('auth.cancelError'));
       const cancelled =
-        stripped === '登录已取消' || stripped === 'access_denied' || /登录已取消|access_denied/i.test(raw);
-      setError(cancelled ? '登录已取消，请重试。' : stripped);
+        stripped === t('auth.cancelError') || stripped === 'access_denied' || /登录已取消|access_denied/i.test(raw);
+      setError(cancelled ? t('auth.retryCancel') : stripped);
       window.history.replaceState({}, '', '/signup');
     }
   }, []);
@@ -230,7 +230,9 @@ export default function SignupPage() {
 
           {/* Optional username (defaults to email prefix) */}
           <div>
-            <label className="mb-1 block text-sm font-medium">{t('auth.username')} <span className="text-muted-foreground">(可选)</span></label>
+            <label className="mb-1 block text-sm font-medium">
+              {t('auth.username')} <span className="text-muted-foreground">({t('auth.optional')})</span>
+            </label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}

@@ -1,34 +1,43 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import AppShell from '@/components/AppShell';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { resolvePermissions } from '@/lib/permissions';
 
+const TOKEN_KEY = 'cfos_token';
+
 // All pages wrapped in the sidebar shell (except login/signup/workspace editor).
-// Server-side: read the session cookie and resolve the user's group permissions so the
-// sidebar (Admin / Users entries) renders immediately instead of waiting for a client
-// /api/me round-trip.
+// Server-side auth gate: read the session cookie and, if there's no valid session,
+// redirect straight to /login — so unauthenticated users NEVER see the home page
+// first (no flash of the app before bouncing to login). Also resolves the user's
+// group permissions so the sidebar (Admin / Users entries) renders immediately.
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
   let initialPermissions: string[] = [];
   let initialGroup: string | null = null;
 
+  const token = cookies().get(TOKEN_KEY)?.value;
+  if (!token) {
+    redirect('/login'); // not logged in → straight to login, never render home
+  }
+
+  const session = await verifySessionToken(token); // never throws (returns null)
+  if (!session) {
+    redirect('/login'); // invalid/expired token
+  }
+
   try {
-    const token = cookies().get('token')?.value;
-    if (token) {
-      const session = await verifySessionToken(token);
-      if (session) {
-        const user = await prisma.user.findUnique({
-          where: { id: session.userId },
-          include: { group: { select: { permissions: true, name: true } } },
-        });
-        if (user) {
-          initialPermissions = resolvePermissions(user);
-          initialGroup = user.group?.name ?? null;
-        }
-      }
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      include: { group: { select: { permissions: true, name: true } } },
+    });
+    if (!user) {
+      redirect('/login'); // user deleted
     }
+    initialPermissions = resolvePermissions(user);
+    initialGroup = user.group?.name ?? null;
   } catch {
-    // Not logged in / invalid token — the client AppShell will redirect to login.
+    // DB error — let the client-side AppShell handle it (fall back to empty shell).
   }
 
   return (

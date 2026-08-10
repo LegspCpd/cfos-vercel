@@ -38,6 +38,7 @@ export const api = {
       googleConnected: boolean;
       githubConnected: boolean;
       githubUsername: string | null;
+      microsoftConnected: boolean;
     }>('/api/me'),
   adminOverview: () =>
     request<{

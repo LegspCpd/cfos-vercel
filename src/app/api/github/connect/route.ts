@@ -22,7 +22,10 @@ export async function GET(req: Request) {
     );
   }
 
-  const redirectUri = siteUrl('/api/github/callback');
+  // Use the same callback URL as GitHub sign-in (already registered in the GitHub console
+  // as /api/auth/github/callback). The state prefix "connect:" tells that callback to run
+  // the connect flow instead of a sign-in, avoiding a second callback URL to register.
+  const redirectUri = siteUrl('/api/auth/github/callback');
 
   const state = `connect:${session.userId}:${crypto.randomBytes(12).toString('hex')}`;
   const params = new URLSearchParams({

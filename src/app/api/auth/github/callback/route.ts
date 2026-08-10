@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
+import { saveGitHubConnection } from '@/lib/github';
+import { writeAudit } from '@/lib/audit';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -81,6 +83,36 @@ export async function GET(req: Request) {
 
     const username = ghUser.login.toLowerCase();
     const displayName = ghUser.name || ghUser.login;
+
+    // CONNECT flow: state = "connect:<userId>:<nonce>". Link this GitHub account to an
+    // already-logged-in user instead of signing in. (Used by the Connections page.)
+    if (state.startsWith('connect:')) {
+      const targetUserId = state.split(':')[1];
+      const targetUser = targetUserId
+        ? await prisma.user.findUnique({ where: { id: targetUserId } })
+        : null;
+      if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
+
+      // If this GitHub account is already linked to a different user, block to avoid stealing.
+      const existing = await prisma.user.findUnique({ where: { githubId: ghUser.id } });
+      if (existing && existing.id !== targetUser.id) {
+        return redirectWithError('该 GitHub 账号已绑定到另一个用户', req, '1001');
+      }
+
+      // Bind the GitHub identity and store the connection for agent access.
+      await prisma.user.update({ where: { id: targetUser.id }, data: { githubId: ghUser.id } });
+      await saveGitHubConnection(targetUser.id, accessToken);
+      await writeAudit({
+        userId: targetUser.id,
+        username: targetUser.username,
+        action: 'github.connect',
+        detail: `Connected GitHub account @${username}`,
+      });
+      const res = NextResponse.redirect(`${siteBaseUrl()}/connections?connected=1`);
+      res.cookies.delete('oauth_from');
+      res.cookies.delete('github_oauth_state');
+      return res;
+    }
 
     // 4. Find or create local user. Priority: existing githubId link → matching username
     // → create a new account. The githubId link lets a "connected" user sign in again

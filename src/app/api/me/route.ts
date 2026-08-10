@@ -31,5 +31,6 @@ export async function GET(req: Request) {
     googleConnected: Boolean(user.googleId),
     githubConnected: Boolean(user.githubConnection),
     githubUsername: user.githubConnection?.githubLogin ?? null,
+    microsoftConnected: Boolean(user.microsoftId),
   });
 }

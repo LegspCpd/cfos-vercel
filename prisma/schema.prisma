@@ -20,6 +20,8 @@ model User {
   googleId     String?  @unique
   // GitHub numeric user id (if the account was linked via GitHub login/connect).
   githubId     Int?     @unique
+  // Microsoft (Entra ID) object id (if the account was created / linked via Microsoft login).
+  microsoftId  String?  @unique
   // Verified email (used for email-code signup). Optional.
   email        String?  @unique
   // Custom avatar image URL (uploaded via the admin-provided image host).

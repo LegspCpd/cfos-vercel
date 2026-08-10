@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Github, Chrome, Check, Link2, Mail, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, Github, Chrome, Monitor, Check, Link2, Mail, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -17,6 +17,7 @@ interface MeInfo {
   googleConnected: boolean;
   githubConnected: boolean;
   githubUsername: string | null;
+  microsoftConnected: boolean;
 }
 
 export default function ProfilePage() {
@@ -123,6 +124,10 @@ export default function ProfilePage() {
 
   function connectGoogle() {
     window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(getToken() || '')}`;
+  }
+
+  function connectMicrosoft() {
+    window.location.href = `/api/auth/microsoft/connect?token=${encodeURIComponent(getToken() || '')}`;
   }
 
   // Countdown for the "resend code" button.
@@ -313,6 +318,33 @@ export default function ProfilePage() {
               className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
             >
               <Link2 className="h-3.5 w-3.5" /> {t('pr.connectGoogle')}
+            </button>
+          )}
+        </div>
+
+        {/* Microsoft */}
+        <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+              <Monitor className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">Microsoft</p>
+              <p className="text-xs text-muted-foreground">
+                {me?.microsoftConnected ? t('pr.microsoftConnected') : t('pr.notConnected')}
+              </p>
+            </div>
+          </div>
+          {me?.microsoftConnected ? (
+            <span className="flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-xs text-green-600">
+              <Check className="h-3.5 w-3.5" /> {t('pr.connected') || '已连接'}
+            </span>
+          ) : (
+            <button
+              onClick={connectMicrosoft}
+              className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
+            >
+              <Link2 className="h-3.5 w-3.5" /> {t('pr.connectMicrosoft')}
             </button>
           )}
         </div>

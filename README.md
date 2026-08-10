@@ -9,6 +9,7 @@
 - **绑定邮箱**：任意注册方式的用户可在个人设置绑定邮箱并设置密码，之后可用"邮箱 + 密码"直接登录
 - **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
 - **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
+- **双语文档站**：`/docs`（简体中文）+ `/en/docs`（English），侧边栏可一键切换；英文文档在根目录 `docs/en/` 便于翻译
 - **命令面板 ⌘K**：搜索/跳转 workspace、新建文档
 - **主题切换**：light / dark / system 三态
 - **Workspace 编辑器**：多文件 + Monaco 代码编辑器 + 文件树 + iframe 预览 + 聊天面板（对话自动持久化）

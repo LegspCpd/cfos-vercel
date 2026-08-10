@@ -46,6 +46,19 @@ function loadStyles(href: string) {
   });
 }
 
+// High-priority prefetch for the Waline script so it downloads as early as possible
+// (helps a lot when the CDN is slow / behind a proxy).
+function preloadScript(src: string) {
+  const existing = document.querySelector(`link[rel="preload"][href="${src}"]`);
+  if (existing) return;
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'script';
+  link.href = src;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
+
 // Waline ships an ES module; expose its `init` on window via an inline module script.
 function loadWalineInit() {
   return new Promise<boolean>((resolve) => {
@@ -68,7 +81,9 @@ export default function WalComment() {
   const containerRef = useRef<HTMLDivElement>(null);
   const walineRef = useRef<{ destroy: () => void } | null>(null);
 
-  // Load Waline assets once (on first open).
+  // Preload Waline assets in the background as soon as the app loads, so opening the
+  // comment panel later is instant (no waiting on the CDN, especially over slow links).
+  // The module <script> is appended early and fetched ahead of the user opening the panel.
   async function ensureWaline() {
     if (loaded) return;
     await loadStyles(WALINE_CSS);
@@ -76,6 +91,15 @@ export default function WalComment() {
     if (!ok) return;
     setLoaded(true);
   }
+
+  // Warm-up: preload CSS+JS immediately on mount (feature enabled) so opening the panel
+  // later is instant — the CDN fetch starts at page load, not on first click.
+  useEffect(() => {
+    if (!COMMENTS_ENABLED) return;
+    preloadScript(WALINE_JS);
+    ensureWaline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initialize Waline when the panel opens and assets are loaded.
   useEffect(() => {

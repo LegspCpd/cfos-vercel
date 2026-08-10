@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Github, Mail, RefreshCw, Loader2 } from 'lucide-react';
+import { Github, Chrome, Mail, RefreshCw, Loader2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { setToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -121,6 +121,10 @@ export default function SignupPage() {
     window.location.href = '/api/auth/github?from=signup';
   }
 
+  function googleLogin() {
+    window.location.href = '/api/auth/google?from=signup';
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -139,10 +143,17 @@ export default function SignupPage() {
 
         <button
           onClick={githubLogin}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
         >
           <Github className="h-4 w-4" />
           {t('auth.github')}
+        </button>
+        <button
+          onClick={googleLogin}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+        >
+          <Chrome className="h-4 w-4" />
+          {t('auth.google')}
         </button>
 
         <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">

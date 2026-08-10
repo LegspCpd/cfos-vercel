@@ -77,26 +77,69 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 
 > Note: Google sign-in uses the email prefix as the username. If that username already exists (e.g. registered with a password), the Google account is automatically linked to the existing account rather than creating a duplicate.
 
-## Microsoft sign-in
+## Microsoft sign-in (detailed guide)
 
-Sign in with a **Microsoft Entra ID (Azure AD)** account:
+Sign in with a **Microsoft Entra ID (Azure AD)** account. Full step-by-step:
 
-1. Open **https://portal.azure.com** → **App registrations** → **New registration**
-   - Name: `Cloudflare OS`
-   - **Redirect URI**: Platform **Web**, URI `https://os.legspcpd.top/api/auth/microsoft/callback` (local: `http://localhost:3000/api/auth/microsoft/callback`)
-2. After registering, copy the **Application (client) ID** → that's `MICROSOFT_CLIENT_ID`
-3. Left side **Certificates & secrets** → **New client secret** → copy the value → that's `MICROSOFT_CLIENT_SECRET`
-4. Fill in Vercel env vars:
+### Step 1: Register the app
+1. Open **https://portal.azure.com** and sign in with your Microsoft account (preferably admin)
+2. In the top search bar type **"App registrations"** and open it
+3. Click **"+ New registration"**
+4. Fill in:
+   - **Name**: `Cloudflare OS`
+   - **Supported account types**: **must select the third option**
+     ```
+     Accounts in any organizational directory (Any Azure AD directory - Multitenant)
+     and personal Microsoft accounts (e.g. Skype, Xbox)
+     ```
+     > Only this option allows **any company tenant + personal Microsoft accounts (Outlook/consumer)** to sign in.
+   - **Redirect URI**: choose platform **Web**, enter `https://os.legspcpd.top/api/auth/microsoft/callback`
+     - For local testing, click **"Add a URI"** and add `http://localhost:3000/api/auth/microsoft/callback`
+5. Click **Register**
 
-```
-MICROSOFT_CLIENT_ID=your-client-id
-MICROSOFT_CLIENT_SECRET=your-client-secret
-MICROSOFT_TENANT_ID=common      # common = any Entra ID tenant + personal Microsoft accounts (recommended)
-```
+> The callback must be **exactly** `/api/auth/microsoft/callback` — not just the domain — otherwise you'll get `redirect_uri_mismatch`.
 
-**Redeploy** to apply. The sign-in page will show "Continue with Microsoft".
+### Step 2: Copy the Client ID
+After registering you land on the Overview page:
+- **Application (client) ID** → this is **`MICROSOFT_CLIENT_ID`**
 
-> The callback must match the console exactly or you'll get `redirect_uri_mismatch`. Use `common` tenant for personal Microsoft accounts (Outlook/consumer).
+> There's also a **Directory (tenant) ID**, but to allow **any tenant + personal accounts** just use `common` for `MICROSOFT_TENANT_ID`.
+
+### Step 3: Create a Client Secret
+1. Left menu **Certificates & secrets** (or **Client credentials**)
+2. In **Client secrets** tab, click **"+ New client secret"**
+3. Fill:
+   - **Description**: `cfos` (anything)
+   - **Expires**: `24 months` or `12 months`
+     > Secrets expire! When one expires, login breaks — create a new one and update the env var.
+4. Click **Add**
+5. **Copy the Value** of the new secret immediately → this is **`MICROSOFT_CLIENT_SECRET`**
+   > The Value is shown only once — copy it right away.
+
+### Step 4: Configure in Vercel
+
+| Key | Value |
+|---|---|
+| `MICROSOFT_CLIENT_ID` | Client ID from step 2 |
+| `MICROSOFT_CLIENT_SECRET` | Secret Value from step 3 |
+| `MICROSOFT_TENANT_ID` | `common` (= any tenant + personal accounts, recommended) |
+
+Then **Redeploy**.
+
+### Step 5: Verify
+- The sign-in page shows **"Continue with Microsoft"**
+- Click it → sign in with any Microsoft account (work email or Outlook personal)
+- You're redirected back logged in
+
+### Microsoft error troubleshooting
+
+| Error | Cause | Fix |
+|---|---|---|
+| `AADSTS50011` (redirect_uri not in list) | Azure callback URI wrong | Make sure Redirect URI is **exactly** `https://os.legspcpd.top/api/auth/microsoft/callback` |
+| `AADSTS700016` (app not found) | Wrong Client ID | Check `MICROSOFT_CLIENT_ID` |
+| `AADSTS7000215` (invalid/expired secret) | Secret wrong or expired | Create a new secret and update |
+| `AADSTS90002` (tenant not found) | Wrong Tenant ID | Use `common` or the correct tenant ID |
+| No button on sign-in | Env vars not set / not redeployed | Check `MICROSOFT_CLIENT_ID` and Redeploy |
 
 ## FAQ
 

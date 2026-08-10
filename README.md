@@ -5,7 +5,7 @@
 **注意**：这是一个全新实现，不依赖原仓库的 `cloudflare:` 运行时。它保留并尽量还原了原版功能：
 
 **核心能力：**
-- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google OAuth + 邮箱验证码注册 + 邮箱+密码登录）
+- 用户注册/登录（argon2id 密码哈希 + JWT 会话 + GitHub / Google / Microsoft OAuth + 邮箱验证码注册 + 邮箱+密码登录）
 - **绑定邮箱**：任意注册方式的用户可在个人设置绑定邮箱并设置密码，之后可用"邮箱 + 密码"直接登录
 - **AppShell 侧边栏布局**：Home / Workspaces / Blueprints / Outputs / Explore / Admin 导航
 - **Home 首页**：hero + 聊天输入 + 任务建议卡（点卡片自动建 workspace 并让 agent 构建）
@@ -92,6 +92,9 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App 的 Client Secret | 用 GitHub 登录则必填 |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 用 Google 登录则必填 |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | 用 Google 登录则必填 |
+| `MICROSOFT_CLIENT_ID` | Microsoft (Entra ID) OAuth Client ID | 用 Microsoft 登录则必填 |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth Client Secret | 用 Microsoft 登录则必填 |
+| `MICROSOFT_TENANT_ID` | Microsoft 租户 ID，默认 `common`（多租户） | 可选 |
 | `RESEND_API_KEY` | 邮箱验证码发信（Resend） | 启用邮箱注册验证则必填 |
 | `RESEND_FROM_EMAIL` | 发件人邮箱，默认 `no-reply@legspcpd.top` | 可选 |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile（配置后管理面板锁定） | 用 Turnstile 则填 |
@@ -178,6 +181,27 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 **Redeploy** 后，登录页会出现"使用 Google 登录"按钮。
 
 > Google 登录用邮箱前缀作为用户名；若该用户名已存在（比如之前用密码/GitHub注册过），会自动关联到现有账号，不会重复创建。
+
+## Microsoft 登录配置（可选）
+
+用 **Microsoft Entra ID（Azure AD）** 账号登录：
+
+1. 打开 **https://portal.azure.com** → **App registrations** → **New registration**
+   - Name：`Cloudflare OS`
+   - **Redirect URI**：平台选 **Web**，URI 填 `https://os.legspcpd.top/api/auth/microsoft/callback`（本地：`http://localhost:3000/api/auth/microsoft/callback`）
+2. 注册后，复制 **Application (client) ID** → 即 `MICROSOFT_CLIENT_ID`
+3. 左侧 **Certificates & secrets** → **New client secret** → 复制值 → 即 `MICROSOFT_CLIENT_SECRET`
+4. 填到 Vercel 环境变量：
+
+```
+MICROSOFT_CLIENT_ID=你的Client ID
+MICROSOFT_CLIENT_SECRET=你的Client Secret
+MICROSOFT_TENANT_ID=common      # 多租户；个人账号/消费账号用 common 即可
+```
+
+**Redeploy** 后，登录页出现"使用 Microsoft 登录"按钮。
+
+> 回调地址需与控制台注册完全一致，否则报 `redirect_uri_mismatch`。个人 Microsoft 账号（Outlook/消费者）用 `common` 租户。
 
 ## 邮箱验证码注册（可选）
 

@@ -34,21 +34,21 @@ export default function OutputsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('out.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('out.sub')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('out.search')}
-              className="w-48 rounded-md border bg-card py-2 pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-md border bg-card py-2 pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-48"
             />
           </div>
           <div className="flex items-center gap-0.5 rounded-md border p-0.5">

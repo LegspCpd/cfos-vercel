@@ -115,10 +115,10 @@ export default function UserManagement() {
                   <button
                     onClick={() => toggleRole(u.id, u.isAdmin)}
                     disabled={busyId === u.id}
-                    className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
-                    title={u.isAdmin ? '取消管理员' : '提升为管理员'}
+                    className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
                   >
-                    {u.isAdmin ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                    {u.isAdmin ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                    {u.isAdmin ? '取消管理员' : '设为管理员'}
                   </button>
                   {confirmId === u.id ? (
                     <button
@@ -131,10 +131,9 @@ export default function UserManagement() {
                   ) : (
                     <button
                       onClick={() => setConfirmId(u.id)}
-                      className="rounded p-1.5 text-destructive hover:bg-destructive/10"
-                      title="删除用户"
+                      className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" /> 删除
                     </button>
                   )}
                 </div>

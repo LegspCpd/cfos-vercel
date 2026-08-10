@@ -10,6 +10,7 @@ When configuring an OAuth app in the GitHub/Google console, **the callback URL m
 |---|---|---|
 | **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
 | **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+| **Microsoft** | `https://os.legspcpd.top/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
 
 The `PUBLIC_SITE_URL` env var must match the callback domain (e.g. `https://os.legspcpd.top`).
 
@@ -75,6 +76,27 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 **Redeploy** to apply. The sign-in page will show "Continue with Google".
 
 > Note: Google sign-in uses the email prefix as the username. If that username already exists (e.g. registered with a password), the Google account is automatically linked to the existing account rather than creating a duplicate.
+
+## Microsoft sign-in
+
+Sign in with a **Microsoft Entra ID (Azure AD)** account:
+
+1. Open **https://portal.azure.com** → **App registrations** → **New registration**
+   - Name: `Cloudflare OS`
+   - **Redirect URI**: Platform **Web**, URI `https://os.legspcpd.top/api/auth/microsoft/callback` (local: `http://localhost:3000/api/auth/microsoft/callback`)
+2. After registering, copy the **Application (client) ID** → that's `MICROSOFT_CLIENT_ID`
+3. Left side **Certificates & secrets** → **New client secret** → copy the value → that's `MICROSOFT_CLIENT_SECRET`
+4. Fill in Vercel env vars:
+
+```
+MICROSOFT_CLIENT_ID=your-client-id
+MICROSOFT_CLIENT_SECRET=your-client-secret
+MICROSOFT_TENANT_ID=common      # multi-tenant; use common for personal/consumer accounts
+```
+
+**Redeploy** to apply. The sign-in page will show "Continue with Microsoft".
+
+> The callback must match the console exactly or you'll get `redirect_uri_mismatch`. Use `common` tenant for personal Microsoft accounts (Outlook/consumer).
 
 ## FAQ
 

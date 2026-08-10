@@ -10,6 +10,7 @@
 |---|---|---|
 | **GitHub** | `https://os.legspcpd.top/api/auth/github/callback` | `http://localhost:3000/api/auth/github/callback` |
 | **Google** | `https://os.legspcpd.top/api/auth/google/callback` | `http://localhost:3000/api/auth/google/callback` |
+| **Microsoft** | `https://os.legspcpd.top/api/auth/microsoft/callback` | `http://localhost:3000/api/auth/microsoft/callback` |
 
 对应的环境变量：`PUBLIC_SITE_URL` 必须与回调里的域名一致（如 `https://os.legspcpd.top`）。
 
@@ -75,6 +76,27 @@ PUBLIC_SITE_URL=https://os.legspcpd.top
 **Redeploy** 后生效，登录页出现"使用 Google 登录"按钮。
 
 > 说明：Google 登录会用邮箱前缀作为用户名。如果该用户名已存在（例如之前用密码注册过），会自动把 Google 账号关联到现有账号，不会重复创建。
+
+## Microsoft 登录
+
+用 **Microsoft Entra ID（Azure AD）** 账号登录：
+
+1. 打开 **https://portal.azure.com** → **App registrations** → **New registration**
+   - Name：`Cloudflare OS`
+   - **Redirect URI**：平台选 **Web**，URI 填 `https://os.legspcpd.top/api/auth/microsoft/callback`（本地：`http://localhost:3000/api/auth/microsoft/callback`）
+2. 注册后，复制 **Application (client) ID** → 即 `MICROSOFT_CLIENT_ID`
+3. 左侧 **Certificates & secrets** → **New client secret** → 复制值 → 即 `MICROSOFT_CLIENT_SECRET`
+4. 填到 Vercel 环境变量：
+
+```
+MICROSOFT_CLIENT_ID=你的Client ID
+MICROSOFT_CLIENT_SECRET=你的Client Secret
+MICROSOFT_TENANT_ID=common      # 多租户；个人/消费者账号用 common
+```
+
+**Redeploy** 后，登录页出现"使用 Microsoft 登录"按钮。
+
+> 回调地址需与控制台注册完全一致，否则报 `redirect_uri_mismatch`。个人 Microsoft 账号（Outlook/消费者）用 `common` 租户。
 
 ## 常见问题
 

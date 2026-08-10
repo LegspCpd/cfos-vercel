@@ -215,16 +215,16 @@ export default function AuditLogView() {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="rounded-md border p-1.5 disabled:opacity-40"
+              className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs disabled:opacity-40"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" /> 上一页
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="rounded-md border p-1.5 disabled:opacity-40"
+              className="flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs disabled:opacity-40"
             >
-              <ChevronRight className="h-4 w-4" />
+              下一页 <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

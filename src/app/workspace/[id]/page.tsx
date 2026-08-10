@@ -24,6 +24,8 @@ export default function WorkspacePage() {
   const [saved, setSaved] = useState(true);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [view, setView] = useState<'split' | 'editor' | 'preview'>('split');
+  // Mobile: which single panel is shown (file tree / editor+preview / chat).
+  const [mobilePanel, setMobilePanel] = useState<'files' | 'work' | 'chat'>('work');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; content: string; createdAt: string }[]>([]);
   const [autoPrompt, setAutoPrompt] = useState<string | undefined>(undefined);
@@ -205,7 +207,7 @@ export default function WorkspacePage() {
             {saving ? t('saving') : saved ? t('ws.saved') : t('ws.unsaved')}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <div className="flex items-center gap-0.5 rounded-md border p-0.5">
             {(['split', 'editor', 'preview'] as const).map((v) => (
               <button
@@ -222,16 +224,18 @@ export default function WorkspacePage() {
           <button
             onClick={() => activePath && openHistory(activePath)}
             disabled={!activePath}
-            className="press flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50"
+            className="press flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-sm text-muted-foreground hover:bg-secondary disabled:opacity-50 sm:px-3"
             title={t('ws.history')}
           >
-            <History className="h-4 w-4" /> {t('ws.history')}
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('ws.history')}</span>
           </button>
           <button
             onClick={() => setPreviewNonce((n) => n + 1)}
-            className="press flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+            className="press flex items-center gap-1.5 rounded-md bg-primary px-2 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 sm:px-3"
           >
-            <Play className="h-4 w-4" /> {t('ws.run')}
+            <Play className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('ws.run')}</span>
           </button>
         </div>
       </header>
@@ -289,10 +293,14 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* Body */}
-      <div className="flex min-h-0 flex-1">
-        {/* File tree */}
-        <div className="w-56 shrink-0 border-r bg-card transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]">
+      {/* Body: stacks vertically on mobile (one panel at a time), side-by-side on md+ */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        {/* File tree: drawer-like on mobile, fixed column on md+ */}
+        <div
+          className={`w-full border-b bg-card md:w-56 md:shrink-0 md:border-r md:border-b-0 ${
+            mobilePanel === 'files' ? 'block' : 'hidden'
+          } md:block`}
+        >
           <FileTree
             files={filesRef.current}
             activePath={activePath}
@@ -305,8 +313,12 @@ export default function WorkspacePage() {
           />
         </div>
 
-        {/* Editor / Preview split */}
-        <div className={`flex min-h-0 min-w-0 flex-1 ${view === 'split' ? 'flex-row' : ''}`}>
+        {/* Editor / Preview: full width on mobile, split on md+ */}
+        <div
+          className={`flex min-h-0 min-w-0 flex-1 flex-col md:flex-row ${
+            mobilePanel === 'work' ? '' : 'hidden'
+          } md:flex ${view === 'split' ? 'md:flex-row' : ''}`}
+        >
           {view !== 'preview' && (
             <div className="min-h-0 min-w-0 flex-1 bg-[#121212]">
               {activeFile ? (
@@ -323,14 +335,20 @@ export default function WorkspacePage() {
             </div>
           )}
           {view !== 'editor' && (
-            <div className={`min-h-0 ${view === 'preview' ? 'w-full' : 'w-1/2'} border-l bg-card`}>
+            <div
+              className={`min-h-0 ${view === 'preview' ? 'w-full' : 'w-full md:w-1/2'} border-t bg-card md:border-l md:border-t-0`}
+            >
               <Preview workspaceId={id} nonce={previewNonce} />
             </div>
           )}
         </div>
 
-        {/* Chat panel */}
-        <div className="w-80 shrink-0 border-l bg-card">
+        {/* Chat panel: full-width sheet on mobile, fixed column on md+ */}
+        <div
+          className={`w-full border-t bg-card md:w-80 md:shrink-0 md:border-l md:border-t-0 ${
+            mobilePanel === 'chat' ? 'block' : 'hidden'
+          } md:block`}
+        >
           <ChatPanel
             workspaceId={id}
             onRunAgent={runAgent}
@@ -339,6 +357,27 @@ export default function WorkspacePage() {
             autoPromptNonce={autoPromptNonce}
           />
         </div>
+      </div>
+
+      {/* Mobile panel switcher (files / work / chat) */}
+      <div className="flex shrink-0 items-center gap-1 border-t bg-card p-1 md:hidden">
+        {(
+          [
+            ['files', t('ws.panelFiles')],
+            ['work', t('ws.panelEditor')],
+            ['chat', t('ws.panelChat')],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setMobilePanel(key)}
+            className={`flex-1 rounded-md px-3 py-2 text-xs font-medium ${
+              mobilePanel === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </main>
   );

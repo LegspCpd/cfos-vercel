@@ -15,6 +15,9 @@
 | `GITHUB_CLIENT_SECRET` | GitHub 登录 | GitHub OAuth Client Secret |
 | `GOOGLE_CLIENT_ID` | Google 登录 | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Google 登录 | Google OAuth Client Secret |
+| `MICROSOFT_CLIENT_ID` | Microsoft 登录 | Microsoft Entra ID Client ID |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft 登录 | Microsoft OAuth Client Secret |
+| `MICROSOFT_TENANT_ID` | Microsoft 登录 | 租户 ID，默认 `common`（多租户） |
 | `RESEND_API_KEY` | 邮箱验证码 | Resend API Key，如 `re_xxxxxx` |
 | `RESEND_FROM_EMAIL` | 邮箱验证码 | 发件人，默认 `no-reply@legspcpd.top` |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | 人机验证 | Cloudflare Turnstile（配置后管理面板锁定） |

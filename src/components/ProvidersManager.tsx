@@ -159,18 +159,17 @@ export default function ProvidersManager() {
                 <button
                   onClick={() => toggle(p.id, p.isEnabled)}
                   disabled={savingId === p.id}
-                  title={p.isEnabled ? 'Disable' : 'Enable'}
-                  className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
                 >
-                  <Power className="h-4 w-4" />
+                  <Power className="h-3.5 w-3.5" />
+                  {p.isEnabled ? '禁用' : '启用'}
                 </button>
                 <button
                   onClick={() => remove(p.id)}
                   disabled={savingId === p.id}
-                  title="Delete"
-                  className="rounded p-1.5 text-destructive hover:bg-destructive/10"
+                  className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" /> 删除
                 </button>
               </div>
             </div>

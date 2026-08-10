@@ -111,7 +111,7 @@ export default function BlueprintsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('bp.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -121,7 +121,7 @@ export default function BlueprintsPage() {
         <button
           onClick={() => fileRef.current?.click()}
           disabled={importing}
-          className="press flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+          className="press flex shrink-0 items-center gap-1.5 self-start rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50 sm:self-auto"
         >
           <Upload className="h-4 w-4" /> {importing ? t('bp.importing') : t('bp.import')}
         </button>

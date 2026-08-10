@@ -10,10 +10,10 @@ import { useI18n } from '@/lib/client/i18n';
 
 // Sample blueprint ideas shown when the user has no workspaces yet.
 const SAMPLE_IDEAS = [
-  { icon: BarChart3, title: '销售看板', desc: '为你的团队生成图表和关键指标' },
-  { icon: StickyNote, title: 'Markdown 笔记', desc: '一个简单的笔记应用' },
-  { icon: Timer, title: '番茄钟', desc: '使用 25/5 方法专注' },
-  { icon: Globe, title: '个人主页', desc: '一个个人落地页' },
+  { icon: BarChart3, titleKey: 'ex.idea0Title', descKey: 'ex.idea0Desc' },
+  { icon: StickyNote, titleKey: 'ex.idea1Title', descKey: 'ex.idea1Desc' },
+  { icon: Timer, titleKey: 'ex.idea2Title', descKey: 'ex.idea2Desc' },
+  { icon: Globe, titleKey: 'ex.idea3Title', descKey: 'ex.idea3Desc' },
 ];
 
 export default function ExplorePage() {
@@ -46,16 +46,16 @@ export default function ExplorePage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {SAMPLE_IDEAS.map((idea, i) => (
           <Link
-            key={idea.title}
-            href={`/?prompt=${encodeURIComponent(`Build ${idea.title}: ${idea.desc}`)}`}
+            key={idea.titleKey}
+            href={`/?prompt=${encodeURIComponent(`Build ${t(idea.titleKey)}: ${t(idea.descKey)}`)}`}
             style={{ animationDelay: `${i * 50}ms` }}
             className="reveal-row press rounded-lg border bg-card p-4 transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
               <idea.icon className="h-5 w-5" />
             </span>
-            <p className="mt-2 font-medium">{idea.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{idea.desc}</p>
+            <p className="mt-2 font-medium">{t(idea.titleKey)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(idea.descKey)}</p>
           </Link>
         ))}
       </div>

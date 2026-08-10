@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useI18n } from '@/lib/client/i18n';
 
 interface Status {
   enabled: boolean;
@@ -12,6 +13,7 @@ interface Status {
 }
 
 export default function CfAccessStatus() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<Status | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,10 +30,10 @@ export default function CfAccessStatus() {
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载中...
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       ) : !status ? (
-        <p className="text-sm text-muted-foreground">无法获取状态。</p>
+        <p className="text-sm text-muted-foreground">{t('cf.statusUnavailable')}</p>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-3 rounded-md border p-4">
@@ -46,12 +48,10 @@ export default function CfAccessStatus() {
             )}
             <div className="flex-1">
               <p className="font-medium">
-                {status.enabled ? '已启用' : '未启用'}
+                {status.enabled ? t('site.enabled') : t('site.disabled')}
               </p>
               <p className="text-sm text-muted-foreground">
-                {status.enabled
-                  ? '所有敏感 API 都会校验 Cloudflare Access JWT。'
-                  : '配置 CF_ACCESS_TEAM 后启用完整版 Cloudflare Access 门禁。'}
+                {status.enabled ? t('cf.jwtDesc') : t('cf.disabledHint')}
               </p>
             </div>
           </div>
@@ -64,17 +64,13 @@ export default function CfAccessStatus() {
             <div className="flex justify-between rounded-md bg-muted/50 px-3 py-2">
               <span className="text-muted-foreground">AUD Tag</span>
               <span className="font-mono">
-                {status.audConfigured ? status.audMasked : '未配置'}
+                {status.audConfigured ? status.audMasked : t('cf.notConfigured')}
               </span>
             </div>
           </div>
 
           {!status.enabled && (
-            <p className="text-xs text-muted-foreground">
-              启用方式：在 Vercel 环境变量设置 <code className="rounded bg-muted px-1">CF_ACCESS_TEAM</code>
-              （团队名，如 <code className="rounded bg-muted px-1">lapdsss</code>），并确保域名走 Cloudflare 代理。
-              可选增强项 <code className="rounded bg-muted px-1">CF_ACCESS_AUD</code> 可跳过。
-            </p>
+            <p className="text-xs text-muted-foreground">{t('cf.howToEnable')}</p>
           )}
         </div>
       )}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isUserAdmin } from '@/lib/admin';
+import { resolvePermissions } from '@/lib/permissions';
 
 // GET /api/me — returns current user from Bearer token.
 export async function GET(req: Request) {
@@ -15,18 +16,25 @@ export async function GET(req: Request) {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    include: { githubConnection: { select: { githubLogin: true } } },
+    include: {
+      githubConnection: { select: { githubLogin: true } },
+      group: { select: { permissions: true, name: true } },
+    },
   });
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
   const isAdmin = await isUserAdmin(user.id);
+  const permissions = resolvePermissions(user);
   return NextResponse.json({
     id: user.id,
     username: user.username,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl ?? '',
     isAdmin,
+    permissions,
+    groupId: user.groupId,
+    groupName: user.group?.name ?? null,
     email: user.email ?? '',
     googleConnected: Boolean(user.googleId),
     githubConnected: Boolean(user.githubConnection),

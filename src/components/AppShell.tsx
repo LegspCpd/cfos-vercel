@@ -21,6 +21,8 @@ import {
   BookMarked,
   Menu,
   X,
+  BarChart3,
+  Users,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -47,6 +49,7 @@ const NAV: NavItem[] = [
   { href: '/outputs', labelKey: 'nav.outputs', icon: FileCode2 },
   { href: '/blueprints', labelKey: 'nav.blueprints', icon: Boxes },
   { href: '/explore', labelKey: 'nav.explore', icon: Compass },
+  { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -56,6 +59,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [userName, setUserName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -74,6 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .me()
       .then((me) => {
         setIsAdmin(me.isAdmin);
+        setPermissions(me.permissions || []);
         setUserName(me.displayName || me.username);
         setAvatarUrl(me.avatarUrl || '');
       })
@@ -163,18 +168,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          {isAdmin && (
+          {permissions.includes('admin.access') && (
             <Link
               href="/admin"
               className={clsx(
                 'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                pathname.startsWith('/admin')
+                pathname.startsWith('/admin') && !pathname.startsWith('/admin/users')
                   ? 'bg-secondary font-medium text-foreground'
                   : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
               )}
             >
               <ShieldCheck className="h-4 w-4" />
               {t('nav.admin')}
+            </Link>
+          )}
+          {permissions.includes('admin.users') && (
+            <Link
+              href="/admin/users"
+              className={clsx(
+                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                pathname.startsWith('/admin/users')
+                  ? 'bg-secondary font-medium text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+              )}
+            >
+              <Users className="h-4 w-4" />
+              {t('nav.users')}
             </Link>
           )}
         </nav>
@@ -318,7 +337,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 );
               })}
-              {isAdmin && (
+              {permissions.includes('admin.access') && (
                 <Link
                   href="/admin"
                   onClick={() => setSidebarOpen(false)}
@@ -326,6 +345,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {t('nav.admin')}
+                </Link>
+              )}
+              {permissions.includes('admin.users') && (
+                <Link
+                  href="/admin/users"
+                  onClick={() => setSidebarOpen(false)}
+                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <Users className="h-4 w-4" />
+                  {t('nav.users')}
                 </Link>
               )}
             </nav>

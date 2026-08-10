@@ -39,6 +39,9 @@ export const api = {
       githubConnected: boolean;
       githubUsername: string | null;
       microsoftConnected: boolean;
+      permissions: string[];
+      groupId: string | null;
+      groupName: string | null;
     }>('/api/me'),
   adminOverview: () =>
     request<{
@@ -234,6 +237,47 @@ export const api = {
     }),
   adminDeleteUser: (id: string) =>
     request<{ ok: boolean }>(`/api/admin/users/${id}`, { method: 'DELETE' }),
+  adminListUsers: () =>
+    request<{
+      users: {
+        id: string;
+        username: string;
+        displayName: string;
+        email: string | null;
+        isAdmin: boolean;
+        groupId: string | null;
+        groupName: string | null;
+        groupPermissions: string[];
+        createdAt: string;
+        workspaces: number;
+      }[];
+    }>('/api/admin/users'),
+  adminCreateUser: (data: { username: string; displayName: string; password: string; email?: string; groupId?: string }) =>
+    request<{ user: { id: string; username: string } }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  adminUpdateUser: (id: string, data: { isAdmin?: boolean; newPassword?: string; email?: string | null; groupId?: string | null }) =>
+    request<{ ok: boolean; username: string; isAdmin: boolean; groupId: string | null; groupName: string | null }>(
+      `/api/admin/users/${id}`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+    ),
+  adminListGroups: () =>
+    request<{ groups: { id: string; name: string; permissions: string[]; isAdminGroup: boolean; memberCount: number }[] }>(
+      '/api/admin/groups',
+    ),
+  adminCreateGroup: (data: { name: string; permissions: string[]; isAdminGroup?: boolean }) =>
+    request<{ group: { id: string; name: string } }>('/api/admin/groups', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  adminUpdateGroup: (id: string, data: { name?: string; permissions?: string[] }) =>
+    request<{ group: { id: string; name: string; permissions: string[] } }>(`/api/admin/groups/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  adminDeleteGroup: (id: string) =>
+    request<{ ok: boolean }>(`/api/admin/groups/${id}`, { method: 'DELETE' }),
   login: (username: string, password: string) =>
     request<{ token: string; user: AuthUser }>('/api/auth/login', {
       method: 'POST',

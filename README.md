@@ -83,6 +83,7 @@ Vercel 项目 **Settings → Environment Variables** 添加（全部）：
 | `AUTH_SECRET` | 会话签名密钥，用 `openssl rand -base64 32` 生成 | ✅ |
 | `PUBLIC_SITE_URL` | 你的公开地址，如 `https://os.legspcpd.top` | ✅（GitHub 登录必需） |
 | `ADMIN_USERNAME` | 管理员用户名，多个用逗号分隔，如 `legspcpd,admin` | 推荐 |
+| `ALLOW_SIGNUPS` | 是否允许注册，`enabled` / `disabled`（环境变量优先于管理面板开关） | 可选 |
 | `GITHUB_CLIENT_ID` | GitHub OAuth App 的 Client ID | 用 GitHub 登录则必填 |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth App 的 Client Secret | 用 GitHub 登录则必填 |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | 用 Google 登录则必填 |
@@ -203,6 +204,14 @@ Redeploy 后，注册页出现"邮箱 + 验证码"输入框。验证码 6 位、
 **临时快速测试**：把 `RESEND_FROM_EMAIL` 改成 Resend 的免费测试发件人 `onboarding@resend.dev`（无需验证域名），Redeploy 后再试。如果能收到邮件，就说明是域名验证问题，把 `legspcpd.top` 验证好再改回即可。
 
 > 若仍报错，前端会显示 Resend 返回的具体错误（如 "Invalid `from` email"），照提示处理即可。
+
+## 注册开关
+
+**默认关闭注册**（防止恶意注册）。新用户注册时会检查开关，关闭则提示"Public signups are currently disabled"。
+
+两种开启方式（**环境变量优先**）：
+- **环境变量**：`ALLOW_SIGNUPS=enabled` 强制开启，`disabled` 强制关闭
+- **管理后台**：`/admin` → 站点设置 → **注册开关** 勾选（仅当环境变量未设置 `ALLOW_SIGNUPS` 时生效）
 
 ## 头像图床（可选）
 

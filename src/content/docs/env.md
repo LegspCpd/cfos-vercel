@@ -22,6 +22,7 @@
 | `IMGHOST_BASE_URL` | 头像图床 | 默认 `https://hub.legspcpd.top` |
 | `IMGHOST_TOKEN` | 头像图床 | 图床 API token，如 `imgbed_xxx` |
 | `IMGHOST_FOLDER` | 头像图床 | 上传文件夹，默认 `photos/avatars` |
+| `ALLOW_SIGNUPS` | 注册开关 | `enabled` 允许注册 / `disabled` 禁止（环境变量优先于管理面板开关） |
 | `R2_ACCOUNT_ID` | 文件分享 | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | 文件分享 | Cloudflare R2 Access Key |
 | `R2_SECRET_ACCESS_KEY` | 文件分享 | Cloudflare R2 Secret Key |

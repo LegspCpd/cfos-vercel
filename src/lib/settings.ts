@@ -66,7 +66,13 @@ export async function setSetting(key: string, value: string): Promise<void> {
   });
 }
 
+// ALLOW_SIGNUPS environment variable (values: "enabled" | "disabled") takes precedence
+// over the admin-panel toggle. When unset, the admin-panel DB value (signupsEnabled) is used.
+// This lets an operator force open/close registration via env vars regardless of panel state.
 export async function areSignupsEnabled(): Promise<boolean> {
+  const env = process.env.ALLOW_SIGNUPS;
+  if (env === 'enabled') return true;
+  if (env === 'disabled') return false;
   const v = await getSetting(SETTING_SIGNUPS_ENABLED);
   return v === 'true';
 }

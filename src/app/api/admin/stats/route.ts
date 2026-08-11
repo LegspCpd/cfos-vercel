@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { isUserAdmin } from '@/lib/admin';
 import { prisma } from '@/lib/db';
+import { auditModel } from '@/lib/audit';
 
 // GET /api/admin/stats — deployment statistics (admin only).
 export async function GET(req: Request) {
@@ -13,14 +14,15 @@ export async function GET(req: Request) {
   const admin = await isUserAdmin(session.userId);
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+  const audit = auditModel();
   const [users, workspaces, files, shares, contexts, aiCalls, agentRuns] = await Promise.all([
     prisma.user.count(),
     prisma.workspace.count(),
     prisma.workspaceFile.count(),
     prisma.sharedFile.count(),
     prisma.contextDoc.count(),
-    prisma.auditLog.count({ where: { action: 'ai.call' } }),
-    prisma.auditLog.count({ where: { action: 'agent.run' } }),
+    audit.count({ where: { action: 'ai.call' } }),
+    audit.count({ where: { action: 'agent.run' } }),
   ]);
 
   return NextResponse.json({

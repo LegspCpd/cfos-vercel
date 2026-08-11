@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isUserAdmin } from '@/lib/admin';
+import { auditModel } from '@/lib/audit';
 
 // GET /api/analytics — per-user analytics for the current user.
 // Returns their own workspace counts, today's login activity (IPs), and today's AI
@@ -20,19 +21,20 @@ export async function GET(req: Request) {
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const audit = auditModel();
 
   // Own stats.
   const [workspaceCount, fileCount, todayLoginCount, todayLoginLogs, todayTokenAgg] = await Promise.all([
     prisma.workspace.count({ where: { ownerId: user.id } }),
     prisma.workspaceFile.count({ where: { workspace: { ownerId: user.id } } }),
-    prisma.auditLog.count({ where: { userId: user.id, action: 'auth.login', createdAt: { gte: todayStart } } }),
-    prisma.auditLog.findMany({
+    audit.count({ where: { userId: user.id, action: 'auth.login', createdAt: { gte: todayStart } } }),
+    audit.findMany({
       where: { userId: user.id, action: 'auth.login', createdAt: { gte: todayStart } },
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: { createdAt: true, ip: true },
     }),
-    prisma.auditLog.aggregate({
+    audit.aggregate({
       where: { userId: user.id, action: 'ai.call', createdAt: { gte: todayStart } },
       _count: { _all: true },
       _sum: { tokens: true },
@@ -53,18 +55,18 @@ export async function GET(req: Request) {
 
   if (user.isAdmin || (await isUserAdmin(user.id))) {
     const [todayLogins, siteTokenAgg, activeUsers, loginIps] = await Promise.all([
-      prisma.auditLog.count({ where: { action: 'auth.login', createdAt: { gte: todayStart } } }),
-      prisma.auditLog.aggregate({
+      audit.count({ where: { action: 'auth.login', createdAt: { gte: todayStart } } }),
+      audit.aggregate({
         where: { action: 'ai.call', createdAt: { gte: todayStart } },
         _count: { _all: true },
         _sum: { tokens: true },
       }),
-      prisma.auditLog.findMany({
+      audit.findMany({
         where: { action: 'auth.login', createdAt: { gte: todayStart } },
         distinct: ['userId'],
         select: { userId: true },
       }),
-      prisma.auditLog.findMany({
+      audit.findMany({
         where: { action: 'auth.login', ip: { not: null }, createdAt: { gte: todayStart } },
         select: { ip: true },
       }),

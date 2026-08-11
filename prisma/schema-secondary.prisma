@@ -1,0 +1,59 @@
+// Prisma schema for the optional SECONDARY (cold-data) database.
+//
+// This schema mirrors ONLY the truly relation-less, low-priority tables that can be
+// safely stored in a separate Neon database without breaking cross-table foreign keys.
+// It is completely independent of the main schema (schema.prisma / DATABASE_URL).
+//
+// Enabled ONLY when BOTH are set:
+//   - DATABASE_URL_2        (the secondary Neon connection string)
+//   - MULTI_DB_ENABLED=true  (explicit opt-in; default OFF)
+//
+// When disabled, all data stays in the main database and this client is never used.
+// Cold data = large-but-unimportant rows that can grow unbounded:
+//   - AuditLog              (operation audit trail; write-heavy, no FK, old rows rarely read)
+//   - EmailVerification     (one-time codes; written on every signup/email change, self-expiring)
+//
+// IMPORTANT: These two models MUST stay free of any @relation to main-schema tables.
+// The client is generated to a dedicated output directory so it does not clash with
+// the main @prisma/client.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-secondary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_2")
+}
+
+// Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).
+// Mirrors AuditLog from the main schema (same shape) so reads/writes are interchangeable.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  username  String?
+  action    String
+  targetId  String?
+  detail    String?
+  ip        String?
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// An email verification code issued during email-based signup (or email change).
+// Mirrors EmailVerification from the main schema.
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

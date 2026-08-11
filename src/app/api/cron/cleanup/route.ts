@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { r2Delete, isR2Configured } from '@/lib/r2';
+import { migrateColdData } from '@/lib/cold-migrate';
 
 // GET /api/cron/cleanup — delete all expired shared files from R2 + DB.
 // Protected by a CRON_SECRET env var. Triggered by vercel.json cron config.
@@ -47,10 +48,18 @@ export async function GET(req: Request) {
     deletedAccounts = del.count;
   }
 
+  // When multi-DB is enabled, drain a bounded batch of cold rows (old audit logs /
+  // used verification codes) from the primary into the secondary database, so the
+  // primary stays lean. Runs here (runtime), never at build time.
+  const cold = await migrateColdData();
+
   return NextResponse.json({
     ok: true,
     deletedFromR2,
     deletedRecords: deletedRecords.count,
     deletedAccounts,
+    multiDb: cold.enabled
+      ? { migrated: { audit: cold.auditMigrated, verification: cold.verificationMigrated }, errors: cold.errors }
+      : 'disabled',
   });
 }

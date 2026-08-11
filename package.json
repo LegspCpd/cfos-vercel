@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/fetch-favicon.mjs && node scripts/fetch-waline.mjs && next build",
+    "build": "node scripts/fetch-favicon.mjs && node scripts/fetch-waline.mjs && prisma generate --schema=prisma/schema-secondary.prisma && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma generate --schema=prisma/schema-secondary.prisma",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:push:secondary": "prisma db push --schema=prisma/schema-secondary.prisma",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate && prisma generate --schema=prisma/schema-secondary.prisma"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

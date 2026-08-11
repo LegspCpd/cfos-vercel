@@ -3,12 +3,23 @@
 
 import crypto from 'node:crypto';
 import { prisma } from './db';
+import { getMultiDbConfig, multiDbEnabled } from './db-secondary';
 import { sendVerificationEmail, resendConfigured } from './email';
 
 // Verification-code lifetime, configurable via VERIFY_CODE_TTL_MINUTES (default 10 min).
 export const CODE_LIFETIME_MS =
   (Number(process.env.VERIFY_CODE_TTL_MINUTES) || 10) * 60 * 1000;
 const CODE_LENGTH = 6;
+
+// Resolve which client owns the EmailVerification table: the secondary DB when
+// multi-db is enabled AND coldTables.verification is on, otherwise main database.
+function verificationModel() {
+  if (multiDbEnabled()) {
+    const cfg = getMultiDbConfig();
+    if (cfg.coldTables.verification && cfg.client) return cfg.client.emailVerification;
+  }
+  return prisma.emailVerification;
+}
 
 function hashCode(code: string): string {
   return crypto.createHash('sha256').update(code).digest('hex');
@@ -31,11 +42,11 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
   const expiresAt = new Date(Date.now() + CODE_LIFETIME_MS);
 
   // Mark any outstanding codes for this email as used so only the newest is valid.
-  await prisma.emailVerification.updateMany({
+  await verificationModel().updateMany({
     where: { email, used: false },
     data: { used: true },
   });
-  const record = await prisma.emailVerification.create({
+  const record = await verificationModel().create({
     data: { email, code: hashCode(code), expiresAt },
   });
 
@@ -46,7 +57,7 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
       sent = true;
     } catch (e) {
       // Sending failed — remove the orphaned code so a retry isn't blocked, then rethrow.
-      await prisma.emailVerification.delete({ where: { id: record.id } }).catch(() => {});
+      await verificationModel().delete({ where: { id: record.id } }).catch(() => {});
       throw e;
     }
   }
@@ -58,7 +69,7 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
 // Verify a user-supplied code for an email. Returns true and consumes the code if valid.
 export async function verifyCode(email: string, code: string): Promise<boolean> {
   const normEmail = email.trim().toLowerCase();
-  const record = await prisma.emailVerification.findFirst({
+  const record = await verificationModel().findFirst({
     where: { email: normEmail, used: false },
     orderBy: { createdAt: 'desc' },
   });
@@ -66,7 +77,7 @@ export async function verifyCode(email: string, code: string): Promise<boolean> 
   if (record.expiresAt.getTime() < Date.now()) return false;
   if (record.code !== hashCode(code.trim())) return false;
 
-  await prisma.emailVerification.update({
+  await verificationModel().update({
     where: { id: record.id },
     data: { used: true },
   });

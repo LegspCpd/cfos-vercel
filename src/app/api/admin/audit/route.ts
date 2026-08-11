@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { auditModel } from '@/lib/audit';
 import { isUserAdmin } from '@/lib/admin';
 
 // GET /api/admin/audit?action=...&user=...&limit=50&offset=0
@@ -24,14 +24,15 @@ export async function GET(req: Request) {
   if (action) where.action = action;
   if (user) where.username = { contains: user, mode: 'insensitive' };
 
+  const model = auditModel();
   const [logs, total] = await Promise.all([
-    prisma.auditLog.findMany({
+    model.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
     }),
-    prisma.auditLog.count({ where }),
+    model.count({ where }),
   ]);
 
   return NextResponse.json({ logs, total, limit, offset });

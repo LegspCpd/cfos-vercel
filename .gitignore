@@ -43,3 +43,6 @@ public/apple-touch-icon.png
 
 # build-time vendored Waline assets (see scripts/fetch-waline.mjs)
 public/vendor/
+
+# generated secondary Prisma client (see schema-secondary.prisma; built on install)
+src/generated/

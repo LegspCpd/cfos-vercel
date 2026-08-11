@@ -42,6 +42,29 @@
 | `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名（必填） |
 | `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag（可选，可跳过） |
 | `CRON_SECRET` | 可选 | 清理 cron 的访问密钥 |
+| `DATABASE_URL_2` | 多库（可选） | 第二个 Neon 数据库连接串，用于存冷数据（审计日志/邮箱验证码） |
+| `MULTI_DB_ENABLED` | 多库（可选） | `true` 开启多数据库，默认关闭（必须同时配 `DATABASE_URL_2`） |
+| `MULTI_DB_COLD_TABLES` | 多库（可选） | 哪些冷数据表放副库，逗号分隔，默认 `audit,verification`（`audit`=审计日志、`verification`=邮箱验证码） |
+
+## 多数据库（可选，默认关闭）
+
+当单个 Neon 数据库快被占满时，可以把**低优先级的冷数据**（审计日志、邮箱验证码）挪到**第二个 Neon 数据库**，主库只留重要数据，降低主库占用。
+
+**启用（必须同时满足）：**
+1. 创建第二个 Neon 数据库，把连接串填入 `DATABASE_URL_2`
+2. 设置 `MULTI_DB_ENABLED=true`
+3. （可选）`MULTI_DB_COLD_TABLES` 控制哪些表进副库，默认 `audit,verification`
+
+**如何生效（自动）：**
+- 开启后，新的审计日志和邮箱验证码**直接写入副库**
+- 主库里已存在的旧冷数据，由**定时清理 cron**（`/api/cron/cleanup`）自动分批搬到副库（每次 500 条，从最老开始；插入成功后才删除源记录，中途失败不会丢数据）
+- 主库旧数据搬空后，主库会显著变小
+
+**注意：**
+- 未配置 `DATABASE_URL_2` 或未设 `MULTI_DB_ENABLED=true` 时，所有数据照常存主库，行为与之前完全一致
+- 副库只在**运行时**被迁移任务和冷数据写入访问；**构建时不做任何数据搬移**
+- 只在 `audit`（审计日志）和 `verification`（邮箱验证码）之间选择，因为它们**没有外键关联**，可以安全隔离；有外键的重要表（工作区、文件、聊天、用户）**不会**被挪动
+- 首次部署需要在 Vercel 的构建命令里已包含 `prisma generate --schema=prisma/schema-secondary.prisma`（本项目已配置）
 
 ## 生成 AUTH_SECRET
 

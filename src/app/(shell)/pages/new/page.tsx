@@ -44,6 +44,8 @@ export default function NewProjectPage() {
   const [github, setGithub] = useState<{ enabled: boolean; connected: boolean; repos: Repo[] }>({ enabled: false, connected: false, repos: [] });
   const [gitlab, setGitlab] = useState<{ enabled: boolean; connected: boolean; repos: Repo[] }>({ enabled: false, connected: false, repos: [] });
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const loadSources = () =>
     api
@@ -85,6 +87,9 @@ export default function NewProjectPage() {
 
   const active = provider === 'github' ? github : gitlab;
   const filteredRepos = active.repos.filter((r) => !query || r.name.toLowerCase().includes(query.toLowerCase()));
+  const totalPages = Math.max(1, Math.ceil(filteredRepos.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageRepos = filteredRepos.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   function chooseRepo(repo: Repo) {
     router.push(`/pages/deploy?source=${provider}&repo=${encodeURIComponent(repo.name)}&ref=${encodeURIComponent(repo.branch)}`);
@@ -121,7 +126,7 @@ export default function NewProjectPage() {
       {/* Provider toggle */}
       <div className="mt-6 flex items-center gap-2 rounded-lg border bg-card p-2">
         <button
-          onClick={() => setProvider('github')}
+          onClick={() => { setProvider('github'); setPage(1); }}
           disabled={!github.enabled}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
             provider === 'github' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'
@@ -131,7 +136,7 @@ export default function NewProjectPage() {
           {!github.enabled && <span className="text-xs">({t('pg.notConfigured')})</span>}
         </button>
         <button
-          onClick={() => setProvider('gitlab')}
+          onClick={() => { setProvider('gitlab'); setPage(1); }}
           disabled={!gitlab.enabled}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
             provider === 'gitlab' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'
@@ -167,7 +172,7 @@ export default function NewProjectPage() {
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
             placeholder={t('pg.searchRepos')}
             className="w-full bg-transparent text-sm outline-none"
           />
@@ -185,25 +190,50 @@ export default function NewProjectPage() {
             {t('pg.noMatchRepos')}
           </div>
         ) : (
-          filteredRepos.map((r) => (
-            <button
-              key={r.name}
-              onClick={() => chooseRepo(r)}
-              className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-primary/50 hover:bg-secondary/50"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <FolderGit2 className="h-4 w-4" />
-              </span>
-              <span className="flex-1 truncate">
-                <span className="block truncate text-sm font-medium">{r.name}</span>
-                <span className="block text-xs text-muted-foreground">{r.branch}</span>
-              </span>
-              <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                {r.language || '—'}
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </button>
-          ))
+          <>
+            {pageRepos.map((r) => (
+              <button
+                key={r.name}
+                onClick={() => chooseRepo(r)}
+                className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition hover:border-primary/50 hover:bg-secondary/50"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <FolderGit2 className="h-4 w-4" />
+                </span>
+                <span className="flex-1 truncate">
+                  <span className="block truncate text-sm font-medium">{r.name}</span>
+                  <span className="block text-xs text-muted-foreground">{r.branch}</span>
+                </span>
+                <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                  {r.language || '—'}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-3">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="rounded-md border px-3 py-1.5 text-xs hover:bg-secondary disabled:opacity-40"
+                >
+                  {t('pg.prevPage')}
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {safePage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="rounded-md border px-3 py-1.5 text-xs hover:bg-secondary disabled:opacity-40"
+                >
+                  {t('pg.nextPage')}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

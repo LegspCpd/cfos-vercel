@@ -579,6 +579,8 @@ const zh: Record<string, string> = {
   'pg.noRepos': '该账户下暂无存储库。',
   'pg.connectToSeeRepos': '连接账户后，此处会显示你的存储库列表。',
   'pg.noMatchRepos': '没有匹配的存储库。',
+  'pg.prevPage': '上一页',
+  'pg.nextPage': '下一页',
   // Pages — setup builds and deployments
   'pg.setupBuildTitle': '设置构建和部署',
   'pg.buildConfigTitle': '构建配置',
@@ -1398,6 +1400,8 @@ const en: Record<string, string> = {
   'pg.noRepos': 'No repositories on this account yet.',
   'pg.connectToSeeRepos': 'Connect your account to see your repositories here.',
   'pg.noMatchRepos': 'No repositories match your search.',
+  'pg.prevPage': 'Previous',
+  'pg.nextPage': 'Next',
   // Pages — setup builds and deployments
   'pg.setupBuildTitle': 'Set up builds and deployments',
   'pg.buildConfigTitle': 'Build configuration',

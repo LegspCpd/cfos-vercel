@@ -81,21 +81,34 @@ function commonRootPrefix(paths: string[]): string {
   return `${parts[0]}/`;
 }
 
-// List a connected GitHub user's repos (name + default branch) for the picker.
+// List a connected GitHub user's repos (name + default branch) for the picker. Fetches ALL
+// repos by paging through the GitHub API (per_page=100) so the frontend can paginate freely.
+const MAX_GITHUB_REPOS = 1000;
 export async function githubRepos(userId: string): Promise<{ name: string; branch: string; language: string | null }[]> {
   const token = await getGitHubToken(userId);
   if (!token) return [];
-  const res = await fetch(
-    'https://api.github.com/user/repos?per_page=50&sort=updated&affiliation=owner,collaborator',
-    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } },
-  );
-  if (!res.ok) return [];
-  const data = (await res.json()) as {
-    full_name: string;
-    default_branch: string;
-    language: string | null;
-  }[];
-  return data.map((r) => ({ name: r.full_name, branch: r.default_branch, language: r.language }));
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+  const out: { name: string; branch: string; language: string | null }[] = [];
+  let page = 1;
+  // Keep paging until GitHub returns an empty page (or we hit the safety cap).
+  while (out.length < MAX_GITHUB_REPOS) {
+    const res = await fetch(
+      `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator`,
+      { headers },
+    );
+    if (!res.ok) break;
+    const data = (await res.json()) as {
+      full_name: string;
+      default_branch: string;
+      language: string | null;
+    }[];
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const r of data) {
+      out.push({ name: r.full_name, branch: r.default_branch, language: r.language });
+    }
+    page += 1;
+  }
+  return out;
 }
 
 // ---- GitLab ----

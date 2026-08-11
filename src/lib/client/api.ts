@@ -292,6 +292,8 @@ export const api = {
     request<{ ok: boolean }>('/api/gitlab/disconnect', { method: 'POST' }),
   githubTool: (args: Record<string, unknown>) =>
     request<{ result?: string; error?: string }>('/api/github/tool', { method: 'POST', body: JSON.stringify(args) }),
+  // Whether the Deploy feature is configured (PAGES_KEY + PAGES_ACCOUNT_ID set).
+  deployAvailable: () => request<{ available: boolean }>('/api/deploy/available'),
   // Deploy a workspace to Cloudflare Pages (optionally mints a short link).
   deployWorkspace: (workspaceId: string) =>
     request<{ ok: boolean; deploymentId?: string; pagesUrl?: string; shortUrl?: string | null; error?: string }>(

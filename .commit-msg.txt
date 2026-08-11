@@ -1,0 +1,13 @@
+feat: only show the Deploy button when Pages deployment is configured
+
+The Deploy button previously always appeared on the Workspaces page, but it
+errors unless PAGES_KEY and PAGES_ACCOUNT_ID are both set.
+
+- New GET /api/deploy/available returns { available } = true only when both
+  PAGES_KEY and PAGES_ACCOUNT_ID are configured.
+- Workspaces page fetches it on load and renders the "Deploy" button only when
+  available (default hidden to avoid a flash), so an unconfigured deployment
+  never shows a dead button.
+- api.ts adds deployAvailable().
+
+Verified: tsc --noEmit clean, oxlint 0 errors.

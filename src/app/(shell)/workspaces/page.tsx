@@ -18,12 +18,15 @@ export default function WorkspacesPage() {
   const [newTitle, setNewTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'fav'>('all');
   const [deployOpen, setDeployOpen] = useState(false);
+  // Deploy is only shown when PAGES_KEY + PAGES_ACCOUNT_ID are configured.
+  const [deployEnabled, setDeployEnabled] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
       return;
     }
+    api.deployAvailable().then((r) => setDeployEnabled(r.available)).catch(() => {});
     api
       .listWorkspaces()
       .then((res) => setWorkspaces(res.workspaces))
@@ -105,12 +108,14 @@ export default function WorkspacesPage() {
           >
             <Plus className="h-4 w-4" /> {t('ws.new')}
           </button>
-          <button
-            onClick={() => setDeployOpen(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary"
-          >
-            <Rocket className="h-4 w-4 text-primary" /> {t('deploy.title')}
-          </button>
+          {deployEnabled && (
+            <button
+              onClick={() => setDeployOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              <Rocket className="h-4 w-4 text-primary" /> {t('deploy.title')}
+            </button>
+          )}
         </div>
       </div>
 

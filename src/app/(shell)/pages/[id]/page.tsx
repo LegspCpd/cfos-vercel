@@ -39,10 +39,9 @@ interface DeploymentDetail {
   updatedAt: string;
 }
 
-// The deployment detail page (/workspace/deploy/[id]). Shows a single deployment's
-// full result — status, project name, pages/short URLs, build config, and the complete
-// saved log — with copy/open/check actions. The deploy page auto-navigates here after
-// a successful deploy.
+// The deployment detail page (/pages/[id]). Shows a single deployment's full result —
+// status, project name, pages/short URLs, build config, and the complete saved log — with
+// copy/open/check actions. The deploy screen auto-navigates here after a successful deploy.
 function CopyButton({ url, copied, onCopy }: { url: string; copied: string; onCopy: (u: string) => void }) {
   return (
     <button
@@ -113,7 +112,7 @@ export default function DeploymentDetailPage() {
     return (
       <div className="mx-auto max-w-4xl px-6 py-16 text-center">
         <p className="text-muted-foreground">{t('dd.notFound')}</p>
-        <Link href="/workspace/deploy" className="mt-4 inline-block text-primary hover:underline">
+        <Link href="/pages" className="mt-4 inline-block text-primary hover:underline">
           {t('dd.back')}
         </Link>
       </div>
@@ -124,7 +123,7 @@ export default function DeploymentDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <Link href="/workspace/deploy" className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/pages" className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('dd.back')}
       </Link>
 
@@ -195,7 +194,7 @@ export default function DeploymentDetailPage() {
               {checking ? t('dd.checking') : t('dd.check')}
             </button>
             <button
-              onClick={() => router.push(`/workspace/deploy${dep.workspaceId ? `?workspace=${dep.workspaceId}` : ''}`)}
+              onClick={() => router.push(`/pages/deploy?source=workspace${dep.workspaceId ? `&workspace=${dep.workspaceId}` : ''}`)}
               className="rounded-md border px-3 py-2 text-sm hover:bg-secondary"
             >
               {t('dd.redeploy')}

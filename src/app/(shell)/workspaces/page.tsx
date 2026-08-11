@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Trash2, Star, Rocket } from 'lucide-react';
+import { Plus, Trash2, Star } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -16,15 +16,12 @@ export default function WorkspacesPage() {
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'fav'>('all');
-  // Deploy is only shown when PAGES_KEY + PAGES_ACCOUNT_ID are configured.
-  const [deployEnabled, setDeployEnabled] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
       return;
     }
-    api.deployAvailable().then((r) => setDeployEnabled(r.available)).catch(() => {});
     api
       .listWorkspaces()
       .then((res) => setWorkspaces(res.workspaces))
@@ -106,14 +103,6 @@ export default function WorkspacesPage() {
           >
             <Plus className="h-4 w-4" /> {t('ws.new')}
           </button>
-          {deployEnabled && (
-            <button
-              onClick={() => router.push('/workspace/deploy')}
-              className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary"
-            >
-              <Rocket className="h-4 w-4 text-primary" /> {t('deploy.title')}
-            </button>
-          )}
         </div>
       </div>
 

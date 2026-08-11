@@ -290,6 +290,13 @@ const zh: Record<string, string> = {
   'conn.gitlabConnected': '已连接到 {name}。agent 可以访问你的 GitLab 项目。',
   'conn.gitlabDisconnected': '连接后 agent 可以列出你的 GitLab 项目、读取仓库。',
   'conn.footer': '当前支持：GitHub、Google、GitLab。连接后 agent 可代表你调用对应服务的 API。',
+  // Gatekeeper capability (side-effect approval)
+  'conn.capReadonly': '只读（Gatekeeper 默认）',
+  'conn.capReadwrite': '读写',
+  'conn.capHint': 'Gatekeeper 能力：默认只读，agent 只能读取；启用「读写」后 agent 才可代表你执行写操作（如创建 issue）。',
+  'conn.setWrite': '启用写权限',
+  'conn.setReadonly': '设为只读',
+  'conn.writeEnabled': '已启用写权限，agent 可代表你写入',
   // Cloudflare Access status
   'cf.statusUnavailable': '无法获取状态。',
   'cf.jwtDesc': '所有敏感 API 都会校验 Cloudflare Access JWT。',
@@ -886,6 +893,13 @@ const en: Record<string, string> = {
   'conn.gitlabConnected': 'Connected to {name}. The agent can access your GitLab projects.',
   'conn.gitlabDisconnected': 'After connecting, the agent can list your GitLab projects and read repositories.',
   'conn.footer': 'Currently supported: GitHub, Google, GitLab. After connecting, the agent can call these services\' APIs on your behalf.',
+  // Gatekeeper capability (side-effect approval)
+  'conn.capReadonly': 'Read-only (Gatekeeper default)',
+  'conn.capReadwrite': 'Read-write',
+  'conn.capHint': 'Gatekeeper capability: read-only by default — the agent can only read. Enable "read-write" to let the agent perform write operations (e.g. creating issues) on your behalf.',
+  'conn.setWrite': 'Enable write access',
+  'conn.setReadonly': 'Set to read-only',
+  'conn.writeEnabled': 'Write access enabled — the agent may write on your behalf',
   // Cloudflare Access status
   'cf.statusUnavailable': 'Could not fetch status.',
   'cf.jwtDesc': 'All sensitive APIs validate the Cloudflare Access JWT.',

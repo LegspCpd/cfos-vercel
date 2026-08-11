@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const conns = await prisma.gitHubConnection.findMany({
     where: { userId: session.userId },
     orderBy: { updatedAt: 'desc' },
-    select: { id: true, githubLogin: true, updatedAt: true },
+    select: { id: true, githubLogin: true, writeAccess: true, updatedAt: true },
   });
 
   return NextResponse.json({
@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     // Backward-compatible single-account fields (first/most-recent) + full list.
     githubLogin: conns[0]?.githubLogin ?? null,
     updatedAt: conns[0]?.updatedAt?.toISOString() ?? null,
-    accounts: conns.map((c) => ({ id: c.id, login: c.githubLogin, updatedAt: c.updatedAt })),
+    writeAccess: conns[0]?.writeAccess ?? 'readonly', // Gatekeeper capability
+    accounts: conns.map((c) => ({ id: c.id, login: c.githubLogin, writeAccess: c.writeAccess, updatedAt: c.updatedAt })),
   });
 }

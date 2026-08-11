@@ -241,6 +241,7 @@ model GitHubConnection {
   githubId    Int?     // GitHub numeric user id; NULL for legacy rows (unique per connected account)
   githubLogin String
   accessToken String   // encrypted; used by the agent's GitHub tools
+  writeAccess String   @default("readonly") // Gatekeeper capability: 'readonly' | 'readwrite'
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -260,6 +261,7 @@ model GoogleConnection {
   googleEmail String
   accessToken String   // encrypted; used by the agent's Google tools
   refreshToken String? // encrypted
+  writeAccess String   @default("readonly") // Gatekeeper capability: 'readonly' | 'readwrite'
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -278,6 +280,7 @@ model GitlabConnection {
   gitlabId       Int?     // GitLab user id; NULL for legacy rows (unique per connected account)
   gitlabUsername String
   accessToken    String   // encrypted; used by the agent's GitLab tools
+  writeAccess    String   @default("readonly") // Gatekeeper capability: 'readonly' | 'readwrite'
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

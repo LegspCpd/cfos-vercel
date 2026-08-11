@@ -121,3 +121,56 @@ export async function githubReadFile(userId: string, repoFullName: string, path:
     return `Error: ${(e as Error).message}`;
   }
 }
+
+// ---- Gatekeeper capability: write access ----
+// The connection defaults to 'readonly'; a write tool may only run when the user has
+// explicitly granted 'readwrite'. This enforces the "side-effect approval" model: the agent
+// can read freely but needs an explicit grant to mutate the external service.
+
+export type WriteAccess = 'readonly' | 'readwrite';
+
+// Whether the most-recently-connected GitHub account has write access granted.
+export async function githubWriteGranted(userId: string): Promise<boolean> {
+  const conn = await prisma.gitHubConnection.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+    select: { writeAccess: true },
+  });
+  return conn?.writeAccess === 'readwrite';
+}
+
+// Set write access for the most-recently-connected account. Returns the new value.
+export async function githubSetWriteAccess(userId: string, access: WriteAccess): Promise<string> {
+  const conn = await prisma.gitHubConnection.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+  });
+  if (!conn) throw new Error('GitHub is not connected.');
+  return prisma.gitHubConnection.update({ where: { id: conn.id }, data: { writeAccess: access } }).then((c) => c.writeAccess);
+}
+
+// Create an issue in a repo (write operation — requires write access).
+export async function githubCreateIssue(
+  userId: string,
+  repoFullName: string,
+  title: string,
+  body?: string,
+): Promise<string> {
+  if (!(await githubWriteGranted(userId))) {
+    return 'Permission denied: this connection is read-only. Enable write access in Connections (Gatekeeper) first.';
+  }
+  try {
+    const token = await getGitHubToken(userId);
+    if (!token) throw new Error('GitHub is not connected.');
+    const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(repoFullName)}/issues`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body: body ?? '' }),
+    });
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+    const data = (await res.json()) as { number: number; html_url: string };
+    return `Created issue #${data.number}: ${data.html_url}`;
+  } catch (e) {
+    return `Error: ${(e as Error).message}`;
+  }
+}

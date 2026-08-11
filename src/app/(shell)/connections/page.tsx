@@ -13,12 +13,18 @@ interface ConnState {
   label: string | null;
 }
 
+// Gatekeeper capability: the agent may only WRITE when the user explicitly grants it.
+interface GithubConn extends ConnState {
+  writeAccess: 'readonly' | 'readwrite';
+}
+
 const EMPTY: ConnState = { connected: false, label: null };
+const EMPTY_GH: GithubConn = { connected: false, label: null, writeAccess: 'readonly' };
 
 export default function ConnectionsPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [github, setGithub] = useState<ConnState>(EMPTY);
+  const [github, setGithub] = useState<GithubConn>(EMPTY_GH);
   const [google, setGoogle] = useState<ConnState>(EMPTY);
   const [gitlab, setGitlab] = useState<ConnState>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -32,13 +38,34 @@ export default function ConnectionsPage() {
         api.googleStatus(),
         api.gitlabStatus(),
       ]);
-      setGithub({ connected: gh.connected, label: gh.githubLogin });
+      setGithub({
+        connected: gh.connected,
+        label: gh.githubLogin,
+        writeAccess: gh.writeAccess === 'readwrite' ? 'readwrite' : 'readonly',
+      });
       setGoogle({ connected: go.connected, label: go.googleEmail });
       setGitlab({ connected: gl.connected, label: gl.gitlabUsername });
     } catch {
       /* ignore */
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Toggle the Gatekeeper write capability for GitHub.
+  async function toggleWrite() {
+    const next: 'readonly' | 'readwrite' = github.writeAccess === 'readonly' ? 'readwrite' : 'readonly';
+    setBusyKey('github-access');
+    try {
+      const res = await api.githubSetAccess(next);
+      setGithub((g) => ({ ...g, writeAccess: res.writeAccess === 'readwrite' ? 'readwrite' : 'readonly' }));
+      setMessage(
+        next === 'readwrite' ? t('conn.writeEnabled') : t('conn.setReadonly'),
+      );
+    } catch (e) {
+      setMessage((e as Error).message || 'Failed to change access');
+    } finally {
+      setBusyKey(null);
     }
   }
 
@@ -68,7 +95,7 @@ export default function ConnectionsPage() {
     try {
       if (provider === 'github') {
         await api.githubDisconnect();
-        setGithub(EMPTY);
+        setGithub(EMPTY_GH);
       } else if (provider === 'google') {
         await api.googleDisconnect();
         setGoogle(EMPTY);
@@ -92,6 +119,12 @@ export default function ConnectionsPage() {
           : t('conn.githubDisconnected'),
       Icon: GithubIcon,
       state: github,
+      // Gatekeeper capability badge only for GitHub (the only provider with write tools today).
+      capability: github.connected
+        ? github.writeAccess === 'readwrite'
+          ? t('conn.capReadwrite')
+          : t('conn.capReadonly')
+        : null,
     },
     {
       key: 'google',
@@ -102,6 +135,7 @@ export default function ConnectionsPage() {
           : t('conn.googleDisconnected'),
       Icon: GoogleIcon,
       state: google,
+      capability: null,
     },
     {
       key: 'gitlab',
@@ -112,6 +146,7 @@ export default function ConnectionsPage() {
           : t('conn.gitlabDisconnected'),
       Icon: GitlabIcon,
       state: gitlab,
+      capability: null,
     },
   ];
 
@@ -144,19 +179,55 @@ export default function ConnectionsPage() {
                         <CheckCircle2 className="h-3 w-3" /> {t('pr.connected')}
                       </span>
                     )}
+                    {p.state.connected && p.capability && (
+                      <span
+                        className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+                          p.key === 'github' && github.writeAccess === 'readwrite'
+                            ? 'bg-amber-500/15 text-amber-600'
+                            : 'bg-secondary text-muted-foreground'
+                        }`}
+                        title={t('conn.capHint')}
+                      >
+                        {p.capability}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 break-words text-sm text-muted-foreground">{p.desc(p.state.connected)}</p>
                 </div>
               </div>
               <div className="mt-4 border-t pt-4">
                 {p.state.connected ? (
-                  <button
-                    onClick={() => disconnect(p.key as 'github' | 'google' | 'gitlab')}
-                    disabled={busyKey === p.key}
-                    className="flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    <Unlink className="h-4 w-4" /> {t('conn.disconnect')}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => disconnect(p.key as 'github' | 'google' | 'gitlab')}
+                      disabled={busyKey === p.key}
+                      className="flex items-center gap-1.5 rounded-md border px-4 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      <Unlink className="h-4 w-4" /> {t('conn.disconnect')}
+                    </button>
+                    {/* Gatekeeper write-capability toggle (GitHub only — the sole provider
+                        with write tools today). */}
+                    {p.key === 'github' && (
+                      <button
+                        onClick={toggleWrite}
+                        disabled={busyKey === 'github-access'}
+                        className={`flex items-center gap-1.5 rounded-md px-4 py-2 text-sm disabled:opacity-50 ${
+                          github.writeAccess === 'readwrite'
+                            ? 'border border-amber-500/50 text-amber-600 hover:bg-amber-500/10'
+                            : 'border text-muted-foreground hover:bg-secondary'
+                        }`}
+                      >
+                        {busyKey === 'github-access' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : github.writeAccess === 'readwrite' ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Link2 className="h-4 w-4" />
+                        )}
+                        {github.writeAccess === 'readwrite' ? t('conn.setReadonly') : t('conn.setWrite')}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <button
                     onClick={() => connect(p.key)}

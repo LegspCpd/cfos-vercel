@@ -1,0 +1,21 @@
+feat(gatekeeper): capability-based access for external connections (write approval)
+
+Implements the Gatekeeper concept from original Cloudflare OS on top of the
+existing connections feature: connections default to read-only and the agent may
+only perform write operations after the user explicitly grants write access.
+
+- Schema: GitHubConnection / GoogleConnection / GitlabConnection gain a
+  writeAccess column defaulting to "readonly" (new nullable-with-default column,
+  existing rows fill "readonly"; migration is safe, no data loss).
+- GitHub write tool: new "create_issue" tool in /api/github/tool that refuses to
+  run unless write access is granted (side-effect approval). Existing read tools
+  (list_repos / read_file) are unaffected.
+- New POST /api/github/access toggles write access and writes an audit entry
+  (github.access_change).
+- /api/github/status now returns writeAccess (single-account + per-account).
+- Connections page: GitHub shows a Gatekeeper capability badge (read-only /
+  read-write) and a toggle to grant/revoke write access; other providers stay as
+  read-only connections.
+- i18n keys added (zh/en).
+
+Verified: tsc --noEmit clean, oxlint 0 errors, prisma client regenerated.

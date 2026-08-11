@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
-import { githubListRepos, githubReadFile } from '@/lib/github';
+import { githubListRepos, githubReadFile, githubCreateIssue } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
 import { requireCfAccess } from '@/lib/require-access';
 
 // POST /api/github/tool — let the agent call GitHub tools on the user's behalf.
-// Body: { tool: "list_repos" } | { tool: "read_file", repo, path }
+// Read-only tools: { tool: "list_repos" } | { tool: "read_file", repo, path }
+// Write tools (Gatekeeper side-effect approval): { tool: "create_issue", repo, title, body }
 export async function POST(req: Request) {
   if (!(await requireCfAccess(req))) {
     return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
@@ -37,6 +38,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'repo and path are required' }, { status: 400 });
       }
       const result = await githubReadFile(session.userId, repo, path);
+      return NextResponse.json({ result });
+    }
+    case 'create_issue': {
+      const repo = String(body?.repo ?? '');
+      const title = String(body?.title ?? '');
+      if (!repo || !title) {
+        return NextResponse.json({ error: 'repo and title are required' }, { status: 400 });
+      }
+      const result = await githubCreateIssue(session.userId, repo, title, String(body?.body ?? ''));
       return NextResponse.json({ result });
     }
     default:

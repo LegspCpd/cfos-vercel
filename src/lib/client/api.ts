@@ -263,7 +263,11 @@ export const api = {
   deleteShare: (id: string) =>
     request<{ ok: boolean }>(`/api/share/${id}`, { method: 'DELETE' }),
   githubStatus: () =>
-    request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null }>('/api/github/status'),
+    request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null; writeAccess: string }>(
+      '/api/github/status',
+    ),
+  githubSetAccess: (access: 'readonly' | 'readwrite') =>
+    request<{ writeAccess: string }>('/api/github/access', { method: 'POST', body: JSON.stringify({ access }) }),
   githubDisconnect: () =>
     request<{ ok: boolean }>('/api/github/disconnect', { method: 'POST' }),
   googleStatus: () =>

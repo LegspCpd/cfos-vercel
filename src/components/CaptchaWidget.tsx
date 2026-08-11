@@ -166,8 +166,11 @@ export default function CaptchaWidget({ config, onVerify, resetSignal = 0 }: Cap
     }
   }, [provider]);
 
+  // "加载人机验证..." is ONLY shown while we have not yet decided which provider to
+  // render (i.e. during latency pick / before the widget mounts). Once a provider is
+  // chosen, we show ONLY the widget container — Turnstile/Recaptcha render their own
+  // frame, so no overlay loading text appears on top of the challenge.
   if (!provider) {
-    // While picking (or when no provider configured) show a lightweight placeholder.
     if (loading) {
       return (
         <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground">
@@ -181,11 +184,6 @@ export default function CaptchaWidget({ config, onVerify, resetSignal = 0 }: Cap
   return (
     <div className="flex items-center justify-center py-2">
       <div ref={containerRef} className="min-h-[60px] min-w-[240px]" />
-      {loading && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('captcha.loading')}
-        </div>
-      )}
     </div>
   );
 }

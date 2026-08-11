@@ -5,13 +5,16 @@ import { getColdStatus } from '@/lib/cold-migrate';
 
 // GET /api/cron/cleanup — delete all expired shared files from R2 + DB.
 // Protected by a CRON_SECRET env var. Triggered by vercel.json cron config.
+// SECURITY: CRON_SECRET is REQUIRED. If it's missing the endpoint refuses to run rather
+// than opening the cleanup (which deletes expired files/accounts) to the public internet.
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
-    if (header !== secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+  }
+  const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
+  if (header !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const now = new Date();

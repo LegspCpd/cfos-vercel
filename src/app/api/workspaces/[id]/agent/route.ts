@@ -41,7 +41,27 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!prompt || typeof prompt !== 'string') {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
   }
+  // Cap the raw prompt to prevent a single request from blowing up token usage.
+  const trimmedPrompt = prompt.trim();
+  if (trimmedPrompt.length > 4000) {
+    return NextResponse.json({ error: 'Prompt too long (max 4000 characters)' }, { status: 400 });
+  }
   const providerId = typeof body?.providerId === 'string' ? body.providerId : undefined;
+
+  // Basic per-user quota so a single account can't run the LLM unbounded and rack up
+  // the site owner's AI cost. Default: 100 agent runs / day (configurable via env).
+  const MAX_AGENT_PER_DAY = Number(process.env.AGENT_DAILY_LIMIT) || 100;
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const runsToday = await prisma.auditLog.count({
+    where: { userId: session.userId, action: 'agent.run', createdAt: { gte: dayStart } },
+  });
+  if (runsToday >= MAX_AGENT_PER_DAY) {
+    return NextResponse.json(
+      { error: `Daily agent limit reached (${MAX_AGENT_PER_DAY}/day). Try again tomorrow.` },
+      { status: 429 },
+    );
+  }
 
   const currentFiles: WorkspaceFileDraft[] = workspace.files.map((f) => ({
     path: f.path,
@@ -54,12 +74,12 @@ export async function POST(req: Request, { params }: Ctx) {
     orderBy: { updatedAt: 'desc' },
     take: 5,
   });
-  let finalPrompt = prompt;
+  let finalPrompt = trimmedPrompt;
   if (contextDocs.length > 0) {
     const ctxBlock = contextDocs
       .map((d) => `\n===== Context: ${d.title} =====\n${d.content.slice(0, 4000)}`)
       .join('\n');
-    finalPrompt = `${prompt}\n\n--- Reference context documents ---\n${ctxBlock}\n--- End context ---`;
+    finalPrompt = `${trimmedPrompt}\n\n--- Reference context documents ---\n${ctxBlock}\n--- End context ---`;
   }
 
   // Apply site-level agent configuration (default model + admin instructions).
@@ -83,7 +103,7 @@ export async function POST(req: Request, { params }: Ctx) {
       username: session.username,
       action: 'agent.run_failed',
       targetId: workspace.id,
-      detail: `Agent failed on workspace "${workspace.title}" (prompt: ${prompt.slice(0, 120)})`,
+      detail: `Agent failed on workspace "${workspace.title}" (prompt: ${trimmedPrompt.slice(0, 120)})`,
     });
     return NextResponse.json(
       { error: 'Failed to run agent. Configure an AI provider in Settings, or check your API key.' },
@@ -138,7 +158,7 @@ export async function POST(req: Request, { params }: Ctx) {
     targetId: workspace.id,
     ip: clientIp(req),
     tokens: result.tokens ?? null,
-    detail: `AI call from agent (prompt: ${prompt.slice(0, 120)})${result.tokens ? ` — ${result.tokens} tokens` : ''}`,
+    detail: `AI call from agent (prompt: ${trimmedPrompt.slice(0, 120)})${result.tokens ? ` — ${result.tokens} tokens` : ''}`,
   });
 
   return NextResponse.json({

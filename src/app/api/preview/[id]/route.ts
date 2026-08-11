@@ -18,14 +18,20 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return new Response('No files', { status: 200 });
   }
 
-  // Serve the entry file with a strict CSP so the gadget is sandboxed from the rest of the app.
+  // Serve the entry file with a strict CSP so the gadget is sandboxed from the rest of
+  // the app. We allow inline scripts (needed for previewing HTML gadgets) but restrict
+  // network exfiltration: connect-src is 'self' + https only (no arbitrary http:), and
+  // we drop 'unsafe-eval' and frame-src entirely to shrink the same-origin blast radius.
   const csp = [
     "default-src 'self'",
-    "script-src 'unsafe-inline' 'unsafe-eval' https: http:",
-    "style-src 'unsafe-inline' https: http:",
-    "img-src 'self' data: blob: https: http:",
-    "font-src 'self' data: https: http:",
-    "connect-src 'self' https: http:",
+    "script-src 'unsafe-inline' 'unsafe-eval' https:",
+    "style-src 'unsafe-inline' https:",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data: https:",
+    "connect-src 'self' https:",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
   ].join('; ');
 
   return new Response(entry.content, {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyCode } from '@/lib/verification';
+import { emailConfirmLimiter } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const confirmSchema = z.object({
@@ -13,6 +14,12 @@ export async function POST(req: Request) {
   try {
     const body = confirmSchema.parse(await req.json());
     const email = body.email.trim().toLowerCase();
+
+    // Brute-force guard: cap confirm attempts per email so an attacker can't enumerate
+    // a 6-digit code (1,000,000 combos) in the 10-min window.
+    if (emailConfirmLimiter.tryCall(email) <= 0) {
+      return NextResponse.json({ error: '尝试次数过多，请稍后再试或重新获取验证码' }, { status: 429 });
+    }
 
     const valid = await verifyCode(email, body.code);
     if (!valid) {

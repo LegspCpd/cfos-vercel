@@ -111,22 +111,33 @@ export async function GET(req: Request) {
     }
 
     // 3. Find or create local user.
-    // Prefer linking by googleId; fall back to email so a previously password-created
-    // account with the same email can still log in via Google (we attach the googleId).
+    // SECURITY: only link an existing local account if we can PROVE ownership:
+    //   - the OAuth provider's googleId is already bound, OR
+    //   - Google has VERIFIED this email (info.email_verified) AND it exactly matches
+    //     the local account's bound email (case-insensitive).
+    // We do NOT link by username/email-prefix — that let an attacker register a Google
+    // account whose email prefix matched a victim's local username and take over the
+    // account. See also the email change flow which keeps user.email verified.
     const email = (info.email || '').toLowerCase();
+    const emailVerified = Boolean(info.email_verified);
     const username = email.split('@')[0] || info.sub.slice(0, 16).toLowerCase();
     const displayName = info.name || email || 'Google user';
 
     let user = await prisma.user.findUnique({ where: { googleId: info.sub } });
     if (user) {
       // Already linked — just log in.
-    } else if (email && (await prisma.user.findUnique({ where: { username } }))) {
-      // A local account with this email's username exists; link googleId to it.
-      user = await prisma.user.update({
-        where: { username },
-        data: { googleId: info.sub },
-      });
-    } else {
+    } else if (emailVerified && email) {
+      // Only link to a local account whose bound email matches this verified email.
+      const byEmail = await prisma.user.findUnique({ where: { email } });
+      if (byEmail) {
+        // A verified-email local account — safe to attach the googleId.
+        user = await prisma.user.update({
+          where: { id: byEmail.id },
+          data: { googleId: info.sub },
+        });
+      }
+    }
+    if (!user) {
       // Brand-new account.
       user = await prisma.user.create({
         data: {
@@ -134,6 +145,7 @@ export async function GET(req: Request) {
           displayName,
           passwordHash: 'google-oauth-no-password',
           googleId: info.sub,
+          email: emailVerified ? email : null,
           profileComplete: false,
         },
       });

@@ -129,17 +129,12 @@ export async function GET(req: Request) {
       return res;
     }
 
-    // 4. Find or create local user. Priority: existing githubId link → matching username
-    // → create a new account. The githubId link lets a "connected" user sign in again
-    // and land back on the same account even if their GitHub username differs.
+    // 4. Find or create local user.
+    // SECURITY: link an existing account ONLY when its githubId is already bound. A
+    // GitHub login (ghUser.login) does NOT prove email ownership, so we must NEVER link
+    // by matching username — that let an attacker with a same-named GitHub account take
+    // over a victim's local account. No existing githubId link => always create new.
     let user = await prisma.user.findUnique({ where: { githubId: ghUser.id } });
-    if (!user) {
-      user = await prisma.user.findUnique({ where: { username } });
-      if (user && user.githubId === null) {
-        // Link this GitHub account to the existing local user.
-        user = await prisma.user.update({ where: { id: user.id }, data: { githubId: ghUser.id } });
-      }
-    }
     if (!user) {
       user = await prisma.user.create({
         data: {

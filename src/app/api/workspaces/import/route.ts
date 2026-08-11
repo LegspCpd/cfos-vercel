@@ -24,16 +24,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'title and files[] required' }, { status: 400 });
   }
 
-  // Sanitize: limit count and total size to avoid abuse.
+  // Sanitize: limit count, per-file size, and total size to avoid abuse; reject unsafe
+  // paths (traversal ../, backslashes, control chars).
   if (files.length > 200) {
     return NextResponse.json({ error: 'Too many files' }, { status: 400 });
   }
+  const MAX_FILE_CONTENT = 2 * 1024 * 1024;
   let total = 0;
   for (const f of files) {
     const content = String(f?.content ?? '');
+    if (content.length > MAX_FILE_CONTENT) {
+      return NextResponse.json({ error: 'A file is too large (max 2 MB)' }, { status: 400 });
+    }
     total += content.length;
     if (total > 2_000_000) {
       return NextResponse.json({ error: 'Archive too large' }, { status: 400 });
+    }
+    const path = String(f?.path ?? '').trim();
+    if (!isSafeFilePath(path)) {
+      return NextResponse.json({ error: `Invalid file path: ${path}` }, { status: 400 });
     }
   }
 
@@ -69,4 +78,14 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ workspace }, { status: 201 });
+}
+
+// Validate a workspace file path: reject traversal, empty, control chars, and long paths.
+function isSafeFilePath(path: string): boolean {
+  if (!path || path.length > 255) return false;
+  if (path.includes('..') || path.includes('\\')) return false;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f]/.test(path)) return false;
+  if (path.startsWith('/') || path.startsWith('.') || path.endsWith('/')) return false;
+  return true;
 }

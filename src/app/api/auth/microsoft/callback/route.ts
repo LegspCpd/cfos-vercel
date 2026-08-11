@@ -3,6 +3,16 @@ import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
+import { verifyOAuthState } from '@/lib/oauth-state';
+
+// For the connect/delete flows, the state must be authentic (HMAC-signed by us) OR
+// match the cookie we set. A plain/forged state must never let an attacker bind their
+// Microsoft account to a victim's account.
+function isConnectDeleteStateValid(state: string | null, storedState: string | undefined): boolean {
+  if (!state) return false;
+  if (verifyOAuthState(state).ok) return true;
+  return storedState !== undefined && state === storedState;
+}
 
 const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
@@ -97,6 +107,11 @@ export async function GET(req: Request) {
 
     // CONNECT flow: state = "connect:<userId>:<nonce>". Link to a logged-in user.
     if (effectiveState.startsWith('connect:')) {
+      // CSRF: state must be authentic (signed) or match the cookie. Never let a forged
+      // state bind the attacker's Microsoft account onto a victim's account.
+      if (!isConnectDeleteStateValid(effectiveState, storedState)) {
+        return redirectWithError('Invalid OAuth state.', req, '1001');
+      }
       const targetUserId = effectiveState.split(':')[1];
       const targetUser = targetUserId ? await prisma.user.findUnique({ where: { id: targetUserId } }) : null;
       if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
@@ -117,6 +132,9 @@ export async function GET(req: Request) {
     // confirmation; the actual deleteAt is set after the user passes human verification
     // (see POST /api/profile/delete-account/oauth).
     if (effectiveState.startsWith('delete:')) {
+      if (!isConnectDeleteStateValid(effectiveState, storedState)) {
+        return redirectWithError('Invalid OAuth state.', req, '1001');
+      }
       const targetUserId = effectiveState.split(':')[1];
       const targetUser = targetUserId ? await prisma.user.findUnique({ where: { id: targetUserId } }) : null;
       if (!targetUser) return redirectWithError('注销确认失败：用户不存在', req, '1001');
@@ -135,12 +153,15 @@ export async function GET(req: Request) {
       return res;
     }
 
-    // Login/signup flow: find-or-create by microsoftId → username → new account.
+    // Login/signup flow: find-or-create by microsoftId → verified email → new account.
+    // SECURITY: we only link an existing local account if the verified MS email exactly
+    // matches the local account's bound email (case-insensitive). We do NOT link by
+    // username/email-prefix, which would let an attacker take over a victim's account.
     let user = await prisma.user.findUnique({ where: { microsoftId: msId } });
-    if (!user) {
-      user = await prisma.user.findUnique({ where: { username } });
-      if (user && user.microsoftId === null) {
-        user = await prisma.user.update({ where: { id: user.id }, data: { microsoftId: msId } });
+    if (!user && finalEmail) {
+      const byEmail = await prisma.user.findUnique({ where: { email: finalEmail } });
+      if (byEmail && byEmail.microsoftId === null) {
+        user = await prisma.user.update({ where: { id: byEmail.id }, data: { microsoftId: msId } });
       }
     }
     if (!user) {
@@ -150,6 +171,7 @@ export async function GET(req: Request) {
           displayName: displayName || username,
           passwordHash: 'microsoft-oauth-no-password',
           microsoftId: msId,
+          email: finalEmail || null,
           profileComplete: false,
         },
       });

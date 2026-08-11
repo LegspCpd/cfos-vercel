@@ -6,7 +6,12 @@ import { isUserAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
 import { applyDueDeletion } from '@/lib/account-deletion';
 import { clientIp } from '@/lib/ip';
+import { loginLimiter } from '@/lib/rate-limit';
 import { z } from 'zod';
+
+// One generic message for BOTH "user not found" and "wrong password" so an attacker
+// cannot enumerate which usernames/emails exist on the site.
+const GENERIC_LOGIN_ERROR = 'Invalid username/email or password';
 
 const loginSchema = z.object({
   // Accept either "identifier" (new) or "username" (legacy). identifier may be a
@@ -22,6 +27,13 @@ export async function POST(req: Request) {
     const identifier = (body.identifier ?? body.username ?? '').trim().toLowerCase();
     const ip = clientIp(req);
 
+    // Brute-force guard: cap login attempts per identifier+IP to slow down password
+    // guessing / credential stuffing.
+    if (loginLimiter.tryCall(`${identifier}:${ip || 'unknown'}`) <= 0) {
+      await writeAudit({ username: identifier, action: 'auth.login_rate_limited', detail: 'Rate limited', ip });
+      return NextResponse.json({ error: 'Too many attempts. Please wait and try again.' }, { status: 429 });
+    }
+
     // Resolve the user by email (case-insensitive) first, then by username.
     let user =
       (await prisma.user.findFirst({
@@ -30,7 +42,7 @@ export async function POST(req: Request) {
       (await prisma.user.findUnique({ where: { username: identifier } }));
     if (!user) {
       await writeAudit({ username: identifier, action: 'auth.login_failed', detail: 'User not found', ip });
-      return NextResponse.json({ error: 'Invalid username/email or password' }, { status: 401 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
     // If the deletion deadline passed, remove the account before authenticating — the
     // freed email/username then allow re-registration.
@@ -40,7 +52,7 @@ export async function POST(req: Request) {
     const ok = await verifyPassword(user.passwordHash, body.password);
     if (!ok) {
       await writeAudit({ userId: user.id, username: user.username, action: 'auth.login_failed', detail: 'Wrong password', ip });
-      return NextResponse.json({ error: 'Invalid username or password' }, { status: 401 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     const isAdmin = user.isAdmin || (await isUserAdmin(user.id));

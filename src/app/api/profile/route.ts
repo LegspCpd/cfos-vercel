@@ -29,20 +29,23 @@ export async function PATCH(req: Request) {
   }
 
   if (body.newPassword) {
-    if (body.email && body.verificationCode) {
-      // Binding flow: user is setting their first password — no currentPassword needed.
-      data.passwordHash = await hashPassword(body.newPassword);
-    } else {
-      // Changing an existing password requires the current one.
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    // A user may set a password WITHOUT the current one ONLY if they have no real
+    // password yet (i.e. they signed up via OAuth and are completing their profile /
+    // binding an email). If they already have a real password, the current one is
+    // always required — even alongside an email+code, so a compromised session can't
+    // silently change the password just because it can bind an email.
+    const hasRealPassword = !user.passwordHash.endsWith('-oauth-no-password');
+    if (hasRealPassword) {
       if (!body.currentPassword) {
         return NextResponse.json({ error: 'Current password is required to change password.' }, { status: 400 });
       }
-      const user = await prisma.user.findUnique({ where: { id: session.userId } });
-      if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
       const ok = await verifyPassword(user.passwordHash, body.currentPassword);
       if (!ok) return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 400 });
-      data.passwordHash = await hashPassword(body.newPassword);
     }
+    data.passwordHash = await hashPassword(body.newPassword);
   }
 
   // Bind an email: verify the code, ensure it isn't taken by another account, then set it.

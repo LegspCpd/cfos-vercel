@@ -1,8 +1,18 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET || 'insecure-dev-secret-change-me',
-);
+// Resolve the JWT signing secret. SECURITY: in production the fallback secret is a
+// hardcoded, publicly-known value — using it would let anyone forge session tokens.
+// So we REQUIRE AUTH_SECRET to be set in production; only local dev may use the fallback.
+function resolveAuthSecret(): Uint8Array {
+  const raw = process.env.AUTH_SECRET;
+  if (raw) return new TextEncoder().encode(raw);
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('AUTH_SECRET is required in production. Set it in your environment variables.');
+  }
+  return new TextEncoder().encode('insecure-dev-secret-change-me');
+}
+
+const secret = resolveAuthSecret();
 
 export interface SessionPayload {
   userId: string;

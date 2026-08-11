@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { issueVerificationCode } from '@/lib/verification';
 import { resendConfigured } from '@/lib/email';
+import { emailSendLimiter } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const sendSchema = z.object({
@@ -9,22 +10,27 @@ const sendSchema = z.object({
 });
 
 // POST /api/auth/verify-code — send a verification code to an email address.
-// Body: { email }. Returns { ok, devCode? } (devCode only when Resend isn't configured).
+// Body: { email }. Returns { ok } .
 export async function POST(req: Request) {
   try {
     const body = sendSchema.parse(await req.json());
     const email = body.email.trim().toLowerCase();
 
-    // If this email already belongs to a user, block re-registration.
-    // Use a case-insensitive match: users may have registered with mixed-case emails, so
-    // a plain equals would miss them and let a second verification-code be issued for an
-    // already-taken address (enabling bulk signup / account probing).
+    // Rate-limit sends per email so an attacker can't spam a mailbox.
+    if (emailSendLimiter.tryCall(email) <= 0) {
+      // Return the same "ok" shape so we don't leak rate-limit internals to attackers.
+      return NextResponse.json({ ok: true });
+    }
+
+    // Anti-enumeration: if the email is already registered, return the SAME success
+    // response as a fresh send WITHOUT actually sending anything. This prevents both
+    // account probing (registered vs not) and email-bombing of existing addresses.
     const existing = await prisma.user.findFirst({
       where: { email: { equals: email, mode: 'insensitive' } },
       select: { id: true },
     });
     if (existing) {
-      return NextResponse.json({ error: '该邮箱已被注册' }, { status: 409 });
+      return NextResponse.json({ ok: true });
     }
 
     if (!resendConfigured()) {

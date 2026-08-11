@@ -4,6 +4,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { siteUrl } from '@/lib/site';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -44,7 +45,8 @@ export async function POST(req: Request, { params }: Ctx) {
     });
   }
 
-  const origin = req.headers.get('origin') || process.env.PUBLIC_SITE_URL || '';
-  const url = `${origin}/blueprint/${token}`;
+  // Build the absolute URL from the trusted PUBLIC_SITE_URL, NEVER from the request's
+  // Origin header (an attacker can set Origin to a phishing domain).
+  const url = siteUrl(`/blueprint/${token}`);
   return NextResponse.json({ token, url });
 }

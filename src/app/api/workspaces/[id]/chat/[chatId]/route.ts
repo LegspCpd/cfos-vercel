@@ -21,11 +21,15 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!chat) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const { role, content } = await req.json();
+  // Restrict role to user/assistant so a client can't inject a `system` message that
+  // could later act as a prompt-injection if chat is wired into the LLM.
+  const safeRole = String(role ?? 'user') === 'assistant' ? 'assistant' : 'user';
+  const safeContent = String(content ?? '').slice(0, 200_000);
   const msg = await prisma.chatMessage.create({
     data: {
       chatId: chat.id,
-      role: String(role ?? 'user'),
-      content: String(content ?? ''),
+      role: safeRole,
+      content: safeContent,
     },
   });
   await prisma.chat.update({ where: { id: chat.id }, data: { updatedAt: new Date() } });

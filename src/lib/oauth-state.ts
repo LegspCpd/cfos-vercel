@@ -13,7 +13,18 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-const SECRET = process.env.AUTH_SECRET || 'insecure-dev-secret-change-me';
+// SECURITY: require AUTH_SECRET in production (the fallback is publicly known and would
+// let an attacker forge valid OAuth state). Dev may use the fallback.
+function resolveSecret(): string {
+  const raw = process.env.AUTH_SECRET;
+  if (raw) return raw;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('AUTH_SECRET is required in production.');
+  }
+  return 'insecure-dev-secret-change-me';
+}
+
+const SECRET = resolveSecret();
 // State remains valid for 15 minutes — long enough for the OAuth round-trip.
 const STATE_TTL_MS = 15 * 60 * 1000;
 

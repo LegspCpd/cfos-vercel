@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { verifySessionToken } from '@/lib/auth';
 import { issueVerificationCode } from '@/lib/verification';
 import { resendConfigured } from '@/lib/email';
+import { emailSendLimiter } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const sendSchema = z.object({
@@ -21,6 +22,10 @@ export async function POST(req: Request) {
 
     const body = sendSchema.parse(await req.json());
     const email = body.email.trim().toLowerCase();
+
+    if (emailSendLimiter.tryCall(email) <= 0) {
+      return NextResponse.json({ error: '发送过于频繁，请稍后再试' }, { status: 429 });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

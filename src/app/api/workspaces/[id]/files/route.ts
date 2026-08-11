@@ -31,6 +31,28 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (!Array.isArray(files)) {
     return NextResponse.json({ error: 'files must be an array' }, { status: 400 });
   }
+  // Hard caps so a malicious/oversized request can't blow up memory or DB history.
+  const MAX_FILES = 200;
+  const MAX_FILE_CONTENT = 2 * 1024 * 1024; // 2 MB per file
+  const MAX_TOTAL_CONTENT = 20 * 1024 * 1024; // 20 MB per request
+  if (files.length > MAX_FILES) {
+    return NextResponse.json({ error: `Too many files (max ${MAX_FILES})` }, { status: 400 });
+  }
+  let total = 0;
+  for (const f of files) {
+    const content = String(f?.content ?? '');
+    if (content.length > MAX_FILE_CONTENT) {
+      return NextResponse.json({ error: 'File too large (max 2 MB per file)' }, { status: 400 });
+    }
+    total += content.length;
+    if (total > MAX_TOTAL_CONTENT) {
+      return NextResponse.json({ error: 'Total content too large (max 20 MB)' }, { status: 400 });
+    }
+    const path = String(f?.path ?? '').trim();
+    if (!isSafeFilePath(path)) {
+      return NextResponse.json({ error: `Invalid file path: ${path}` }, { status: 400 });
+    }
+  }
 
   // Snapshot the previous content of any file that is being changed, so it can be
   // restored later (per-file history / undo).
@@ -101,6 +123,19 @@ export async function DELETE(req: Request, { params }: Ctx) {
     select: { id: true },
   });
   if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!isSafeFilePath(path)) return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
   await prisma.workspaceFile.deleteMany({ where: { workspaceId: params.id, path } });
   return NextResponse.json({ ok: true });
+}
+
+// Validate a workspace file path: reject path traversal, empty, control chars, and
+// overly long paths. Keeps DB keys well-formed and prevents ../ abuse.
+function isSafeFilePath(path: string): boolean {
+  if (!path || path.length > 255) return false;
+  if (path.includes('..') || path.includes('\\')) return false;
+  // Reject control characters and the NUL byte.
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f]/.test(path)) return false;
+  if (path.startsWith('/') || path.startsWith('.') || path.endsWith('/')) return false;
+  return true;
 }

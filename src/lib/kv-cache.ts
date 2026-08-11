@@ -30,7 +30,6 @@ const FETCH_TIMEOUT_MS = 3000;
 type MaybePromise<T> = T | Promise<T>;
 
 interface Store {
-  index: number; // 1-based store number (1 = the base store)
   accountId: string;
   token: string;
   namespaceId: string;
@@ -51,7 +50,7 @@ function stores(): Store[] {
     const token = process.env[`KV_API_TOKEN${suffix}`];
     const namespaceId = process.env[`KV_NAMESPACE_ID${suffix}`];
     if (accountId && token && namespaceId) {
-      out.push({ index: i, accountId, token, namespaceId });
+      out.push({ accountId, token, namespaceId });
     }
   }
   return out;
@@ -178,7 +177,8 @@ export async function cachedJson<T>(
     try {
       return JSON.parse(cached) as T;
     } catch {
-      /* corrupt — fall through to reload */
+      // Corrupt/unparseable value — drop it so we don't re-read and re-reload it every time.
+      await kvDelete(key);
     }
   }
 

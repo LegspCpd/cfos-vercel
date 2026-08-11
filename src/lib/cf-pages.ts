@@ -88,11 +88,11 @@ export async function deployFiles(
   project: string,
   files: PagesFile[],
 ): Promise<{ url: string; deploymentId: string }> {
-  // Build the file manifest with SHA-256 hashes.
-  const manifest = files.map((f) => ({
-    path: f.path,
-    hash: createHash('sha256').update(f.content).digest('hex'),
-  }));
+  // Cloudflare Direct Upload expects the manifest hash to be the base64 (standard) SHA-256
+  // of each file, and missing_hashes in the response uses the same encoding. Using hex here
+  // is a common failure (CF can't match the file to its hash), so we must use base64.
+  const hashOf = (buf: Buffer) => createHash('sha256').update(buf).digest('base64');
+  const manifest = files.map((f) => ({ path: f.path, hash: hashOf(f.content) }));
 
   const create = await cf(`/accounts/${accountId()}/pages/projects/${project}/deployments`, {
     method: 'POST',
@@ -107,7 +107,7 @@ export async function deployFiles(
     // Upload missing file contents concatenated in the exact order of missing_hashes.
     const byHash = new Map<string, Buffer>();
     for (const f of files) {
-      byHash.set(createHash('sha256').update(f.content).digest('hex'), f.content);
+      byHash.set(hashOf(f.content), f.content);
     }
     const chunks = missing.map((h) => byHash.get(h)).filter((c): c is Buffer => Boolean(c));
     const body = Buffer.concat(chunks);

@@ -1,0 +1,14 @@
+fix(deploy): use base64 SHA-256 in the Pages Direct Upload manifest (502 fix)
+
+Deploy returned 502 because the Cloudflare Pages Direct Upload manifest used hex
+SHA-256 hashes while Cloudflare expects base64-encoded hashes, so it could not
+match files to their hashes and the upload/creation failed.
+
+- cf-pages.ts: compute file hashes as base64 (digest('base64')) for both the
+  create-deployment manifest and the missing_hashes lookup, so the upload finds
+  every file.
+- api.ts: when an API returns a non-2xx with a body that has no `error` field,
+  surface the JSON body in the thrown message instead of a bare "Request failed
+  (502)", so the real Cloudflare error is visible.
+
+Verified: tsc --noEmit clean, lint clean.

@@ -94,27 +94,33 @@ or ZIP uploads to Cloudflare Pages as static sites, and auto-creates short links
 
 Used to make slow cross-service calls (the Cloudflare Pages project list, GitHub/GitLab repo enumeration) feel instant on repeat visits. Everything degrades gracefully when not configured (falls back to a per-instance in-memory cache).
 
-**Multi-region (up to 5 KV namespaces).** Reads route to the KV store nearest to the request (from Vercel's `x-vercel-ip-country`), falling back through the other regions on a miss; writes fan out to every configured region so any nearby reader can hit. Region codes: `ASIA`, `NA` (North America), `SA` (South America), `EU` (Europe). If a region has two KV stores, append `-2`.
+**Up to 5 KV namespaces.** The first store uses the base names; additional stores append a numeric suffix (`_2` … `_5`). Reads try the stores in order (store 1 first) and fall through on a miss; writes fan out to **every** configured store so any reader finds the value. You only need one store to get going — the rest are optional.
 
-Each configured region uses three vars (replace `<REGION>` with `ASIA` / `NA` / `SA` / `EU`, and add `_2` for a second store in a region):
+Store 1 (required base):
 
 | Variable | Description |
 |---|---|
-| `KV_<REGION>_ACCOUNT_ID` | Cloudflare account id (same account as the Pages projects). |
-| `KV_<REGION>_API_TOKEN` | Cloudflare API token with KV read/write on the namespace. You can reuse `PAGES_KEY` if that token also has **Workers KV → Edit** permission, otherwise create a dedicated token. |
-| `KV_<REGION>_NAMESPACE_ID` | The KV namespace id to store into. Create a namespace in Cloudflare → Workers & Pages → KV and paste its ID here — "give it an ID and it just works". |
+| `KV_ACCOUNT_ID` | Cloudflare account id (same account as the Pages projects). |
+| `KV_API_TOKEN` | Cloudflare API token with KV read/write on the namespace. You can reuse `PAGES_KEY` if that token also has **Workers KV → Edit** permission, otherwise create a dedicated token. |
+| `KV_NAMESPACE_ID` | The KV namespace id to store into. Create a namespace in Cloudflare → Workers & Pages → KV and paste its ID here — "give it an ID and it just works". |
 
-Example — an Asia store plus a second Asia store:
+Stores 2–5 (optional) — same three vars with a numeric suffix:
+
+| Variable | Description |
+|---|---|
+| `KV_ACCOUNT_ID_N` / `KV_API_TOKEN_N` / `KV_NAMESPACE_ID_N` | The N-th store (N = 2..5), where N is a plain number (e.g. `KV_NAMESPACE_ID_2`). |
+
+Example — two stores:
 ```
-KV_ASIA_ACCOUNT_ID=...
-KV_ASIA_API_TOKEN=...
-KV_ASIA_NAMESPACE_ID=...
-KV_ASIA_2_ACCOUNT_ID=...
-KV_ASIA_2_API_TOKEN=...
-KV_ASIA_2_NAMESPACE_ID=...
+KV_ACCOUNT_ID=...
+KV_API_TOKEN=...
+KV_NAMESPACE_ID=...
+KV_ACCOUNT_ID_2=...
+KV_API_TOKEN_2=...
+KV_NAMESPACE_ID_2=...
 ```
 
-Shared tuning vars (one set, applies to all regions):
+Shared tuning vars (one set, applies to all stores):
 
 | Variable | Description |
 |---|---|

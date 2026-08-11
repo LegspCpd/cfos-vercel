@@ -142,9 +142,9 @@
 | `VERIFY_CODE_TTL_MINUTES` | 邮箱验证码有效分钟数，默认 `10`。 |
 | `CRON_SECRET` | 定时清理任务（cron）的访问密钥。 |
 
-### 多地区 KV 响应缓存（可选）
+### 多库 KV 响应缓存（可选）
 
-用于加速 Pages 部署相关接口（项目列表、Git 仓库枚举等），让重复访问"秒开"。**默认一个 KV 库即可用**，最多可配 5 个按地区分布（读取就近、写入全量）。未配置时自动回退到进程内内存缓存，不影响功能。详细使用教程见 [KV 缓存使用指南](/docs/kv)。
+用于加速 Pages 部署相关接口（项目列表、Git 仓库枚举等），让重复访问"秒开"。**默认一个 KV 库即可用**，最多可配 5 个（第 2 个起加数字后缀 `_2`…`_5`；写入全量、读取按序回退）。未配置时自动回退到进程内内存缓存，不影响功能。详细使用教程见 [KV 缓存使用指南](/docs/kv)。
 
 **默认单库（配这 3 个就能用）**
 
@@ -154,24 +154,22 @@
 | `KV_API_TOKEN` | Cloudflare API Token，需有该 namespace 的 **Workers KV → Edit** 权限（若 `PAGES_KEY` 已含 KV:Edit 可直接复用）。 |
 | `KV_NAMESPACE_ID` | KV 命名空间 ID。在 Cloudflare 控制台 → Workers & Pages → KV → 创建命名空间，把生成的 Namespace ID 填进来即可。 |
 
-**可选的多地区库（提升就近速度，最多再加 4 个）**
+**可选的更多库（最多再加 4 个，共 5 个）**
 
-地区代码：`ASIA`（亚洲）/ `NA`（北美）/ `SA`（南美）/ `EU`（欧洲），同一地区有两个库就在后面加 `-2`。每个地区 3 个变量：
+第 1 个库用基础名；之后的每个库在三个变量后加**数字后缀**（`_2` … `_5`），纯序号、不带地区：
 
 | 变量 | 说明 |
 |---|---|
-| `KV_<地区>_ACCOUNT_ID` | 该地区库的账户 ID。 |
-| `KV_<地区>_API_TOKEN` | 该地区库的 API Token。 |
-| `KV_<地区>_NAMESPACE_ID` | 该地区库的 Namespace ID。 |
+| `KV_ACCOUNT_ID_N` / `KV_API_TOKEN_N` / `KV_NAMESPACE_ID_N` | 第 N 个库（N = 2..5），例如第 2 个库为 `KV_NAMESPACE_ID_2`。 |
 
-示例——亚洲一个 + 亚洲第二个：
+示例——两个库：
 ```
-KV_ASIA_ACCOUNT_ID=...
-KV_ASIA_API_TOKEN=...
-KV_ASIA_NAMESPACE_ID=...
-KV_ASIA_2_ACCOUNT_ID=...
-KV_ASIA_2_API_TOKEN=...
-KV_ASIA_2_NAMESPACE_ID=...
+KV_ACCOUNT_ID=...
+KV_API_TOKEN=...
+KV_NAMESPACE_ID=...
+KV_ACCOUNT_ID_2=...
+KV_API_TOKEN_2=...
+KV_NAMESPACE_ID_2=...
 ```
 
 **共享调优（一套，作用于所有库）**

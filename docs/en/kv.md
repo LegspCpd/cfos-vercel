@@ -36,34 +36,28 @@ seconds. Caching the result in KV means:
 > Workers" template usually already includes **Workers KV → Edit**; otherwise create a custom
 > token and grant **Account → Workers KV → Edit**.
 
-## 2. (Optional) Add 4 regional stores for nearest-store reads
+## 2. (Optional) Add up to 4 more KV stores
 
-If your users are global, create one KV namespace per region so each region reads locally.
+If you have several KV namespaces (e.g. spread across regions), you can configure up to
+**5** total. The first uses the base names; each extra store appends a numeric suffix
+(`_2` … `_5`) to the three variables.
 
-- Up to **5** KV stores: `ASIA`, `NA` (North America), `SA` (South America), `EU` (Europe).
-- Each region uses 3 vars: `KV_<REGION>_ACCOUNT_ID` / `KV_<REGION>_API_TOKEN` /
-  `KV_<REGION>_NAMESPACE_ID`.
-- If a region has **two** stores, append `-2` (e.g. `KV_ASIA_2_*`).
-
-Example — Asia (×2) + North America:
+Example — two stores:
 ```
-KV_ASIA_ACCOUNT_ID=...
-KV_ASIA_API_TOKEN=...
-KV_ASIA_NAMESPACE_ID=...
-KV_ASIA_2_ACCOUNT_ID=...
-KV_ASIA_2_API_TOKEN=...
-KV_ASIA_2_NAMESPACE_ID=...
-KV_NA_ACCOUNT_ID=...
-KV_NA_API_TOKEN=...
-KV_NA_NAMESPACE_ID=...
+KV_ACCOUNT_ID=...
+KV_API_TOKEN=...
+KV_NAMESPACE_ID=...
+KV_ACCOUNT_ID_2=...
+KV_API_TOKEN_2=...
+KV_NAMESPACE_ID_2=...
 ```
 
 **Read/write strategy**:
-- **Write**: data is written to **every** configured store (all of them), so every region has a
-  replica.
-- **Read**: route to the store nearest to the request (from Vercel's `x-vercel-ip-country`),
-  falling back through the other stores on a miss.
-- With only the default store configured, reads and writes both use that one store.
+- **Write**: data is written to **every** configured store (all of them), so any reader finds
+  it regardless of which store it hits.
+- **Read**: try the stores in order (store 1 first), falling through to the next store on a
+  miss.
+- With only the base store configured, reads and writes both use that one store.
 
 ## 3. Tuning (optional)
 

@@ -56,7 +56,7 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **Cloudflare Pages-style deploy** at `/pages` — deploy a static site from a **workspace**, a **GitHub/GitLab repo**, or a **ZIP/文件夹** upload, all in one UI
 - Live project list with real `.pages.dev` subdomains, custom-domain binding, delete-with-confirmation, and source-aware redeploy
 - Optional **short links** (sink.cool) that redirect to the long Pages URL
-- Optional **multi-region Cloudflare KV** response cache (up to 5 namespaces, nearest-store reads) to keep Pages project lists and Git repo enumeration instant
+- Optional **Cloudflare KV** response cache (up to 5 namespaces, numbered `KV_*_2`…`_5`, write-all / read-fallthrough) to keep Pages project lists and Git repo enumeration instant
 
 ### Persistence
 - **Postgres** via Prisma (Vercel Postgres or Neon free tier), replacing the original Durable Object + SQLite model

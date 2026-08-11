@@ -41,7 +41,7 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 - [环境变量](/docs/env) — 全部环境变量详解
 - [登录与 OAuth](/docs/github-login) — 配置 GitHub / Google / Microsoft 登录 + GitLab 外部连接与 Pages 仓库部署
 - [文件分享 R2](/docs/r2) — 配置 Cloudflare R2 存储
-- [KV 缓存加速](/docs/kv) — 多地区 KV 缓存，让页面秒开
+- [KV 缓存加速](/docs/kv) — 多库 KV 缓存，让页面秒开
 - [Cloudflare Access](/docs/cf-access) — 完整版 SSO 门禁
 - [数据库备份](/docs/backup) — 用 Neon 平台能力保护数据
 - [Pages 部署](/docs/cloudflare-deploy) — 部署工作区 / Git 仓库 / ZIP 到 Cloudflare Pages + 短链

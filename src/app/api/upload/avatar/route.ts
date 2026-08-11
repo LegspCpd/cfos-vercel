@@ -46,6 +46,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Image must be smaller than 5 MB' }, { status: 400 });
   }
 
+  // Don't trust the browser-reported MIME alone — sniff the magic bytes so a
+  // file renamed to .png but actually containing HTML/JS can't be uploaded.
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!looksLikeAllowedImage(head)) {
+    return NextResponse.json({ error: 'File is not a valid image' }, { status: 400 });
+  }
+
   // Build the upload request to the image host (POST /upload?uploadFolder=).
   const uploadUrl = new URL('/upload', IMGHOST_BASE);
   uploadUrl.searchParams.set('uploadFolder', IMGHOST_FOLDER);
@@ -77,4 +84,26 @@ export async function POST(req: Request) {
   await prisma.user.update({ where: { id: session.userId }, data: { avatarUrl: imageUrl } });
 
   return NextResponse.json({ url: imageUrl });
+}
+
+// Sniff the leading bytes of an image file to confirm it really is one of the
+// allowed raster formats (PNG/JPEG/GIF/WEBP), ignoring whatever MIME the browser
+// claimed. Returns false for HTML/SVG/other disguised content.
+function looksLikeAllowedImage(head: Uint8Array): boolean {
+  const len = head.length;
+  // PNG: 89 50 4E 47
+  if (len >= 4 && head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return true;
+  // JPEG: FF D8 FF
+  if (len >= 3 && head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return true;
+  // GIF: "GIF8"
+  if (len >= 4 && head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x38) return true;
+  // WEBP: "RIFF" .... "WEBP" (bytes 8..11)
+  if (
+    len >= 12 &&
+    head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 &&
+    head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50
+  ) {
+    return true;
+  }
+  return false;
 }

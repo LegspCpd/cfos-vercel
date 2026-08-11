@@ -51,6 +51,15 @@ export async function GET(req: Request) {
     const targetUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
     if (!targetUser) return redirectError('用户不存在');
 
+    // If this Google identity is already linked to another account, block the connect
+    // to avoid stealing another user's Google login.
+    if (info.sub) {
+      const boundTo = await prisma.user.findUnique({ where: { googleId: info.sub } });
+      if (boundTo && boundTo.id !== userId) {
+        return redirectError('该 Google 账号已绑定到另一个用户');
+      }
+    }
+
     await prisma.googleConnection.upsert({
       where: { userId },
       update: { accessToken: tokenJson.access_token, refreshToken: tokenJson.refresh_token ?? null, googleEmail: email },

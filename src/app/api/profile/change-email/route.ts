@@ -89,7 +89,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '该邮箱已被其他账号使用' }, { status: 409 });
     }
 
-    await prisma.user.update({ where: { id: user.id }, data: { email: newEmail } });
+    try {
+      await prisma.user.update({ where: { id: user.id }, data: { email: newEmail } });
+    } catch (e) {
+      // The taken-check above is best-effort; a concurrent change or a case-variant
+      // of the email can still trip the unique index. Surface a clean 409.
+      if ((e as { code?: string })?.code === 'P2002') {
+        return NextResponse.json({ error: '该邮箱已被其他账号使用' }, { status: 409 });
+      }
+      throw e;
+    }
     await writeAudit({
       userId: user.id,
       username: user.username,

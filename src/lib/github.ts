@@ -22,7 +22,12 @@ export async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> 
 export async function saveGitHubConnection(userId: string, accessToken: string): Promise<string> {
   const gh = await fetchGitHubUser(accessToken);
   const login = gh.login.toLowerCase();
-  // If a local user with this username exists, they are the same person.
+  // If this GitHub identity is already linked to another account, block the connect
+  // to avoid stealing another user's GitHub login.
+  const boundTo = await prisma.user.findUnique({ where: { githubId: gh.id } });
+  if (boundTo && boundTo.id !== userId) {
+    throw new Error('该 GitHub 账号已绑定到另一个用户');
+  }
   await prisma.gitHubConnection.upsert({
     where: { userId },
     update: { accessToken, githubLogin: login },

@@ -84,11 +84,20 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await hashPassword(body.newPassword);
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: { username, passwordHash, email, profileComplete: true },
-      select: { id: true, username: true, displayName: true, email: true },
-    });
+    let updated;
+    try {
+      updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { username, passwordHash, email, profileComplete: true },
+        select: { id: true, username: true, displayName: true, email: true },
+      });
+    } catch (e) {
+      // Concurrent completion / email race hit a unique constraint.
+      if ((e as { code?: string })?.code === 'P2002') {
+        return NextResponse.json({ error: '该用户名或邮箱已被使用' }, { status: 409 });
+      }
+      throw e;
+    }
 
     await writeAudit({
       userId: user.id,

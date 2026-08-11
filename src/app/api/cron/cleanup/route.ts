@@ -34,9 +34,23 @@ export async function GET(req: Request) {
     where: { id: { in: expired.map((f) => f.id) } },
   });
 
+  // Also purge accounts whose deletion cooldown has passed but who never logged in
+  // again after the deadline (applyDueDeletion only runs on active entry points).
+  // Related rows are removed by the schema's onDelete: Cascade.
+  let deletedAccounts = 0;
+  const due = await prisma.user.findMany({
+    where: { deleteAt: { not: null, lt: now } },
+    select: { id: true },
+  });
+  if (due.length > 0) {
+    const del = await prisma.user.deleteMany({ where: { id: { in: due.map((u) => u.id) } } });
+    deletedAccounts = del.count;
+  }
+
   return NextResponse.json({
     ok: true,
     deletedFromR2,
     deletedRecords: deletedRecords.count,
+    deletedAccounts,
   });
 }

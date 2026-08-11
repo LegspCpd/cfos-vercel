@@ -115,9 +115,19 @@ export async function POST(req: Request) {
     const passwordHash = await hashPassword(body.password);
     const displayName = body.displayName || username;
 
-    const user = await prisma.user.create({
-      data: { username, displayName, passwordHash, email: email ?? null },
-    });
+    // Concurrency-safe: the existence checks above are a fast path, but a unique
+    // constraint (P2002) is the real authority. Handle the race cleanly.
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: { username, displayName, passwordHash, email: email ?? null },
+      });
+    } catch (e) {
+      if (isUniqueViolation(e)) {
+        return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
+      }
+      throw e;
+    }
 
     // The first user ever created becomes the bootstrap admin.
     await maybeBootstrapAdmin(user.username);
@@ -148,4 +158,14 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+}
+
+// Prisma throws a unique-constraint violation with code P2002 (e.g. two concurrent
+// signups both passing the existence check). Turn it into a clean 409.
+function isUniqueViolation(e: unknown): boolean {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    (e as { code?: string }).code === 'P2002'
+  );
 }

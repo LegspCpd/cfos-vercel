@@ -40,8 +40,8 @@ function loadScript(src: string): Promise<number> {
     const s = document.createElement('script');
     s.src = src;
     s.async = true;
-    s.onload = () => resolve(performance.now() - start);
-    s.onerror = () => resolve(Infinity);
+    s.addEventListener('load', () => resolve(performance.now() - start), { once: true });
+    s.addEventListener('error', () => resolve(Infinity), { once: true });
     document.head.appendChild(s);
   });
   scriptCache.set(src, p);

@@ -21,15 +21,21 @@ export async function GET(req: Request, { params }: Ctx) {
   const file = await prisma.sharedFile.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!file) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Expired?
+  // Expired? Return 410 but leave the record for cron to clean up — a mere "read"
+  // should not permanently delete the share (and concurrent reads could double-delete).
   if (file.expiresAt < new Date()) {
-    await deleteSharedFile(file.id, session.userId);
     return NextResponse.json({ error: 'This share link has expired.' }, { status: 410 });
   }
 
   let url: string;
   try {
-    url = await r2GetPresignedUrl(file.r2Key, 900); // 15 min window
+    // Make the presigned URL valid for the remaining lifetime of the share
+    // (clamped to AWS's 7-day max for presigned URLs). This way a link copied
+    // once stays usable until the share itself expires, instead of dying after
+    // a fixed 15 minutes.
+    const remainingSecs = Math.max(1, Math.floor((file.expiresAt.getTime() - Date.now()) / 1000));
+    const ttlSecs = Math.min(remainingSecs, 7 * 24 * 60 * 60);
+    url = await r2GetPresignedUrl(file.r2Key, ttlSecs);
   } catch (e) {
     console.error('presign failed', e);
     return NextResponse.json({ error: 'Failed to create download link.' }, { status: 500 });

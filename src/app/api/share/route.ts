@@ -48,13 +48,25 @@ export async function POST(req: Request) {
   if (!fileName) return NextResponse.json({ error: 'fileName is required' }, { status: 400 });
   if (!body.content) return NextResponse.json({ error: 'content (base64) is required' }, { status: 400 });
 
+  // Reject obviously-oversized payloads BEFORE decoding, to avoid loading a huge
+  // string into memory (base64 is ~4/3 the decoded size; allow a little slack).
+  const MAX_BYTES = 50 * 1024 * 1024;
+  if (body.content.length > Math.ceil((MAX_BYTES / 3) * 4) + 4096) {
+    return NextResponse.json({ error: 'File too large (max 50MB)' }, { status: 400 });
+  }
+
   let buffer: Buffer;
-  try {
-    buffer = Buffer.from(body.content, 'base64');
-  } catch {
+  // Buffer.from(base64) never throws on invalid input — it silently decodes what it
+  // can. Do a strict round-trip so malformed payloads are actually rejected.
+  const strictBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(body.content) && body.content.length % 4 === 0;
+  if (!strictBase64) {
     return NextResponse.json({ error: 'Invalid base64 content' }, { status: 400 });
   }
-  if (buffer.length > 50 * 1024 * 1024) {
+  buffer = Buffer.from(body.content, 'base64');
+  if (buffer.toString('base64').replace(/=+$/, '') !== body.content.replace(/=+$/, '')) {
+    return NextResponse.json({ error: 'Invalid base64 content' }, { status: 400 });
+  }
+  if (buffer.length > MAX_BYTES) {
     return NextResponse.json({ error: 'File too large (max 50MB)' }, { status: 400 });
   }
 
@@ -63,7 +75,10 @@ export async function POST(req: Request) {
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
   const key = `share/${session.userId}/${crypto.randomUUID()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-  const mimeType = body.mimeType || 'application/octet-stream';
+  // Never serve active content inline from R2 (would enable stored XSS on open).
+  // Restrict to safe types; anything unknown degrades to application/octet-stream
+  // so browsers download rather than render.
+  const mimeType = sanitizeMimeType(body.mimeType);
 
   try {
     await r2Put({ key, body: buffer, contentType: mimeType });
@@ -93,4 +108,34 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ file: { id: file.id, fileName, sizeBytes: file.sizeBytes, expiresAt, mimeType } }, { status: 201 });
+}
+
+// Allowlist of MIME types safe to serve inline. Anything not in this list (or not a
+// plain image/pdf/archive/video/audio/text type) is downgraded to octet-stream so the
+// browser downloads instead of rendering (which could execute HTML/SVG/JS).
+const SAFE_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'font/'];
+const SAFE_EXACT = new Set([
+  'application/pdf',
+  'application/json',
+  'application/javascript',
+  'text/plain',
+  'text/csv',
+  'text/markdown',
+  'application/zip',
+  'application/x-tar',
+  'application/gzip',
+  'application/x-7z-compressed',
+  'application/vnd.rar',
+  'application/octet-stream',
+  'text/css',
+  'application/xml',
+  'application/wasm',
+]);
+function sanitizeMimeType(mime: string | undefined): string {
+  const raw = (mime || 'application/octet-stream').toLowerCase().trim().split(';')[0];
+  if (SAFE_EXACT.has(raw)) return raw;
+  if (SAFE_MIME_PREFIXES.some((p) => raw.startsWith(p))) return raw;
+  // text/html, image/svg+xml, text/javascript, application/xhtml+xml, etc.
+  // are NOT in the allowlist -> force download.
+  return 'application/octet-stream';
 }

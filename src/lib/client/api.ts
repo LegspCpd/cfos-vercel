@@ -367,11 +367,8 @@ export const api = {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
-        while (true) {
-          const { done: streamDone, value } = await reader.read();
-          if (streamDone) break;
-          buf += decoder.decode(value, { stream: true });
-          // SSE frames are separated by a blank line.
+        // Parse every complete SSE frame in `buf` and drop it from the buffer.
+        const drainFrames = () => {
           let idx: number;
           while ((idx = buf.indexOf('\n\n')) !== -1) {
             const frame = buf.slice(0, idx);
@@ -386,6 +383,26 @@ export const api = {
             }
             if (parsed.type === 'data' && parsed.text) onData({ text: parsed.text, isError: false });
             if (parsed.type === 'error' && parsed.text) onData({ text: parsed.text, isError: true });
+          }
+        };
+        while (true) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          buf += decoder.decode(value, { stream: true });
+          drainFrames();
+        }
+        // Flush any trailing frame the server sent without a closing blank line, so the
+        // final chunk of output is not lost.
+        if (buf.trim()) {
+          const dataLine = buf.split('\n').find((l) => l.startsWith('data: '));
+          if (dataLine) {
+            try {
+              const parsed = JSON.parse(dataLine.slice(6));
+              if (parsed.type === 'data' && parsed.text) onData({ text: parsed.text, isError: false });
+              if (parsed.type === 'error' && parsed.text) onData({ text: parsed.text, isError: true });
+            } catch {
+              /* ignore malformed tail */
+            }
           }
         }
       } catch (e) {

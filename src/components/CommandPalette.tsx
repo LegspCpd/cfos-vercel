@@ -88,7 +88,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                setHighlight((h) => Math.min(h + 1, allItems.length - 1));
+                setHighlight((h) => Math.min(h + 1, Math.max(0, allItems.length - 1)));
               } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 setHighlight((h) => Math.max(h - 1, 0));

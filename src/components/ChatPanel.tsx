@@ -55,6 +55,10 @@ export default function ChatPanel({
 
   // Load the latest chat thread for this workspace (create one if none exists).
   useEffect(() => {
+    // Reset the auto-send guard when the workspace changes, so a prompt carried over from
+    // the home page fires for the new workspace (the component may be reused across /w/:id
+    // navigations, and refs are not reset automatically).
+    sentAutoRef.current = false;
     let cancelled = false;
     (async () => {
       try {

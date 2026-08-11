@@ -68,22 +68,49 @@ export default function WorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, router]);
 
-  // Debounced autosave.
+  // Debounced autosave. `saveInFlightRef` tracks an in-progress PUT so runAgent can wait
+  // for it (and cancel a pending one) before issuing the agent write — preventing a stale
+  // autosave PUT from landing after the agent POST and silently rolling back its changes.
+  const saveInFlightRef = useRef<Promise<void> | null>(null);
+
+  // Persist the current files immediately (used by runAgent before its own write).
+  const flushSave = useCallback(async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (saveInFlightRef.current) {
+      try {
+        await saveInFlightRef.current;
+      } catch {
+        /* saved above */
+      }
+    }
+    const snapshot = filesRef.current.map((f) => ({ path: f.path, content: f.content }));
+    setSaving(true);
+    const p = api
+      .saveFiles(id, snapshot)
+      .then(() => {
+        // Only mark saved if no newer edits arrived during the save (dirtyRef non-empty
+        // means the user edited again while we were saving).
+        if (dirtyRef.current.size === 0) setSaved(true);
+        dirtyRef.current.clear();
+        forceDirty((n) => n + 1);
+      })
+      .finally(() => setSaving(false));
+    saveInFlightRef.current = p;
+    await p;
+  }, [id]);
+
   const scheduleSave = useCallback(() => {
     setSaved(false);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try {
-        setSaving(true);
-        await api.saveFiles(id, filesRef.current.map((f) => ({ path: f.path, content: f.content })));
-        setSaved(true);
-        dirtyRef.current.clear();
-        forceDirty((n) => n + 1);
-      } finally {
-        setSaving(false);
-      }
+    saveTimer.current = setTimeout(() => {
+      saveInFlightRef.current = flushSave().catch(() => {});
     }, 800);
-  }, [id]);
+  }, [flushSave]);
+
+  // Clear any pending autosave timer on unmount.
+  useEffect(() => () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+  }, []);
 
   // Listen for preview refresh from Preview component.
   useEffect(() => {
@@ -172,6 +199,9 @@ export default function WorkspacePage() {
   async function runAgent(prompt: string) {
     setAgentBusy(true);
     try {
+      // Persist any unsaved edits first so the agent's write starts from the latest files
+      // and no stale autosave PUT can overwrite the agent's result afterwards.
+      await flushSave();
       const res = await api.runAgent(id, prompt);
       filesRef.current = res.files.map((f) => ({ id: crypto.randomUUID(), ...f }));
       if (res.files.length > 0) {

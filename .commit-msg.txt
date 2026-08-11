@@ -1,0 +1,32 @@
+fix: runtime bugs found in deep code review (autosave race, SSE tail loss, more)
+
+Deep review of high-traffic workspace/agent/editor paths found and fixed real
+runtime bugs:
+
+1) Data-loss race (HIGH): the debounced autosave PUT could land after the agent
+   POST and silently overwrite the agent's changes. runAgent now flushes pending
+   edits (flushSave) before calling the agent, and tracks in-flight saves so a
+   stale snapshot can't clobber newer writes.
+
+2) Save-state bug (HIGH): autosave set saved=true unconditionally on completion,
+   even if the user edited again mid-save. Now only marks saved when no new dirty
+   paths arrived (dirtyRef empty).
+
+3) SSE tail loss (MED): execSshHost only parsed frames delimited by a blank line
+   and dropped a trailing chunk with no closing newline. Added a drainFrames
+   helper plus a final flush of the remaining buffer so the last command output
+   isn't lost.
+
+4) Auto-prompt loss (MED): ChatPanel sentAutoRef was never reset when switching
+   workspaces, so a carried-over prompt didn't fire for the new workspace. Reset
+   it when the workspaceId effect reloads the chat.
+
+5) Autosave timer now cleared on unmount (was a pending save firing after nav).
+
+6) CommandPalette: highlight index could become -1 with zero results. Guarded with
+   Math.max(0, ...).
+
+Skipped the audit-log multi-shard offset pagination refactor (Bug 5/6) to avoid
+regression risk on a rare edge case, keeping behavior stable.
+
+Verified: tsc --noEmit clean, lint clean on all four touched files.

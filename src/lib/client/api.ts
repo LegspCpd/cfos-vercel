@@ -292,6 +292,34 @@ export const api = {
     request<{ ok: boolean }>('/api/gitlab/disconnect', { method: 'POST' }),
   githubTool: (args: Record<string, unknown>) =>
     request<{ result?: string; error?: string }>('/api/github/tool', { method: 'POST', body: JSON.stringify(args) }),
+  // Deploy a workspace to Cloudflare Pages (optionally mints a short link).
+  deployWorkspace: (workspaceId: string) =>
+    request<{ ok: boolean; deploymentId?: string; pagesUrl?: string; shortUrl?: string | null; error?: string }>(
+      '/api/deploy',
+      { method: 'POST', body: JSON.stringify({ workspaceId }) },
+    ),
+  listDeployments: () =>
+    request<{
+      deployments: {
+        id: string;
+        workspaceId: string;
+        workspaceTitle: string;
+        pagesProject: string;
+        status: string;
+        pagesUrl: string | null;
+        shortUrl: string | null;
+        customDomain: string | null;
+        error: string | null;
+        createdAt: string;
+      }[];
+    }>('/api/deploy/list'),
+  checkDeployment: (id: string) =>
+    request<{ ok: boolean; status: string; error?: string | null; cfStatus?: unknown }>(`/api/deploy/${id}/status`),
+  bindDeploymentDomain: (id: string, domain: string) =>
+    request<{ ok: boolean; customDomain?: string; error?: string }>(`/api/deploy/${id}/domain`, {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    }),
   listSshHosts: () =>
     request<{
       hosts: {

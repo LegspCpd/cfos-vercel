@@ -89,6 +89,15 @@
 | `NEXT_PUBLIC_COMMENTS_SERVER_URL` | Waline 评论服务器地址（启用评论时使用）。 |
 | `NEXT_PUBLIC_WALINE_CSS` / `NEXT_PUBLIC_WALINE_JS` | Waline 前端资源 CDN 地址，默认 unpkg 官方源。 |
 
+### 部署服务（Cloudflare Pages + 短链，可选）
+
+| 变量 | 说明 |
+|---|---|
+| `PAGES_KEY` | Cloudflare API Token，需具备 Cloudflare Pages 编辑/部署权限；配置后启用工作区「部署」功能。 |
+| `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID（控制台首页右下角）。部署到 Pages 必需。 |
+| `S_LINK` | 短链服务（sink.cool / s.legspcpd.top）的站点 Token；配置后部署完成自动生成短链。 |
+| `S_LINK_BASE` | 短链系统基址，默认 `https://sink.cool`。 |
+
 ### 其他
 
 | 变量 | 说明 |

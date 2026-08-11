@@ -55,6 +55,7 @@ model User {
   favorites  Favorite[]
   tickets    Ticket[]
   sshHosts   SshHost[]
+  deployments Deployment[]
   group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }
 
@@ -148,6 +149,7 @@ model Workspace {
   files WorkspaceFile[]
   chats Chat[]
   favorites Favorite[]
+  deployments Deployment[]
 }
 
 // A user's favorite (starred) workspace, mirroring the original OS's "favorites" rail.
@@ -161,6 +163,28 @@ model Favorite {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+}
+
+// A deployment of a workspace to Cloudflare Pages, plus its short link (s.legspcpd.top).
+model Deployment {
+  id            String   @id @default(cuid())
+  userId        String
+  workspaceId   String
+  pagesProject  String   // Cloudflare Pages project name (workspace slug)
+  cfDeploymentId String? // Cloudflare deployment id (for status checks)
+  status        String   @default("pending") // pending | deploying | deployed | failed
+  pagesUrl      String?  // https://<project>.pages.dev
+  shortUrl      String?  // https://s.legspcpd.top/xxxxxx
+  customDomain  String?  // optional custom domain bound to the project
+  error         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([workspaceId])
 }
 
 // One file inside a workspace.

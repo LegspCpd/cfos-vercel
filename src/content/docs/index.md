@@ -43,6 +43,7 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 - [文件分享 R2](/docs/r2) — 配置 Cloudflare R2 存储
 - [Cloudflare Access](/docs/cf-access) — 完整版 SSO 门禁
 - [数据库备份](/docs/backup) — 用 Neon 平台能力保护数据
+- [工作区部署](/docs/cloudflare-deploy) — 一键部署到 Cloudflare Pages + 短链
 - [使用说明](/docs/usage) — 怎么用这个工作区
 - [常见问题](/docs/faq) — 排错与技巧
 

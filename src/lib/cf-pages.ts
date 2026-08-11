@@ -59,6 +59,32 @@ export interface PagesFile {
   contentType?: string;
 }
 
+// Best-effort MIME type from a file extension (used in the manifest).
+function contentTypeOf(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    html: 'text/html',
+    htm: 'text/html',
+    css: 'text/css',
+    js: 'application/javascript',
+    mjs: 'application/javascript',
+    json: 'application/json',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    ico: 'image/x-icon',
+    txt: 'text/plain',
+    md: 'text/markdown',
+    xml: 'application/xml',
+    wasm: 'application/wasm',
+    pdf: 'application/pdf',
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
 // Get or create a Pages project. Returns { name, subdomain } where subdomain is the
 // *.pages.dev host (e.g. "name.hash.pages.dev") — we read the canonical subdomain.
 export async function ensureProject(name: string): Promise<{ name: string; subdomain: string | null }> {
@@ -88,11 +114,22 @@ export async function deployFiles(
   project: string,
   files: PagesFile[],
 ): Promise<{ url: string; deploymentId: string }> {
-  // Cloudflare Direct Upload expects the manifest hash to be the base64 (standard) SHA-256
-  // of each file, and missing_hashes in the response uses the same encoding. Using hex here
-  // is a common failure (CF can't match the file to its hash), so we must use base64.
-  const hashOf = (buf: Buffer) => createHash('sha256').update(buf).digest('base64');
-  const manifest = files.map((f) => ({ path: f.path, hash: hashOf(f.content) }));
+  // Cloudflare Direct Upload expects `manifest` to be an OBJECT mapping each path to
+  // { path, content_type, hash }, where hash is the hex SHA-256 (64 chars). The response
+  // `missing_hashes` are those same hex hashes, and file contents are uploaded to `url`
+  // concatenated in that exact order with the returned JWT.
+  const hashOf = (buf: Buffer) => createHash('sha256').update(buf).digest('hex');
+  const manifest: Record<string, { path: string; content_type: string; hash: string }> = {};
+  const byHash = new Map<string, Buffer>();
+  for (const f of files) {
+    const hash = hashOf(f.content);
+    manifest[f.path] = {
+      path: f.path,
+      content_type: f.contentType || contentTypeOf(f.path),
+      hash,
+    };
+    byHash.set(hash, f.content);
+  }
 
   const create = await cf(`/accounts/${accountId()}/pages/projects/${project}/deployments`, {
     method: 'POST',
@@ -105,10 +142,6 @@ export async function deployFiles(
 
   if (missing.length > 0) {
     // Upload missing file contents concatenated in the exact order of missing_hashes.
-    const byHash = new Map<string, Buffer>();
-    for (const f of files) {
-      byHash.set(hashOf(f.content), f.content);
-    }
     const chunks = missing.map((h) => byHash.get(h)).filter((c): c is Buffer => Boolean(c));
     const body = Buffer.concat(chunks);
     const up = await fetch(uploadUrl, {

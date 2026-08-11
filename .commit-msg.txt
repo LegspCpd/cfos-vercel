@@ -1,0 +1,14 @@
+fix(deploy): manifest must be an object, not an array; use hex SHA-256
+
+Deploy still failed with "A 'manifest' field was expected" because the manifest
+was sent as an ARRAY. Cloudflare Direct Upload requires manifest to be an OBJECT
+keyed by file path, each value being { path, content_type, hash }, with hash as
+the hex SHA-256 (64 chars).
+
+- deployFiles now builds manifest as an object: { [path]: { path,
+  content_type, hash } }, using hex digests and best-effort MIME detection.
+- missing_hashes are matched against the same hex hashes for the content upload.
+
+This addresses the root cause (wrong manifest shape), not just the field name.
+
+Verified: tsc --noEmit clean, lint clean.

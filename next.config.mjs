@@ -4,6 +4,24 @@ const nextConfig = {
   // Monaco is a large client-side dependency; keep it out of server bundles.
   transpilePackages: ['@monaco-editor/react'],
 
+  // ssh2 (and its optional native dep cpu-features) load platform-specific .node binaries
+  // at runtime. They must stay out of the webpack bundle — webpack cannot parse the native
+  // binaries and fails with "Module parse failed". Treating them as server external packages
+  // makes Next require() them at runtime instead of bundling, which is what serverless
+  // functions support.
+  serverComponentsExternalPackages: ['ssh2', 'cpu-features'],
+
+  // Belt-and-suspenders: force ssh2 (and its optional native dep cpu-features) to stay
+  // external in server bundles too, so webpack never tries to parse their .node binaries.
+  // This covers any require() path inside ssh2 that webpack might otherwise chase.
+  webpack(config, { isServer }) {
+    if (isServer) {
+      const ext = config.externals || [];
+      config.externals = [...(Array.isArray(ext) ? ext : [ext]), 'ssh2', 'cpu-features'];
+    }
+    return config;
+  },
+
   // Long-lived cache headers for immutable public assets. These are served from
   // the site origin (which sits behind Cloudflare), so Cloudflare caches them at
   // the edge and repeat visitors never hit Vercel for them.

@@ -96,7 +96,7 @@ export async function deployFiles(
 
   const create = await cf(`/accounts/${accountId()}/pages/projects/${project}/deployments`, {
     method: 'POST',
-    body: JSON.stringify({ files: manifest }),
+    body: JSON.stringify({ manifest }),
   });
   const result = create.result;
   const uploadUrl: string = result.url;

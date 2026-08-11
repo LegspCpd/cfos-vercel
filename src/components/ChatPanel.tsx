@@ -31,7 +31,7 @@ const SUGGESTION_PROMPTS = [
 
 function MessageContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm max-w-none prose-invert">
+    <div className="prose prose-sm max-w-none dark:prose-invert">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
     </div>
   );

@@ -51,7 +51,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh" className="dark">
+    <html lang="zh" suppressHydrationWarning>
+      <head>
+        {/* Apply the persisted theme before paint so every page (including /docs, which is
+            outside the app shell) matches the theme the user chose on the home page — no
+            flash of the wrong theme when navigating between the app and the docs. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var v=localStorage.getItem('cfos_theme');var dark=(v==='dark'||((!v||v==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches));document.documentElement.classList.toggle('dark',dark);}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <I18nProvider>{children}</I18nProvider>
         <PwaRegister />

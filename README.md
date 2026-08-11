@@ -1,5 +1,7 @@
 # Cloudflare OS — Vercel Edition
 
+**🌏 Languages:** English | [简体中文](README-ZH-CN.md)
+
 > ⚠️ **二次开发 (Derivative work)**: This project is developed based on (二次开发自) [Cloudflare OS](https://github.com/cloudflare/cloudflare-os) under the [Apache License 2.0](LICENSE).
 
 A full-stack rewrite of Cloudflare OS for Vercel (Next.js 14 + Postgres), removing the dependency on Cloudflare Durable Objects, Dynamic Workers, and Workers RPC.

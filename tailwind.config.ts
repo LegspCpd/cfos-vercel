@@ -1,6 +1,11 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  // Match the app's theme mechanism (`.dark` on <html>, toggled by useTheme / the root
+  // layout's inline script) rather than the OS `prefers-color-scheme` default. This makes
+  // `dark:` variants follow the user's chosen theme consistently across every page,
+  // including the docs, so navigating from the app doesn't flip the docs to the wrong theme.
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {

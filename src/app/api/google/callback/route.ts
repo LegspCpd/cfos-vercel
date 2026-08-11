@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
+import { verifyOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -18,10 +19,16 @@ export async function GET(req: Request) {
   const error = url.searchParams.get('error');
 
   const storedState = req.headers.get('cookie')?.match(/google_oauth_state=([^;]+)/)?.[1];
-  if (!state || !storedState || state !== storedState) {
+  // Validate state by our HMAC signature OR the cookie (robust against third-party
+  // cookie blocking).
+  const signed = state ? verifyOAuthState(state) : { ok: false, userId: '' };
+  const stateOk =
+    Boolean(state) &&
+    (signed.ok || (storedState !== undefined && state === storedState));
+  if (!stateOk) {
     return redirectError('Invalid OAuth state.');
   }
-  if (!state.startsWith('connect:') || error || !code) {
+  if (!state || !state.startsWith('connect:') || error || !code) {
     return redirectError('连接失败或已取消');
   }
 

@@ -5,6 +5,7 @@ import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
 import { saveGitHubConnection } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
+import { verifyOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -13,11 +14,6 @@ interface GitHubUser {
   login: string;
   name?: string | null;
   id: number;
-}
-interface GitHubEmail {
-  email: string;
-  primary: boolean;
-  verified: boolean;
 }
 
 // GET /api/auth/github/callback — handle GitHub OAuth callback.
@@ -36,15 +32,21 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
-  // CSRF check
+  // CSRF check: a plain random hex state must match the cookie (login), while a
+  // signed state (delete/connect flows) is validated by its HMAC signature — so a
+  // blocked third-party cookie doesn't break the delete/connect flows.
   const storedState = req.headers.get('cookie')?.match(/github_oauth_state=([^;]+)/)?.[1];
-  if (!state || !storedState || state !== storedState) {
-    return redirectWithError('Invalid OAuth state. Please try again.', req);
+  const signed = state ? verifyOAuthState(state) : { ok: false };
+  const stateOk =
+    Boolean(state) &&
+    (signed.ok || (storedState !== undefined && state === storedState));
+  if (!state || !stateOk) {
+    return redirectWithError('Invalid OAuth state. Please try again.', req, undefined, state);
   }
 
   if (error || !code) {
     // User cancelled on GitHub or returned without authorizing.
-    return redirectWithError('登录已取消', req, '1001');
+    return redirectWithError('登录已取消', req, '1001', state);
   }
 
   try {
@@ -63,7 +65,7 @@ export async function GET(req: Request) {
     });
     const tokenJson = (await tokenRes.json()) as { access_token?: string; error?: string };
     if (!tokenJson.access_token) {
-      return redirectWithError('Failed to obtain GitHub token.', req);
+      return redirectWithError('Failed to obtain GitHub token.', req, undefined, state);
     }
     const accessToken = tokenJson.access_token;
 
@@ -72,14 +74,6 @@ export async function GET(req: Request) {
     // 2. Fetch GitHub user.
     const userRes = await fetch('https://api.github.com/user', { headers: authHeader });
     const ghUser = (await userRes.json()) as GitHubUser;
-
-    // 3. Fetch verified primary email (for username uniqueness & display).
-    const emailRes = await fetch('https://api.github.com/user/emails', { headers: authHeader });
-    const emails = (await emailRes.json()) as GitHubEmail[];
-    const primaryEmail =
-      emails.find((e) => e.primary && e.verified)?.email ??
-      emails.find((e) => e.verified)?.email ??
-      '';
 
     const username = ghUser.login.toLowerCase();
     const displayName = ghUser.name || ghUser.login;
@@ -91,12 +85,12 @@ export async function GET(req: Request) {
       const targetUser = targetUserId
         ? await prisma.user.findUnique({ where: { id: targetUserId } })
         : null;
-      if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001');
+      if (!targetUser) return redirectWithError('连接失败：用户不存在', req, '1001', state);
 
       // If this GitHub account is already linked to a different user, block to avoid stealing.
       const existing = await prisma.user.findUnique({ where: { githubId: ghUser.id } });
       if (existing && existing.id !== targetUser.id) {
-        return redirectWithError('该 GitHub 账号已绑定到另一个用户', req, '1001');
+        return redirectWithError('该 GitHub 账号已绑定到另一个用户', req, '1001', state);
       }
 
       // Bind the GitHub identity and store the connection for agent access.
@@ -120,10 +114,10 @@ export async function GET(req: Request) {
       const targetUser = targetUserId
         ? await prisma.user.findUnique({ where: { id: targetUserId } })
         : null;
-      if (!targetUser) return redirectWithError('注销确认失败：用户不存在', req, '1001');
+      if (!targetUser) return redirectWithError('注销确认失败：用户不存在', req, '1001', state);
       // The authenticated GitHub identity must belong to the target account.
       if (targetUser.githubId !== ghUser.id) {
-        return redirectWithError('注销确认失败：GitHub 身份不匹配', req, '1001');
+        return redirectWithError('注销确认失败：GitHub 身份不匹配', req, '1001', state);
       }
       await prisma.user.update({
         where: { id: targetUser.id },
@@ -165,7 +159,7 @@ export async function GET(req: Request) {
     return redirectWithToken(token, req);
   } catch (e) {
     console.error('github oauth error', e);
-    return redirectWithError('GitHub login failed.', req, '1001');
+    return redirectWithError('GitHub login failed.', req, '1001', state);
   }
 }
 
@@ -178,14 +172,20 @@ function redirectWithToken(token: string, req: Request): Response {
 
 // On an OAuth cancel/failure, send the user back to the page where they started
 // (default /login) with a clear error. Code 1001 = "OAuth sign-in cancelled/failed".
-function redirectWithError(msg: string, req: Request, code?: string): Response {
+// For connect/delete flows the target is /connections or /profile respectively, so a
+// failed connection never bounces the user to the login page (which looked like a
+// "logged out" bug).
+function redirectWithError(msg: string, req: Request, code?: string, state?: string | null): Response {
   const cookie = req.headers.get('cookie') || '';
   const from = cookie.match(/oauth_from=([^;]+)/)?.[1];
-  const target = from === 'signup' ? '/signup' : '/login';
+  let target = from === 'signup' ? '/signup' : '/login';
+  if (state?.startsWith('connect:')) target = '/connections';
+  else if (state?.startsWith('delete:')) target = '/profile';
   const errorCode = code || '1001';
   const res = NextResponse.redirect(
     `${siteBaseUrl()}${target}?error=${encodeURIComponent(`${errorCode}: ${msg}`)}`,
   );
   res.cookies.delete('oauth_from');
+  res.cookies.delete('github_oauth_state');
   return res;
 }

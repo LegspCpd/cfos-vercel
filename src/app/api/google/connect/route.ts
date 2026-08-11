@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import crypto from 'node:crypto';
 import { verifySessionToken } from '@/lib/auth';
 import { siteUrl } from '@/lib/site';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { signOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
@@ -22,7 +22,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
   }
 
-  const state = `connect:${session.userId}:${crypto.randomBytes(8).toString('hex')}`;
+  // Sign the state so the callback can validate it WITHOUT a cookie (third-party
+  // cookie blocking otherwise breaks the flow).
+  const state = signOAuthState('connect', session.userId);
   const redirectUri = siteUrl('/api/google/callback');
   const params = new URLSearchParams({
     client_id: CLIENT_ID,

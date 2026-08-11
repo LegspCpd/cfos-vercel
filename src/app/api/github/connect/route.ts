@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
-import crypto from 'node:crypto';
 import { siteUrl } from '@/lib/site';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { signOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
@@ -26,15 +26,17 @@ export async function GET(req: Request) {
     );
   }
 
-  // Use the same callback URL as GitHub sign-in (already registered in the GitHub console
-  // as /api/auth/github/callback). The state prefix "connect:" tells that callback to run
-  // the connect flow instead of a sign-in, avoiding a second callback URL to register.
+  // GitHub requires the callback URL be registered in the OAuth app console. To avoid
+  // forcing a second callback registration, both connect and delete reuse the ALREADY
+  // registered /api/auth/github/callback (which handles `connect:` and `delete:` state
+  // prefixes). The state is HMAC-signed so the callback can validate it even if a
+  // third-party cookie is blocked — that was the real cause of "Invalid OAuth state".
+  const purpose = url.searchParams.get('purpose');
+  const isDelete = purpose === 'delete';
+  const kind = isDelete ? 'delete' : 'connect';
   const redirectUri = siteUrl('/api/auth/github/callback');
 
-  // purpose=delete → OAuth re-authentication used to confirm account deletion.
-  const purpose = url.searchParams.get('purpose');
-  const kind = purpose === 'delete' ? 'delete' : 'connect';
-  const state = `${kind}:${session.userId}:${crypto.randomBytes(12).toString('hex')}`;
+  const state = signOAuthState(kind, session.userId);
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,

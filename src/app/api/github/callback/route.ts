@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { saveGitHubConnection } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
+import { verifyOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -18,10 +19,17 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const storedState = req.headers.get('cookie')?.match(/github_oauth_state=([^;]+)/)?.[1];
 
-  if (!state || !storedState || state !== storedState) {
+  // Validate state either by our HMAC signature (robust against third-party-cookie
+  // blocking) OR by matching the cookie we set (backward compatible with old flows).
+  const signed = state ? verifyOAuthState(state) : { ok: false, userId: '' };
+  const stateOk =
+    Boolean(state) &&
+    (signed.ok || (storedState !== undefined && state === storedState));
+
+  if (!stateOk || !code) {
     return redirect('/connections?error=Invalid+OAuth+state');
   }
-  if (!state.startsWith('connect:') || !code) {
+  if (!state || !state.startsWith('connect:') || !code) {
     return redirect('/connections?error=Connect+flow+expected');
   }
 

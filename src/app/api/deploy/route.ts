@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { ensureProject, deployFiles, slugifyProject } from '@/lib/cf-pages';
-import { createShortLink } from '@/lib/short-link';
+import { slugifyProject } from '@/lib/cf-pages';
+import { runDeploy } from '@/lib/deploy-run';
 import { writeAudit } from '@/lib/audit';
 
 async function auth(req: Request) {
@@ -12,14 +12,23 @@ async function auth(req: Request) {
 }
 
 // POST /api/deploy — deploy a workspace to Cloudflare Pages and (optionally) mint a
-// short link. Body: { workspaceId }.
+// short link. Body: { workspaceId, buildCommand?, installCommand?, outputDir?, envJson? }.
+// Returns once the (synchronous) deploy finishes. Prefer /api/deploy/stream on the
+// standalone deploy page for real-time logs; this non-streaming route is kept for
+// backward compatibility and simple programmatic use.
 export async function POST(req: Request) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  let body: { workspaceId?: string } = {};
+  let body: {
+    workspaceId?: string;
+    buildCommand?: string;
+    installCommand?: string;
+    outputDir?: string;
+    envJson?: string;
+  } = {};
   try {
-    body = (await req.json().catch(() => ({}))) as { workspaceId?: string };
+    body = (await req.json().catch(() => ({}))) as typeof body;
   } catch {
     body = {};
   }
@@ -41,31 +50,42 @@ export async function POST(req: Request) {
   });
   const projectName = prev?.pagesProject || slugifyProject(ws.title, `ws-${ws.id.slice(0, 8)}`);
 
+  const config = {
+    buildCommand: body.buildCommand || null,
+    installCommand: body.installCommand || null,
+    outputDir: body.outputDir || null,
+    envJson: body.envJson || null,
+  };
+
   // Record a pending deployment so we can update it below.
   const record = await prisma.deployment.create({
-    data: { userId: session.userId, workspaceId: ws.id, pagesProject: projectName, status: 'deploying' },
+    data: {
+      userId: session.userId,
+      workspaceId: ws.id,
+      pagesProject: projectName,
+      status: 'deploying',
+      buildCommand: config.buildCommand,
+      installCommand: config.installCommand,
+      outputDir: config.outputDir,
+      envJson: config.envJson,
+    },
   });
 
   try {
-    const { name } = await ensureProject(projectName);
     // Static deploy: all workspace files become the Pages output. Skip dotfiles except
     // _redirects / _headers (Pages special files) to avoid uploading junk.
     const files = ws.files
       .filter((f) => !f.path.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers'))
       .map((f) => ({ path: f.path, content: Buffer.from(f.content || '') }));
 
-    const { deploymentId } = await deployFiles(name, files);
-    const pagesUrl = `https://${name}.pages.dev`;
-
-    // Mint a short link (best-effort — only if S_LINK is configured).
-    let shortUrl: string | null = null;
-    if (process.env.S_LINK) {
-      try {
-        shortUrl = await createShortLink(pagesUrl);
-      } catch {
-        shortUrl = null;
-      }
-    }
+    const log = (line: string) => {
+      // Non-streaming path: just keep the tail in memory; /api/deploy/stream persists it.
+      void line;
+    };
+    const { deploymentId, pagesUrl, shortUrl } = await runDeploy(
+      { projectName, files, config, makeShortLink: Boolean(process.env.S_LINK) },
+      log,
+    );
 
     await prisma.deployment.update({
       where: { id: record.id },
@@ -79,10 +99,8 @@ export async function POST(req: Request) {
       detail: `Deployed "${ws.title}" → ${pagesUrl}`,
     });
 
-    return NextResponse.json({ ok: true, deploymentId, pagesUrl, shortUrl, deployment: { id: record.id, project: name } });
+    return NextResponse.json({ ok: true, deploymentId, pagesUrl, shortUrl, deployment: { id: record.id, project: projectName } });
   } catch (e) {
-    // Log the full error server-side (visible in the platform logs) so CF failures can be
-    // diagnosed, and return a non-empty message to the client.
     const err = e instanceof Error ? e : new Error(String(e));
     console.error('[deploy] failed:', err);
     const msg = err.message || 'Deploy failed (unknown error)';

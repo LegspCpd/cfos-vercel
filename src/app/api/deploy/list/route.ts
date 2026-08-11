@@ -27,6 +27,11 @@ export async function GET(req: Request) {
       shortUrl: r.shortUrl,
       customDomain: r.customDomain,
       error: r.error,
+      log: r.log,
+      buildCommand: r.buildCommand,
+      installCommand: r.installCommand,
+      outputDir: r.outputDir,
+      envJson: r.envJson,
       createdAt: r.createdAt.toISOString(),
     })),
   });

@@ -296,11 +296,85 @@ export const api = {
   // Whether the Deploy feature is configured (PAGES_KEY + PAGES_ACCOUNT_ID set).
   deployAvailable: () => request<{ available: boolean }>('/api/deploy/available'),
   // Deploy a workspace to Cloudflare Pages (optionally mints a short link).
-  deployWorkspace: (workspaceId: string) =>
+  deployWorkspace: (
+    workspaceId: string,
+    config?: { buildCommand?: string; installCommand?: string; outputDir?: string; envJson?: string },
+  ) =>
     request<{ ok: boolean; deploymentId?: string; pagesUrl?: string; shortUrl?: string | null; error?: string }>(
       '/api/deploy',
-      { method: 'POST', body: JSON.stringify({ workspaceId }) },
+      { method: 'POST', body: JSON.stringify({ workspaceId, ...config }) },
     ),
+  // Stream a deploy, parsing SSE frames and calling onData({ text }) for each log line.
+  // Resolves { ok, pagesUrl?, shortUrl?, error? } once the stream closes. Used by the
+  // standalone deploy page (/workspace/deploy) to show real-time build logs.
+  streamDeploy: (
+    workspaceId: string,
+    config: { buildCommand?: string; installCommand?: string; outputDir?: string; envJson?: string },
+    onData: (text: string) => void,
+  ): Promise<{ ok: boolean; pagesUrl?: string; shortUrl?: string | null; error?: string }> =>
+    new Promise((resolve, reject) => {
+      fetch('/api/deploy/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ workspaceId, ...config }),
+      })
+        .then(async (res) => {
+          if (!res.ok || !res.body) {
+            let message = `Deploy failed (${res.status})`;
+            try {
+              const body = await res.json();
+              if (body?.error) message = body.error;
+            } catch {
+              /* ignore */
+            }
+            reject(new Error(message));
+            return;
+          }
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = '';
+          const drainFrames = () => {
+            let idx: number;
+            while ((idx = buf.indexOf('\n\n')) !== -1) {
+              const frame = buf.slice(0, idx);
+              buf = buf.slice(idx + 2);
+              const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
+              if (!dataLine) continue;
+              let parsed: { type?: string; text?: string; ok?: boolean; pagesUrl?: string; shortUrl?: string | null; error?: string };
+              try {
+                parsed = JSON.parse(dataLine.slice(6));
+              } catch {
+                continue;
+              }
+              if (parsed.type === 'data' && parsed.text) onData(parsed.text);
+              if (parsed.type === 'done') {
+                if (parsed.ok) resolve({ ok: true, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl });
+                else resolve({ ok: false, error: parsed.error || 'Deploy failed' });
+              }
+            }
+          };
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            drainFrames();
+          }
+          if (buf.trim()) {
+            const dataLine = buf.split('\n').find((l) => l.startsWith('data: '));
+            if (dataLine) {
+              try {
+                const parsed = JSON.parse(dataLine.slice(6));
+                if (parsed.type === 'done' && parsed.ok) resolve({ ok: true, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl });
+                else if (parsed.type === 'done') resolve({ ok: false, error: parsed.error || 'Deploy failed' });
+              } catch {
+                /* ignore malformed tail */
+              }
+            }
+          }
+          resolve({ ok: false, error: 'Deploy stream ended without a result' });
+        })
+        .catch(reject);
+    }),
   listDeployments: () =>
     request<{
       deployments: {
@@ -313,6 +387,11 @@ export const api = {
         shortUrl: string | null;
         customDomain: string | null;
         error: string | null;
+        log: string | null;
+        buildCommand: string | null;
+        installCommand: string | null;
+        outputDir: string | null;
+        envJson: string | null;
         createdAt: string;
       }[];
     }>('/api/deploy/list'),

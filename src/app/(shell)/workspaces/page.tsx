@@ -7,7 +7,6 @@ import { Plus, Trash2, Star, Rocket } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
-import DeployPanel from '@/components/DeployPanel';
 
 export default function WorkspacesPage() {
   const router = useRouter();
@@ -17,7 +16,6 @@ export default function WorkspacesPage() {
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'fav'>('all');
-  const [deployOpen, setDeployOpen] = useState(false);
   // Deploy is only shown when PAGES_KEY + PAGES_ACCOUNT_ID are configured.
   const [deployEnabled, setDeployEnabled] = useState(false);
 
@@ -110,7 +108,7 @@ export default function WorkspacesPage() {
           </button>
           {deployEnabled && (
             <button
-              onClick={() => setDeployOpen(true)}
+              onClick={() => router.push('/workspace/deploy')}
               className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary"
             >
               <Rocket className="h-4 w-4 text-primary" /> {t('deploy.title')}
@@ -172,7 +170,6 @@ export default function WorkspacesPage() {
         </div>
       )}
 
-      <DeployPanel open={deployOpen} onClose={() => setDeployOpen(false)} />
     </div>
   );
 }

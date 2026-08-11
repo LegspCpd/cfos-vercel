@@ -43,15 +43,18 @@ async function cf(path: string, init?: RequestInit): Promise<any> {
   return data;
 }
 
-// Generate a unique Pages project name: "app-" + a random suffix. Random names are
-// collision-free (no dependence on the workspace title or user), so a workspace can be
-// redeployed without ever hitting a name conflict or reusing a stale project.
+// Build one random segment of 6 lowercase letters + digits (base36), e.g. "a1b2c3".
+function randomSegment(): string {
+  const s = Math.random().toString(36).slice(2, 8);
+  return s.padEnd(6, '0');
+}
+
+// Generate a unique, collision-free Pages project name in the three-segment format:
+// "<seg>-<seg>-<seg>" (each segment is lowercase letters + digits). Random names never
+// depend on the workspace title or user, so a workspace can be redeployed without ever
+// hitting a name conflict or reusing a stale project.
 export function slugifyProject(_title: string, _fallback: string): string {
-  const rand = createHash('sha256')
-    .update(`${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
-    .digest('hex')
-    .slice(0, 10);
-  return `app-${rand}`;
+  return `${randomSegment()}-${randomSegment()}-${randomSegment()}`;
 }
 
 export interface PagesFile {

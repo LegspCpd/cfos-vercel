@@ -176,6 +176,13 @@ model Deployment {
   pagesUrl      String?  // https://<project>.pages.dev
   shortUrl      String?  // https://s.legspcpd.top/xxxxxx
   customDomain  String?  // optional custom domain bound to the project
+  // Build configuration captured at deploy time (so later edits to the workspace config
+  // never change a past deployment's record).
+  buildCommand   String?
+  installCommand String?
+  outputDir      String?
+  envJson        String?  // JSON map of extra env vars applied during the deploy
+  log            String?  // last build log text (accumulated during the streaming deploy)
   error         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

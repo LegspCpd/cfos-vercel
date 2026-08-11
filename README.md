@@ -9,7 +9,8 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 ## ✨ Features
 
 ### Core
-- **Authentication** — register / sign-in with argon2id password hashing + JWT sessions, plus **GitHub / Google / Microsoft OAuth**, email verification-code registration, and email+password sign-in
+- **Authentication** — register / sign-in with scrypt password hashing (Node built-in `crypto.scrypt`) + JWT sessions, plus **GitHub / Google / Microsoft OAuth**, email verification-code registration, and email+password sign-in
+- **Cloudflare Access SSO** — optional full-site gate via `CF_ACCESS_TEAM` / `CF_ACCESS_AUD` (see [docs](docs/CLOUDFLARE_ACCESS_SETUP.md))
 - **OAuth onboarding** — accounts created via a third-party login must complete a profile (username + password + human verification, optional email binding) before entering the app
 - **Email management** — bind an email, or change it with a two-step ownership verification (old email code → new email code) plus human verification
 - **Account deletion** — self-serve with email-code or OAuth re-authentication + human verification, then a 4–7 day cooldown before permanent removal (email/username are freed and can be re-registered); cancellable during the cooldown
@@ -43,15 +44,21 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **Analytics** `/analytics` — personal stats (workspaces, files, today's sign-in IPs, AI token usage); admins additionally see a site-wide daily summary with login-IP distribution
 - **Site customization** — brand favicon/logo, optional full-site background image (env-configured), human verification (Turnstile + reCAPTCHA), registration toggle
 
+### Remote connections (SSH)
+- **SSH host manager** — add/remove/test servers with password or private-key auth; credentials are **AES-256-GCM encrypted** at rest (never plaintext)
+- **Live monitoring** — probe a host to show hostname, OS, cores, uptime, load, memory and disk usage
+- **Command terminal** — run a command and stream its output live over SSE; auto-reconnects (up to 5 attempts) on transient failures and shows a clear timeout message if it gives up
+- Host input accepts `host:port`, plain domains, and IPv6 (`[::1]:22`)
+
 ### Persistence
 - **Postgres** via Prisma (Vercel Postgres or Neon free tier), replacing the original Durable Object + SQLite model
+- **Optional multi-database** — offload cold data (audit logs, email verification codes) to up to 4 secondary Neon databases (`MULTI_DB_ENABLED`) to keep the primary small; reads merge across DBs and cold writes safely fall back to the primary on failure
 
 ### Removed (not part of this rewrite)
 - Real-time multi-user collab (Yjs)
 - Per-gadget sandboxed processes (Dynamic Workers) → replaced by browser iframe static preview
 - Gatekeeper external-OAuth integrations (GitHub/Google/Slack, require external service setup)
 - Context & Skills (a "coming soon" placeholder in the original)
-- Cloudflare Access SSO
 
 ## 🧰 Tech Stack
 
@@ -136,7 +143,7 @@ Configure the callback exactly as below (replace `os.example.com` with your doma
 
 ## 🔒 Security
 
-- Passwords are hashed server-side with argon2id.
+- Passwords are hashed server-side with scrypt (`crypto.scrypt`, Node built-in, no native compile).
 - Sessions are JWT (HS256) signed with `AUTH_SECRET`, expiring after 7 days.
 - The preview iframe is sandboxed via CSP.
 - `/api/preview/:id` is currently unauthenticated (single-user / local scenario). For multi-tenant deployments, switch to signed preview URLs (see the comments in that route).

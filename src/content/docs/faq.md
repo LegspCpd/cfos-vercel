@@ -7,8 +7,8 @@
 - **解决**：确认 Build Command 是 `pnpm install && pnpm db:push && pnpm build`
 
 ### 登录提示"无效用户名或密码"
-- **原因**：密码格式不匹配（旧 argon2 / 新 scrypt）
-- **解决**：用 GitHub 登录，或重置密码
+- **原因**：密码输入有误，或该账号使用了旧版 argon2 密码哈希（旧版本曾用 `argon2`，现已统一改为 Node 内置 `crypto.scrypt`，两者不兼容）
+- **解决**：确认密码无误；如果是旧 argon2 账号，用 GitHub 登录或联系管理员重置密码
 
 ### 域名打不开
 - **原因**：DNS 没生效
@@ -38,7 +38,7 @@
 
 ## Cloudflare Access
 
-见 [Cloudflare Access](cf-access) 章节的排查表。
+见 [Cloudflare Access](/docs/cf-access) 章节的排查表。
 
 ## 其他
 

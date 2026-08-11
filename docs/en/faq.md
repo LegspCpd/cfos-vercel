@@ -7,8 +7,8 @@
 - **Fix**: ensure Build Command is `pnpm install && pnpm db:push && pnpm build`
 
 ### "Invalid username/email or password"
-- **Cause**: password format mismatch (old argon2 / new scrypt)
-- **Fix**: sign in with GitHub, or reset the password
+- **Cause**: the password is wrong, or the account uses an old argon2 hash (older builds used `argon2`; the app now uses Node built-in `crypto.scrypt` and the two are not compatible)
+- **Fix**: confirm the password; for old argon2 accounts, sign in with GitHub or ask an admin to reset the password
 
 ### Domain won't open
 - **Cause**: DNS not propagated

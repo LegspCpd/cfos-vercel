@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Server,
@@ -26,6 +26,7 @@ import {
   ShieldOff,
   Calendar,
   Clock,
+  MoreVertical,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -121,6 +122,31 @@ function fmtDate(iso: string | undefined): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+// A single item in the mobile "more" action menu.
+function MenuItem({
+  icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-secondary ${
+        danger ? 'text-red-600 hover:bg-red-500/10' : ''
+      }`}
+    >
+      {icon}
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
+
 // A small progress bar for used/available fractions.
 function Bar({ used, total }: { used: number; total: number }) {
   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
@@ -144,6 +170,7 @@ export default function RemotePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [moreOpenId, setMoreOpenId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -545,7 +572,7 @@ export default function RemotePage() {
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -596,7 +623,7 @@ export default function RemotePage() {
                     <span className="truncate">{h.name}</span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span className="font-mono">
+                    <span className="max-w-full break-all font-mono">
                       {h.username}@{h.host}:{h.port}
                     </span>
                   </div>
@@ -647,60 +674,111 @@ export default function RemotePage() {
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    onClick={() => copyConn(h)}
-                    title={t('remote.copyInfo') || 'Copy connection info'}
-                    className="rounded p-1.5 hover:bg-secondary"
-                  >
-                    {copiedId === h.id ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
+                {/* Action buttons — desktop: all inline; mobile: collapsed into a "more" menu */}
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <div className="hidden gap-1 sm:flex">
+                    <button
+                      onClick={() => copyConn(h)}
+                      title={t('remote.copyInfo') || 'Copy connection info'}
+                      className="rounded p-1.5 hover:bg-secondary"
+                    >
+                      {copiedId === h.id ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => toggleMonitor(h)}
+                      title={t('remote.monitorBtn') || 'Monitor'}
+                      className="rounded p-1.5 hover:bg-secondary"
+                    >
+                      <Activity className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => toggleTerminal(h)}
+                      title={t('remote.terminalBtn') || 'Terminal'}
+                      className="rounded p-1.5 hover:bg-secondary"
+                    >
+                      <TerminalSquare className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => test(h)}
+                      disabled={testingId === h.id}
+                      title={t('remote.test') || 'Test connection'}
+                      className="rounded p-1.5 hover:bg-secondary"
+                    >
+                      {testingId === h.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <PlugZap className="h-4 w-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => edit(h)}
+                      title={t('remote.edit') || 'Edit'}
+                      className="rounded p-1.5 hover:bg-secondary"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => remove(h)}
+                      disabled={busy === h.id}
+                      title={t('remote.delete') || 'Delete'}
+                      className="rounded p-1.5 hover:bg-red-500/10 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Mobile: single "more" button opening an action menu */}
+                  <div className="relative sm:hidden">
+                    <button
+                      onClick={() => setMoreOpenId(moreOpenId === h.id ? null : h.id)}
+                      className="rounded p-2 hover:bg-secondary"
+                      aria-label={t('remote.more') || 'More actions'}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                    {moreOpenId === h.id && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setMoreOpenId(null)} />
+                        <div className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border bg-popover shadow-lg">
+                          <MenuItem
+                            icon={copiedId === h.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                            label={t('remote.copyInfo') || 'Copy connection info'}
+                            onClick={() => { copyConn(h); setMoreOpenId(null); }}
+                          />
+                          <MenuItem
+                            icon={<Activity className="h-4 w-4" />}
+                            label={t('remote.monitorBtn') || 'Monitor'}
+                            onClick={() => { toggleMonitor(h); setMoreOpenId(null); }}
+                          />
+                          <MenuItem
+                            icon={<TerminalSquare className="h-4 w-4" />}
+                            label={t('remote.terminalBtn') || 'Terminal'}
+                            onClick={() => { toggleTerminal(h); setMoreOpenId(null); }}
+                          />
+                          <MenuItem
+                            icon={testingId === h.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlugZap className="h-4 w-4" />}
+                            label={t('remote.test') || 'Test connection'}
+                            onClick={() => { test(h); setMoreOpenId(null); }}
+                          />
+                          <MenuItem
+                            icon={<Pencil className="h-4 w-4" />}
+                            label={t('remote.edit') || 'Edit'}
+                            onClick={() => { edit(h); setMoreOpenId(null); }}
+                          />
+                          <MenuItem
+                            icon={<Trash2 className="h-4 w-4" />}
+                            label={t('remote.delete') || 'Delete'}
+                            danger
+                            onClick={() => { setMoreOpenId(null); remove(h); }}
+                          />
+                        </div>
+                      </>
                     )}
-                  </button>
-                  <button
-                    onClick={() => toggleMonitor(h)}
-                    title={t('remote.monitorBtn') || 'Monitor'}
-                    className="rounded p-1.5 hover:bg-secondary"
-                  >
-                    <Activity className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => toggleTerminal(h)}
-                    title={t('remote.terminalBtn') || 'Terminal'}
-                    className="rounded p-1.5 hover:bg-secondary"
-                  >
-                    <TerminalSquare className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => test(h)}
-                    disabled={testingId === h.id}
-                    title={t('remote.test') || 'Test connection'}
-                    className="rounded p-1.5 hover:bg-secondary"
-                  >
-                    {testingId === h.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <PlugZap className="h-4 w-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => edit(h)}
-                    title={t('remote.edit') || 'Edit'}
-                    className="rounded p-1.5 hover:bg-secondary"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => remove(h)}
-                    disabled={busy === h.id}
-                    title={t('remote.delete') || 'Delete'}
-                    className="rounded p-1.5 hover:bg-red-500/10 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  </div>
                 </div>
               </div>
 

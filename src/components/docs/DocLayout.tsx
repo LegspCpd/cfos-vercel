@@ -54,14 +54,14 @@ export default function DocLayout({ children, lang = 'zh' }: DocLayoutProps) {
     </nav>
   );
 
-  // Language switcher button.
-  const langSwitch = isEn ? (
-    <Link href="/docs" className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">
-      <Languages className="h-3.5 w-3.5" /> 中文
-    </Link>
-  ) : (
-    <Link href="/en/docs" className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">
-      <Languages className="h-3.5 w-3.5" /> English
+  // Language switcher button. Takes the user to the SAME page in the other language
+  // (e.g. /docs/cf-access <-> /en/docs/cf-access), not just the docs home. If the current
+  // slug has no translation, we still fall back to that language's docs home.
+  const otherBase = isEn ? '/docs' : '/en/docs';
+  const otherHref = currentSlug === 'index' ? otherBase : `${otherBase}/${currentSlug}`;
+  const langSwitch = (
+    <Link href={otherHref} className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">
+      <Languages className="h-3.5 w-3.5" /> {isEn ? '中文' : 'English'}
     </Link>
   );
 

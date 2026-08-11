@@ -6,4 +6,7 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   argon2: true
+  cpu-features: true
   prisma: true
+  sharp: true
+  ssh2: true

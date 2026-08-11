@@ -4,7 +4,9 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
-// POST /api/github/disconnect — remove the GitHub connection for the current user.
+// POST /api/github/disconnect — remove a GitHub connection for the current user.
+// Body: { id?: string } — when id is given, remove just that connected account
+// (ownership-checked); otherwise remove all of the user's GitHub connections.
 export async function POST(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -14,7 +16,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
   }
 
-  await prisma.gitHubConnection.deleteMany({ where: { userId: session.userId } });
+  let id: string | undefined;
+  try {
+    const body = await req.json().catch(() => ({}));
+    id = typeof body?.id === 'string' ? body.id : undefined;
+  } catch {
+    id = undefined;
+  }
+
+  if (id) {
+    await prisma.gitHubConnection.deleteMany({ where: { id, userId: session.userId } });
+  } else {
+    await prisma.gitHubConnection.deleteMany({ where: { userId: session.userId } });
+  }
   await writeAudit({
     userId: session.userId,
     username: session.username,

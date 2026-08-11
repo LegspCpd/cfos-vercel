@@ -47,17 +47,19 @@ export async function GET(req: Request) {
     const infoRes = await fetch(`${BASE_URL}/api/v4/user`, {
       headers: { Authorization: `Bearer ${tokenJson.access_token}` },
     });
-    const info = (await infoRes.json()) as { username?: string };
+    const info = (await infoRes.json()) as { id?: number; username?: string };
+    const gitlabId = typeof info.id === 'number' ? info.id : -1;
     const username = (info.username || 'unknown').toLowerCase();
 
     const userId = state.split(':')[1];
     const targetUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
     if (!targetUser) return redirectError('用户不存在');
 
+    // Upsert by the account's gitlabId (not userId) → supports multiple GitLab accounts.
     await prisma.gitlabConnection.upsert({
-      where: { userId },
-      update: { accessToken: tokenJson.access_token, gitlabUsername: username },
-      create: { userId, gitlabUsername: username, accessToken: tokenJson.access_token },
+      where: { gitlabId },
+      update: { userId, accessToken: tokenJson.access_token, gitlabUsername: username },
+      create: { userId, gitlabId, gitlabUsername: username, accessToken: tokenJson.access_token },
     });
 
     await writeAudit({ userId, username: targetUser.username, action: 'gitlab.connect', detail: `Connected GitLab @${username}` });

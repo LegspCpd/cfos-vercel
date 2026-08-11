@@ -67,11 +67,18 @@ export async function GET(req: Request) {
       }
     }
 
+    // Upsert by the account's googleSub (not userId) → supports multiple Google accounts.
     await prisma.googleConnection.upsert({
-      where: { userId },
-      update: { accessToken: tokenJson.access_token, refreshToken: tokenJson.refresh_token ?? null, googleEmail: email },
+      where: { googleSub: info.sub || 'n/a' },
+      update: {
+        userId,
+        accessToken: tokenJson.access_token,
+        refreshToken: tokenJson.refresh_token ?? null,
+        googleEmail: email || 'unknown',
+      },
       create: {
         userId,
+        googleSub: info.sub || 'n/a',
         googleEmail: email || 'unknown',
         accessToken: tokenJson.access_token,
         refreshToken: tokenJson.refresh_token ?? null,

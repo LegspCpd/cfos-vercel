@@ -265,6 +265,54 @@ export const api = {
     request<{ connected: boolean; gitlabUsername: string | null; updatedAt: string | null }>('/api/gitlab/status'),
   gitlabDisconnect: () =>
     request<{ ok: boolean }>('/api/gitlab/disconnect', { method: 'POST' }),
+  listSshHosts: () =>
+    request<{
+      hosts: {
+        id: string;
+        name: string;
+        host: string;
+        port: number;
+        username: string;
+        authMethod: string;
+        saveCreds: boolean;
+        hasCredential: boolean;
+        country: string | null;
+        region: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }[];
+    }>('/api/ssh-hosts'),
+  createSshHost: (data: {
+    name: string;
+    host: string;
+    port?: number;
+    username: string;
+    password?: string;
+    privateKey?: string;
+    passphrase?: string;
+    authMethod?: 'password' | 'key' | 'keypassphrase';
+    saveCreds?: boolean;
+  }) => request<{ host: unknown }>('/api/ssh-hosts', { method: 'POST', body: JSON.stringify(data) }),
+  updateSshHost: (
+    id: string,
+    data: {
+      name?: string;
+      host?: string;
+      port?: number;
+      username?: string;
+      password?: string;
+      privateKey?: string;
+      passphrase?: string;
+      authMethod?: 'password' | 'key' | 'keypassphrase';
+      saveCreds?: boolean;
+    },
+  ) => request<{ host: unknown }>(`/api/ssh-hosts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteSshHost: (id: string) => request<{ ok: boolean }>(`/api/ssh-hosts/${id}`, { method: 'DELETE' }),
+  testSshHost: (id: string, creds?: { password?: string; privateKey?: string; passphrase?: string }) =>
+    request<{ ok: boolean; message?: string; error?: string }>(`/api/ssh-hosts/${id}/test`, {
+      method: 'POST',
+      body: JSON.stringify(creds || {}),
+    }),
   listContext: () =>
     request<{
       docs: { id: string; title: string; tags: string; createdAt: string; updatedAt: string }[];

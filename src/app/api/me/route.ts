@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     include: {
-      githubConnection: { select: { githubLogin: true } },
+      githubConnections: { select: { githubLogin: true }, orderBy: { updatedAt: 'desc' } },
       group: { select: { permissions: true, name: true } },
     },
   });
@@ -32,6 +32,7 @@ export async function GET(req: Request) {
   }
   const isAdmin = await isUserAdmin(user.id);
   const permissions = resolvePermissions(user);
+  const githubLogins = user.githubConnections.map((c) => c.githubLogin);
   return NextResponse.json({
     id: user.id,
     username: user.username,
@@ -43,8 +44,9 @@ export async function GET(req: Request) {
     groupName: user.group?.name ?? null,
     email: user.email ?? '',
     googleConnected: Boolean(user.googleId),
-    githubConnected: Boolean(user.githubConnection),
-    githubUsername: user.githubConnection?.githubLogin ?? null,
+    githubConnected: githubLogins.length > 0,
+    githubUsername: githubLogins[0] ?? null,
+    githubAccounts: githubLogins,
     microsoftConnected: Boolean(user.microsoftId),
     profileComplete: user.profileComplete,
     deleteRequestedAt: user.deleteRequestedAt?.toISOString() ?? null,

@@ -2,21 +2,24 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-// GET /api/github/status — is the current user connected to GitHub?
+// GET /api/github/status — list the GitHub accounts the current user has connected.
 export async function GET(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-  const conn = await prisma.gitHubConnection.findUnique({
+  const conns = await prisma.gitHubConnection.findMany({
     where: { userId: session.userId },
-    select: { githubLogin: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+    select: { id: true, githubLogin: true, updatedAt: true },
   });
 
   return NextResponse.json({
-    connected: Boolean(conn),
-    githubLogin: conn?.githubLogin ?? null,
-    updatedAt: conn?.updatedAt ?? null,
+    connected: conns.length > 0,
+    // Backward-compatible single-account fields (first/most-recent) + full list.
+    githubLogin: conns[0]?.githubLogin ?? null,
+    updatedAt: conns[0]?.updatedAt?.toISOString() ?? null,
+    accounts: conns.map((c) => ({ id: c.id, login: c.githubLogin, updatedAt: c.updatedAt })),
   });
 }

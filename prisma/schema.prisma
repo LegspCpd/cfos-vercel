@@ -48,12 +48,13 @@ model User {
   workspaces Workspace[]
   chats      Chat[]
   sharedFiles SharedFile[]
-  githubConnection GitHubConnection?
-  googleConnection GoogleConnection?
-  gitlabConnection GitlabConnection?
+  githubConnections GitHubConnection[]
+  googleConnections GoogleConnection[]
+  gitlabConnections GitlabConnection[]
   contextDocs ContextDoc[]
   favorites  Favorite[]
   tickets    Ticket[]
+  sshHosts   SshHost[]
   group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }
 
@@ -232,45 +233,58 @@ model SharedFile {
 }
 
 // A user's OAuth connection to GitHub. Lets the agent call the GitHub API on the user's behalf.
+// A single user may connect MULTIPLE GitHub accounts (hence githubId is the unique key,
+// not userId). The stored access token is ENCRYPTED at rest (see src/lib/credentials.ts).
 model GitHubConnection {
   id          String   @id @default(cuid())
-  userId      String   @unique
+  userId      String
+  githubId    Int?     // GitHub numeric user id; NULL for legacy rows (unique per connected account)
   githubLogin String
-  accessToken String // stored; used by the agent's GitHub tools
+  accessToken String   // encrypted; used by the agent's GitHub tools
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([githubId])
+  @@index([userId])
   @@map("GitHubConnection")
 }
 
 // A user's OAuth connection to Google. Lets the agent call Google APIs on the user's behalf.
+// A single user may connect MULTIPLE Google accounts (googleSub is the unique key).
 model GoogleConnection {
   id          String   @id @default(cuid())
-  userId      String   @unique
+  userId      String
+  googleSub   String?  // Google subject id; NULL for legacy rows (unique per connected account)
   googleEmail String
-  accessToken String // stored; used by the agent's Google tools
-  refreshToken String?
+  accessToken String   // encrypted; used by the agent's Google tools
+  refreshToken String? // encrypted
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([googleSub])
+  @@index([userId])
   @@map("GoogleConnection")
 }
 
 // A user's OAuth connection to GitLab. Lets the agent call GitLab APIs on the user's behalf.
+// A single user may connect MULTIPLE GitLab accounts (gitlabId is the unique key).
 model GitlabConnection {
-  id           String   @id @default(cuid())
-  userId       String   @unique
+  id             String   @id @default(cuid())
+  userId         String
+  gitlabId       Int?     // GitLab user id; NULL for legacy rows (unique per connected account)
   gitlabUsername String
-  accessToken  String // stored; used by the agent's GitLab tools
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  accessToken    String   // encrypted; used by the agent's GitLab tools
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([gitlabId])
+  @@index([userId])
   @@map("GitlabConnection")
 }
 
@@ -307,4 +321,34 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+// An SSH host the user manages from the "Remote Connections" panel. Host credentials
+// (password / private key) are ENCRYPTED at rest with AES-GCM using a key derived from
+// AUTH_SECRET (see src/lib/credentials.ts) — NEVER stored in plaintext. When `saveCreds`
+// is false, the credential is kept only for the current request and NOT persisted.
+model SshHost {
+  id          String   @id @default(cuid())
+  ownerId     String
+  name        String   // display name, e.g. "Web Server"
+  host        String   // IP or hostname
+  port        Int      @default(22)
+  username    String
+  // AES-encrypted password or private key (base64). Null when auth is by key+no passphrase.
+  encryptedSecret String?
+  // Tells the UI which auth method was used ("password" | "key" | "keypassphrase").
+  authMethod String   @default("password")
+  // When false the secret above is null (credential was provided in-memory only).
+  saveCreds  Boolean  @default(true)
+  // True when a credential is stored for this host (password/private key present).
+  hasCredential Boolean @default(false)
+  // Geographic / extra metadata resolved at connect time (IP-based country, etc.).
+  country    String?
+  region     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
 }

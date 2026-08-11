@@ -3,7 +3,9 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
-// POST /api/gitlab/disconnect — remove the GitLab connection for the current user.
+// POST /api/gitlab/disconnect — remove a GitLab connection for the current user.
+// Body: { id?: string } — when id is given, remove just that connected account
+// (ownership-checked); otherwise remove all of the user's GitLab connections.
 export async function POST(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -13,6 +15,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
   }
 
-  await prisma.gitlabConnection.deleteMany({ where: { userId: session.userId } });
+  let id: string | undefined;
+  try {
+    const body = await req.json().catch(() => ({}));
+    id = typeof body?.id === 'string' ? body.id : undefined;
+  } catch {
+    id = undefined;
+  }
+
+  if (id) {
+    await prisma.gitlabConnection.deleteMany({ where: { id, userId: session.userId } });
+  } else {
+    await prisma.gitlabConnection.deleteMany({ where: { userId: session.userId } });
+  }
   return NextResponse.json({ ok: true });
 }

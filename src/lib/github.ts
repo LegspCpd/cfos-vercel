@@ -19,19 +19,29 @@ export async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> 
   return (await res.json()) as GitHubUser;
 }
 
+// A single user may connect MULTIPLE GitHub accounts. Each row is keyed by the
+// account's numeric githubId (unique), so connecting the same GitHub account twice just
+// refreshes that row. `getGitHubToken` returns the MOST RECENTLY connected account's
+// token, which keeps the agent's GitHub tools working when only one (or the last-used)
+// account is intended.
+
 export async function saveGitHubConnection(userId: string, accessToken: string): Promise<string> {
   const gh = await fetchGitHubUser(accessToken);
   const login = gh.login.toLowerCase();
-  // If this GitHub identity is already linked to another account, block the connect
-  // to avoid stealing another user's GitHub login.
+  // Block if this GitHub identity is bound to a DIFFERENT user (account-stealing guard).
   const boundTo = await prisma.user.findUnique({ where: { githubId: gh.id } });
   if (boundTo && boundTo.id !== userId) {
     throw new Error('该 GitHub 账号已绑定到另一个用户');
   }
+  // Upsert by the account's githubId (not userId) → supports multiple accounts per user.
+  const existing = await prisma.gitHubConnection.findUnique({ where: { githubId: gh.id } });
+  if (existing && existing.userId !== userId) {
+    throw new Error('该 GitHub 账号已绑定到另一个用户');
+  }
   await prisma.gitHubConnection.upsert({
-    where: { userId },
-    update: { accessToken, githubLogin: login },
-    create: { userId, accessToken, githubLogin: login },
+    where: { githubId: gh.id },
+    update: { userId, accessToken, githubLogin: login },
+    create: { userId, githubId: gh.id, accessToken, githubLogin: login },
   });
   // Store the GitHub numeric id on the user so a later OAuth sign-in resolves to the
   // same account (even if their GitHub username ever changes).
@@ -42,13 +52,25 @@ export async function saveGitHubConnection(userId: string, accessToken: string):
   return login;
 }
 
+// List all GitHub accounts connected to a user.
+export async function listGitHubConnections(userId: string) {
+  return prisma.gitHubConnection.findMany({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+    select: { id: true, githubLogin: true, updatedAt: true },
+  });
+}
+
 export async function getGitHubToken(userId: string): Promise<string | null> {
-  const conn = await prisma.gitHubConnection.findUnique({ where: { userId } });
+  const conn = await prisma.gitHubConnection.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+  });
   return conn?.accessToken ?? null;
 }
 
 export async function isGitHubConnected(userId: string): Promise<boolean> {
-  const conn = await prisma.gitHubConnection.findUnique({
+  const conn = await prisma.gitHubConnection.findFirst({
     where: { userId },
     select: { accessToken: true },
   });

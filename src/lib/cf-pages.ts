@@ -139,10 +139,29 @@ export async function deployFiles(
     byHash.set(hash, f.content);
   }
 
-  const create = await cf(`/accounts/${accountId()}/pages/projects/${project}/deployments`, {
+  // Cloudflare's Create Deployment endpoint REQUIRES multipart/form-data, with `manifest`
+  // sent as a plain form field whose value is the JSON string (NOT a JSON body — a JSON
+  // body is rejected with "A 'manifest' field was expected..."). Using the native FormData
+  // lets fetch set the multipart boundary automatically.
+  const form = new FormData();
+  form.append('manifest', JSON.stringify({ manifest }));
+
+  const res = await fetch(`${API}/accounts/${accountId()}/pages/projects/${project}/deployments`, {
     method: 'POST',
-    body: JSON.stringify({ manifest }),
+    headers: { Authorization: `Bearer ${pagesKey()}` },
+    body: form,
   });
+  const text = await res.text();
+  let create: any = null;
+  try {
+    create = JSON.parse(text);
+  } catch {
+    /* non-json */
+  }
+  if (!res.ok) {
+    const msg = create?.errors?.[0]?.message || create?.errors?.[0]?.code || text.slice(0, 200);
+    throw new Error(`Cloudflare API ${res.status}: ${msg}`);
+  }
   const result = create.result;
   const uploadUrl: string = result.url;
   const jwt: string = result.jwt;

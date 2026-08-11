@@ -14,11 +14,11 @@ import {
   Gitlab,
   UploadCloud,
   ArrowRight,
+  X,
   Activity,
   Receipt,
   Check,
   ArrowUpRight,
-  Search,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -39,10 +39,9 @@ interface DeploymentRow {
 
 interface PagesStats {
   account: { id: string; subdomain: string };
-  projects: { total: number; deployed: number; failed: number; thisMonth: number };
   usage: { used: number; quota: number };
   panels: { billingShow: boolean; accountShow: boolean };
-  period: { start: string; end: string; label: string };
+  period: { label: string };
 }
 
 async function copyText(u: string) {
@@ -53,9 +52,9 @@ async function copyText(u: string) {
   }
 }
 
-// The Pages dashboard (/pages), styled after Cloudflare's Workers & Pages dashboard. Two
-// columns: left = hero (how do you want to start?) + project list; right = usage /
-// billing / monthly stats / account details.
+// The Pages dashboard (/pages). Shows the deployed project list and a "New project" button.
+// Clicking the button opens a modal with the two "how do you want to deploy?" cards (import a
+// Git repository / drag and drop files). Picking one continues to the matching flow.
 export default function PagesPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -64,9 +63,9 @@ export default function PagesPage() {
   const [gitlabEnabled, setGitlabEnabled] = useState(false);
   const [deployments, setDeployments] = useState<DeploymentRow[]>([]);
   const [stats, setStats] = useState<PagesStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState('');
-  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -111,166 +110,104 @@ export default function PagesPage() {
     }
   }
 
-  const filtered = query
-    ? deployments.filter((d) => d.pagesProject.toLowerCase().includes(query.toLowerCase()))
-    : deployments;
-
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Left column */}
         <div>
-          {/* Hero — how do you want to start? */}
-          {available && (
-            <div className="mb-6">
-              <h1 className="text-xl font-semibold">{t('pg.getStartedTitle')}</h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">{t('pg.getStartedDesc')}</p>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                {/* Import a Git repository */}
-                <button
-                  onClick={() => router.push('/pages/new')}
-                  className="group flex flex-col rounded-lg border bg-card p-4 text-left transition hover:border-primary/50 hover:shadow-sm"
-                >
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Github className="h-4 w-4 text-primary" />
-                    {t('pg.importGitTitle')}
-                  </div>
-                  <p className="mt-1.5 flex-1 text-xs text-muted-foreground">{t('pg.importGitDesc')}</p>
-                  <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                    <Github className="h-3.5 w-3.5" /> GitHub
-                    <span className="mx-1">·</span>
-                    <Gitlab className="h-3.5 w-3.5" /> GitLab
-                    {(!githubEnabled && !gitlabEnabled) && <span className="ml-1">({t('pg.notConfigured')})</span>}
-                  </div>
-                  <span className="mt-3 inline-flex items-center gap-1 self-start text-xs font-medium text-primary group-hover:underline">
-                    {t('pg.getStarted')} <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                </button>
-
-                {/* Drag and drop files */}
-                <button
-                  onClick={() => router.push('/pages/deploy?source=upload')}
-                  className="group flex flex-col rounded-lg border bg-card p-4 text-left transition hover:border-primary/50 hover:shadow-sm"
-                >
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <UploadCloud className="h-4 w-4 text-primary" />
-                    {t('pg.dragDropTitle')}
-                  </div>
-                  <p className="mt-1.5 flex-1 text-xs text-muted-foreground">{t('pg.dragDropDesc')}</p>
-                  <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                    <Rocket className="h-3.5 w-3.5" /> .zip / 文件夹
-                  </div>
-                  <span className="mt-3 inline-flex items-center gap-1 self-start text-xs font-medium text-primary group-hover:underline">
-                    {t('pg.getStarted')} <ArrowRight className="h-3.5 w-3.5" />
-                  </span>
-                </button>
-              </div>
+          {/* Header */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="flex items-center gap-2 text-xl font-bold">
+                <Rocket className="h-6 w-6 text-primary" /> {t('pg.title')}
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('pg.subtitle')}</p>
             </div>
-          )}
-
-          {!available && (
-            <div className="mb-6 rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-              {t('pg.notConfiguredMsg')}
-            </div>
-          )}
-
-          {/* Projects */}
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-base font-semibold">
-              <Rocket className="h-4 w-4 text-primary" /> {t('pg.title')}
-            </h2>
             {available && (
               <button
-                onClick={() => router.push('/pages/new')}
-                className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+                onClick={() => setShowNew(true)}
+                className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
               >
-                <Plus className="h-3.5 w-3.5" /> {t('pg.newProject')}
+                <Plus className="h-4 w-4" /> {t('pg.newProject')}
               </button>
             )}
           </div>
 
-          {/* Search */}
-          {deployments.length > 0 && (
-            <div className="mb-3 flex items-center gap-2 rounded-md border bg-card px-3 py-1.5">
-              <Search className="h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t('pg.searchProjects')}
-                className="w-full bg-transparent text-sm outline-none"
-              />
+          {!available && (
+            <div className="mb-6 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              {t('pg.notConfiguredMsg')}
             </div>
           )}
 
-          {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
-          ) : deployments.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              {t('pg.emptyProjects')}
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((d) => (
-                <div key={d.id} className="flex flex-col rounded-lg border bg-card p-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-mono text-sm font-semibold">{d.pagesProject}</span>
-                    <span
-                      className={`flex shrink-0 items-center gap-1 text-xs ${
-                        d.status === 'deployed'
-                          ? 'text-green-600'
-                          : d.status === 'failed'
-                            ? 'text-red-600'
-                            : 'text-muted-foreground'
-                      }`}
-                    >
-                      {d.status === 'deployed' ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      ) : d.status === 'failed' ? (
-                        <XCircle className="h-3.5 w-3.5" />
-                      ) : (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      )}
-                      {d.status}
-                    </span>
-                  </div>
+      {/* Project list */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : deployments.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+          {t('pg.emptyProjects')}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {deployments.map((d) => (
+            <div key={d.id} className="flex flex-col rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-sm font-semibold">{d.pagesProject}</span>
+                <span
+                  className={`flex items-center gap-1 text-xs ${
+                    d.status === 'deployed'
+                      ? 'text-green-600'
+                      : d.status === 'failed'
+                        ? 'text-red-600'
+                        : 'text-muted-foreground'
+                  }`}
+                >
+                  {d.status === 'deployed' ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : d.status === 'failed' ? (
+                    <XCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  {d.status}
+                </span>
+              </div>
 
-                  <div className="mt-1.5 space-y-1 text-xs text-muted-foreground">
-                    {d.workspaceTitle && <div>{d.workspaceTitle}</div>}
-                    <div>{new Date(d.createdAt).toLocaleString()}</div>
-                    {d.pagesUrl && (
-                      <button onClick={() => copyText(d.pagesUrl ?? '')} className="flex items-center gap-1 text-primary hover:underline">
-                        <Copy className="h-3 w-3" />
-                        <span className="max-w-[14rem] truncate">{d.pagesUrl}</span>
-                      </button>
-                    )}
-                    {d.error && <div className="line-clamp-2 text-red-500">{d.error}</div>}
-                  </div>
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {d.workspaceTitle && <div>{d.workspaceTitle}</div>}
+                <div>{new Date(d.createdAt).toLocaleString()}</div>
+                {d.pagesUrl && (
+                  <button onClick={() => copyText(d.pagesUrl ?? '')} className="flex items-center gap-1 text-primary hover:underline">
+                    <Copy className="h-3 w-3" />
+                    <span className="max-w-[14rem] truncate">{d.pagesUrl}</span>
+                  </button>
+                )}
+                {d.error && <div className="text-red-500">{d.error}</div>}
+              </div>
 
-                  <div className="mt-auto flex items-center gap-1.5 pt-2.5">
-                    <button
-                      onClick={() => router.push(`/pages/${d.id}`)}
-                      className="rounded-md border px-2 py-0.5 text-[11px] hover:bg-secondary"
-                    >
-                      {t('pg.check')}
-                    </button>
-                    <button
-                      onClick={() => d.pagesUrl && window.open(d.pagesUrl, '_blank')}
-                      disabled={!d.pagesUrl}
-                      className="flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] hover:bg-secondary disabled:opacity-40"
-                    >
-                      <Globe className="h-3 w-3" /> {t('pg.open')}
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="mt-auto flex items-center gap-2 pt-3">
+                <button
+                  onClick={() => router.push(`/pages/${d.id}`)}
+                  className="rounded-md border px-2.5 py-1 text-xs hover:bg-secondary"
+                >
+                  {t('pg.check')}
+                </button>
+                <button
+                  onClick={() => d.pagesUrl && window.open(d.pagesUrl, '_blank')}
+                  disabled={!d.pagesUrl}
+                  className="flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs hover:bg-secondary disabled:opacity-40"
+                >
+                  <Globe className="h-3 w-3" /> {t('pg.open')}
+                </button>
+              </div>
             </div>
-          )}
+          ))}
+        </div>
+      )}
         </div>
 
-        {/* Right column — usage, billing, monthly stats, account */}
+        {/* Right column — usage / billing / account */}
         <div className="space-y-4">
           {/* Usage */}
           <div className="rounded-lg border bg-card p-4">
@@ -317,15 +254,7 @@ export default function PagesPage() {
               <div className="flex items-center gap-3 py-2">
                 <div className="relative flex h-16 w-16 items-center justify-center">
                   <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="15"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-secondary"
-                    />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary" />
                   </svg>
                   <span className="text-xs font-medium">$0.00</span>
                 </div>
@@ -351,10 +280,7 @@ export default function PagesPage() {
                   <span className="flex items-center gap-1 truncate font-mono">
                     <span className="max-w-[10rem] truncate">{stats?.account.id || '—'}</span>
                     {stats?.account.id && (
-                      <button
-                        onClick={() => stats && copy(stats.account.id, 'acct')}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
-                      >
+                      <button onClick={() => stats && copy(stats.account.id, 'acct')} className="rounded p-0.5 text-muted-foreground hover:bg-secondary">
                         {copied === 'acct' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
                       </button>
                     )}
@@ -365,10 +291,7 @@ export default function PagesPage() {
                   <span className="flex items-center gap-1 font-mono">
                     <span className="truncate">{stats?.account.subdomain || '—'}</span>
                     {stats?.account.subdomain && (
-                      <button
-                        onClick={() => stats && copy(stats.account.subdomain, 'sub')}
-                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
-                      >
+                      <button onClick={() => stats && copy(stats.account.subdomain, 'sub')} className="rounded p-0.5 text-muted-foreground hover:bg-secondary">
                         {copied === 'sub' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
                       </button>
                     )}
@@ -379,6 +302,67 @@ export default function PagesPage() {
           )}
         </div>
       </div>
+
+      {/* New project modal — how do you want to deploy? */}
+      {showNew && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowNew(false)}>
+          <div
+            className="w-full max-w-2xl rounded-xl border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-1 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold">{t('pg.getStartedTitle')}</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">{t('pg.getStartedDesc')}</p>
+              </div>
+              <button onClick={() => setShowNew(false)} className="rounded p-1 text-muted-foreground hover:bg-secondary">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {/* Import a Git repository */}
+              <button
+                onClick={() => router.push('/pages/new')}
+                className="group flex flex-col rounded-lg border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Github className="h-4 w-4 text-primary" />
+                  {t('pg.importGitTitle')}
+                </div>
+                <p className="mt-2 flex-1 text-xs text-muted-foreground">{t('pg.importGitDesc')}</p>
+                <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Github className="h-3.5 w-3.5" /> GitHub
+                  <span className="mx-1">·</span>
+                  <Gitlab className="h-3.5 w-3.5" /> GitLab
+                  {(!githubEnabled && !gitlabEnabled) && <span className="ml-1">({t('pg.notConfigured')})</span>}
+                </div>
+                <span className="mt-4 inline-flex items-center gap-1 self-start text-sm font-medium text-primary group-hover:underline">
+                  {t('pg.getStarted')} <ArrowRight className="h-4 w-4" />
+                </span>
+              </button>
+
+              {/* Drag and drop files */}
+              <button
+                onClick={() => router.push('/pages/deploy?source=upload')}
+                className="group flex flex-col rounded-lg border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <UploadCloud className="h-4 w-4 text-primary" />
+                  {t('pg.dragDropTitle')}
+                </div>
+                <p className="mt-2 flex-1 text-xs text-muted-foreground">{t('pg.dragDropDesc')}</p>
+                <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+                  <Rocket className="h-3.5 w-3.5" /> .zip / 文件夹
+                </div>
+                <span className="mt-4 inline-flex items-center gap-1 self-start text-sm font-medium text-primary group-hover:underline">
+                  {t('pg.getStarted')} <ArrowRight className="h-4 w-4" />
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

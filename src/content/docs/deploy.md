@@ -2,7 +2,7 @@
 
 > 从零开始，把 Cloudflare OS 部署上线。下面每一步都写了**命令在哪敲、填什么、填成什么样**，照着做就能跑起来。
 >
-> 完整的环境变量清单见 [环境变量速查表](/docs/env)；数据库备份建议见 [数据库备份](/docs/backup)。
+> 完整的环境变量清单见 [环境变量配置指南](/docs/env)；数据库备份建议见 [数据库备份](/docs/backup)。
 
 ## 0. 你需要准备什么
 
@@ -105,7 +105,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 > 想本地先跑起来，这些环境变量要先写进本地 `.env` 文件，见文末「本地开发」。
 >
-> **其他可选变量**（GitHub/Google OAuth 登录、R2 文件分享、邮箱验证码、Cloudflare Access、人机验证等）见 [环境变量速查表](/docs/env)。**不配也能用**，只是对应功能关闭。
+> **其他可选变量**（GitHub/Google OAuth 登录、R2 文件分享、邮箱验证码、Cloudflare Access、人机验证等）见 [环境变量配置指南](/docs/env)。**不配也能用**，只是对应功能关闭。
 
 ### 3.4 点击 Deploy
 

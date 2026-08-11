@@ -25,6 +25,8 @@ postgresql://neondb_owner:密码@ep-xxxx.region.aws.neon.tech/neondb?sslmode=req
 
 > **注意**：连接串含密码，**不要泄露**。泄露了可在 Neon 控制台重置。
 
+> 💡 **别忘了备份**：数据库是应用唯一的持久化存储。请尽早用 Neon 的**分支（Branch）/ 时间点恢复（PITR）**给主库做备份，详见 [数据库备份](/docs/backup)。
+
 ## 第二步：部署到 Vercel
 
 ### 推送代码到 GitHub

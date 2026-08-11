@@ -26,6 +26,7 @@ export const DOC_NAV: DocNavItem[] = [
   { slug: 'github-login', title: '登录配置', icon: KeyRound },
   { slug: 'r2', title: '文件分享 R2', icon: FolderOpen },
   { slug: 'cf-access', title: 'Cloudflare Access', icon: Shield },
+  { slug: 'backup', title: '数据库备份', icon: ShieldCheck },
   { slug: 'usage', title: '使用说明', icon: Lightbulb },
   { slug: 'faq', title: '常见问题', icon: CircleHelp },
 ];
@@ -38,6 +39,7 @@ export const DOC_NAV_EN: DocNavItem[] = [
   { slug: 'github-login', title: 'Sign-in Setup', icon: KeyRound },
   { slug: 'r2', title: 'File Sharing (R2)', icon: FolderOpen },
   { slug: 'cf-access', title: 'Cloudflare Access', icon: Shield },
+  { slug: 'backup', title: 'Database Backup', icon: ShieldCheck },
   { slug: 'usage', title: 'Usage', icon: Lightbulb },
   { slug: 'faq', title: 'FAQ', icon: CircleHelp },
 ];

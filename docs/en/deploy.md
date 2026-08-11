@@ -25,6 +25,8 @@ postgresql://neondb_owner:password@ep-xxxx.region.aws.neon.tech/neondb?sslmode=r
 
 > **Note**: the connection string contains your password — **never leak it**. If leaked, reset it in the Neon console.
 
+> 💡 **Don't forget backups**: the database is the app's only persistent storage. Set up backups early using Neon's **Branch / point-in-time restore (PITR)** — see [Database Backup](/en/docs/backup).
+
 ## Step 2: Deploy to Vercel
 
 ### Push code to GitHub

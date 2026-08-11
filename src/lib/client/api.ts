@@ -313,6 +313,76 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(creds || {}),
     }),
+  monitorSshHost: (id: string) =>
+    request<{
+      ok: boolean;
+      online: boolean;
+      error?: string;
+      checkedAt?: string;
+      hostname?: string;
+      os?: string | null;
+      cores?: number | null;
+      uptimeSec?: number;
+      load?: { one: number | null; five: number | null; fifteen: number | null };
+      memory?: { totalBytes: number; usedBytes: number; availableBytes: number } | null;
+      disk?: { totalBytes: number; usedBytes: number; availableBytes: number } | null;
+    }>(`/api/ssh-hosts/${id}/monitor`),
+  // Stream a command's output over SSE. Returns { abort, done }: call abort() to stop the
+  // stream early; await done to know when the stream has fully ended (for resetting UI state).
+  execSshHost: (
+    id: string,
+    command: string,
+    onData: (text: string) => void,
+  ): { abort: () => void; done: Promise<void> } => {
+    const controller = new AbortController();
+    const done = (async () => {
+      try {
+        const res = await fetch(`/api/ssh-hosts/${id}/exec`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ command }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          let message = `Command failed (${res.status})`;
+          try {
+            const body = await res.json();
+            if (body?.error) message = body.error;
+          } catch {
+            /* ignore */
+          }
+          throw new Error(message);
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          buf += decoder.decode(value, { stream: true });
+          // SSE frames are separated by a blank line.
+          let idx: number;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const frame = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
+            if (!dataLine) continue;
+            let parsed: { type?: string; text?: string };
+            try {
+              parsed = JSON.parse(dataLine.slice(6));
+            } catch {
+              continue;
+            }
+            if (parsed.type === 'data' && parsed.text) onData(parsed.text);
+            if (parsed.type === 'error' && parsed.text) onData(`\n${parsed.text}\n`);
+          }
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) onData(`\n${(e as Error).message}\n`);
+      }
+    })();
+    return { abort: () => controller.abort(), done };
+  },
   listContext: () =>
     request<{
       docs: { id: string; title: string; tags: string; createdAt: string; updatedAt: string }[];

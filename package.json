@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate && prisma generate --schema=prisma/schema-secondary.prisma",
-    "db:push": "prisma db push",
+    "db:push": "prisma db push --accept-data-loss",
     "db:push:secondary": "prisma db push --schema=prisma/schema-secondary.prisma",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate && prisma generate --schema=prisma/schema-secondary.prisma"

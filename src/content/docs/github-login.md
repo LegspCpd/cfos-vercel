@@ -186,6 +186,55 @@ Vercel → 你的项目 → **Settings → Environment Variables**，添加：
 | `AADSTS90002`（租户不存在） | Tenant ID 填错 | 用 `common` 或正确的租户 ID |
 | 登录页没按钮 | 环境变量没配/没 Redeploy | 检查 `MICROSOFT_CLIENT_ID` 是否配置并 Redeploy |
 
+## GitLab 外部连接（GitLab OAuth）
+
+GitLab 是**外部连接**（非登录）：配置后，登录用户可在 **外部连接** 页连接自己的 GitLab 账号，agent 可代为读取项目 / 创建 issue（受 Gatekeeper 写权限控制）。
+
+> **重要**：GitLab 登录与 GitHub/Google/Microsoft **不同**——它**不会**出现在登录页。它是纯"外部连接"功能。
+
+### 第 1 步：创建 GitLab OAuth Application
+
+1. 打开 **https://gitlab.com/-/profile/applications**（或你的自建 GitLab 实例 → **Preferences → Applications**）
+2. 填写：
+   - **Name（名称）**：`Cloudflare OS`
+   - **Redirect URI（重定向 URI）**：`https://os.your-domain.com/api/gitlab/callback`
+     > 必须精确到 `/api/gitlab/callback`，不能只填域名，否则报 `redirect_uri_mismatch`
+   - **Scopes（权限）**：勾选 **`read_api`**（或 `api`，如需写操作；创建 issue 需要 `api`）
+3. 点 **Save application（保存应用）**
+4. 保存后页面会显示 **Application ID** 和 **Secret**（Secret 只显示一次，**立即复制**）
+
+### 第 2 步：配置到 Vercel 环境变量
+
+```
+GITLAB_CLIENT_ID=你的Application ID
+GITLAB_CLIENT_SECRET=你的Secret
+GITLAB_BASE_URL=https://gitlab.com
+```
+
+**Redeploy** 后生效。
+
+### 第 3 步：连接与使用
+
+- 侧边栏 → **外部连接** → GitLab → **连接** → 授权你的 GitLab 账号
+- agent 聊天 → 底部 **外部服务工具（Gatekeeper）** → 选择 GitLab → 读取项目 / 创建 issue
+
+### GitLab 报错排查
+
+| 报错 | 原因 | 解决 |
+|---|---|---|
+| `redirect_uri_mismatch` | 回调地址不对 | GitLab 应用的 **Redirect URI** 精确改为 `https://os.your-domain.com/api/gitlab/callback` |
+| `invalid_client` | Client ID/Secret 错 | 检查 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` |
+| 外部连接页不显示 GitLab | `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` 没配置 | 未配置的服务**不会显示**在外部连接页；配置后 Redeploy |
+
+## 关于"未配置的服务不显示"
+
+外部连接页（以及登录页）**只显示已配置环境变量的服务**：
+
+- 若没有设置 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET`，外部连接页就**不会显示 GitLab 卡片**
+- 同理，GitHub / Google / Microsoft 登录按钮也只在对应环境变量配置后才出现
+
+这样部署时不会出现"点连接却报未配置"的死卡片。想启用哪个服务，就配置哪个服务的环境变量并 Redeploy。
+
 ## 常见问题
 
 | 现象 | 原因与解决 |

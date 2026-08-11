@@ -30,14 +30,23 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  // Which providers are configured in the environment (OAuth client creds set). A provider
+  // with no client id is hidden — showing it would render a dead card whose connect fails.
+  const [available, setAvailable] = useState<{ github: boolean; google: boolean; gitlab: boolean }>({
+    github: true,
+    google: true,
+    gitlab: true,
+  });
 
   async function load() {
     try {
-      const [gh, go, gl] = await Promise.all([
+      const [av, gh, go, gl] = await Promise.all([
+        api.connectionsAvailable(),
         api.githubStatus(),
         api.googleStatus(),
         api.gitlabStatus(),
       ]);
+      setAvailable(av);
       setGithub({
         connected: gh.connected,
         label: gh.githubLogin,
@@ -165,7 +174,9 @@ export default function ConnectionsPage() {
         </div>
       ) : (
         <div className="mt-6 space-y-4">
-          {providers.map((p) => (
+          {providers
+            .filter((p) => available[p.key as 'github' | 'google' | 'gitlab'])
+            .map((p) => (
             <div key={p.key} className="rounded-lg border bg-card p-4 sm:p-5">
               <div className="flex items-start gap-3 sm:gap-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

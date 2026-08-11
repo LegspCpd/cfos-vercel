@@ -262,6 +262,9 @@ export const api = {
     ),
   deleteShare: (id: string) =>
     request<{ ok: boolean }>(`/api/share/${id}`, { method: 'DELETE' }),
+  // Which external providers are configured in the environment (OAuth client creds set).
+  connectionsAvailable: () =>
+    request<{ github: boolean; google: boolean; gitlab: boolean }>('/api/connections/available'),
   githubStatus: () =>
     request<{ connected: boolean; githubLogin: string | null; updatedAt: string | null; writeAccess: string }>(
       '/api/github/status',

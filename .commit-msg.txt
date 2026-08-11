@@ -1,0 +1,20 @@
+feat: hide unconfigured external providers on Connections page + docs update
+
+External Connections previously hard-coded all three providers (github/google/
+gitlab) even when their OAuth env vars weren't set, so a provider without creds
+showed a dead card that 500s on connect.
+
+- New GET /api/connections/available reports which providers are configured in
+  the environment (OAuth client id + secret present).
+- Connections page fetches it on load and filters out providers that aren't
+  configured, instead of rendering a broken card.
+- api.ts adds connectionsAvailable().
+
+Docs (github-login.md, zh + en):
+- Added a complete GitLab external-connection guide (create OAuth app, Redirect
+  URI must be exactly /api/gitlab/callback, scopes read_api/api, env vars, connect
+  & use, troubleshooting).
+- Added an "unconfigured services are hidden" note explaining that a provider only
+  shows once its env vars are set, and why.
+
+Verified: tsc --noEmit clean, oxlint 0 errors.

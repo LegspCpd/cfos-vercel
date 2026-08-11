@@ -141,6 +141,61 @@ Then **Redeploy**.
 | `AADSTS90002` (tenant not found) | Wrong Tenant ID | Use `common` or the correct tenant ID |
 | No button on sign-in | Env vars not set / not redeployed | Check `MICROSOFT_CLIENT_ID` and Redeploy |
 
+## GitLab external connection (GitLab OAuth)
+
+GitLab is an **external connection** (not sign-in): once configured, logged-in users can
+connect their own GitLab account on the **Connections** page, and the agent can read
+projects / create issues on their behalf (subject to Gatekeeper write access).
+
+> **Note**: unlike GitHub/Google/Microsoft, GitLab does **not** appear on the sign-in
+> page — it is purely an external-connection feature.
+
+### Step 1: Create a GitLab OAuth Application
+
+1. Open **https://gitlab.com/-/profile/applications** (or your self-hosted GitLab → **Preferences → Applications**)
+2. Fill in:
+   - **Name**: `Cloudflare OS`
+   - **Redirect URI**: `https://os.your-domain.com/api/gitlab/callback`
+     > Must be **exactly** `/api/gitlab/callback` — otherwise `redirect_uri_mismatch`
+   - **Scopes**: tick **`read_api`** (or **`api`** if you need writes; creating issues needs `api`)
+3. Click **Save application**
+4. Copy the **Application ID** and **Secret** (Secret shows only once — copy immediately)
+
+### Step 2: Add to Vercel env vars
+
+```
+GITLAB_CLIENT_ID=your Application ID
+GITLAB_CLIENT_SECRET=your Secret
+GITLAB_BASE_URL=https://gitlab.com
+```
+
+**Redeploy** to apply.
+
+### Step 3: Connect & use
+
+- Sidebar → **Connections** → GitLab → **Connect** → authorize your GitLab account
+- Agent chat → bottom **External service tools (Gatekeeper)** → choose GitLab → read projects / create issues
+
+### GitLab troubleshooting
+
+| Error | Cause | Fix |
+|---|---|---|
+| `redirect_uri_mismatch` | Callback URL wrong | Set the app's **Redirect URI** to exactly `https://os.your-domain.com/api/gitlab/callback` |
+| `invalid_client` | Wrong ID/Secret | Check `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` |
+| GitLab missing on Connections | `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` unset | Unconfigured services are **not shown**; configure and Redeploy |
+
+## About "unconfigured services are hidden"
+
+The Connections page (and the sign-in page) **only shows services whose environment
+variables are configured**:
+
+- Without `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET`, the Connections page **won't show
+  GitLab**
+- Likewise, the GitHub / Google / Microsoft sign-in buttons appear only once their env
+  vars are set
+
+This avoids a dead card that errors on connect. Enable the services you want, then Redeploy.
+
 ## FAQ
 
 | Symptom | Cause & fix |

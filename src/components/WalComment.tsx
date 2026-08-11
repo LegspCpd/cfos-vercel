@@ -14,12 +14,14 @@ import { useI18n } from '@/lib/client/i18n';
 // Waline comment server URL, configurable via env (inlined by Next at build time).
 const SERVER_URL =
   process.env.NEXT_PUBLIC_COMMENTS_SERVER_URL || 'https://chat.example.com';
-// Waline assets are served from unpkg by default; override the CDN via env vars
-// (useful when self-hosting Waline or mirroring assets). Client-read, so NEXT_PUBLIC_.
+// Waline frontend assets are vendored into this deployment at build time
+// (scripts/fetch-waline.mjs) and served from our own origin behind Cloudflare CDN,
+// so visitors get them from the edge instead of unpkg. NEXT_PUBLIC_WALINE_CSS/JS can
+// still override to point at a custom mirror if vendoring is unwanted.
 const WALINE_CSS =
-  process.env.NEXT_PUBLIC_WALINE_CSS || 'https://unpkg.com/@waline/client@v3/dist/waline.css';
+  process.env.NEXT_PUBLIC_WALINE_CSS || '/vendor/waline/waline.css';
 const WALINE_JS =
-  process.env.NEXT_PUBLIC_WALINE_JS || 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+  process.env.NEXT_PUBLIC_WALINE_JS || '/vendor/waline/waline.js';
 // Off unless explicitly enabled via env var (inlined by Next at build time).
 const COMMENTS_ENABLED = process.env.NEXT_PUBLIC_COMMENTS_ENABLED === 'true';
 
@@ -47,8 +49,8 @@ function loadStyles(href: string) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = href;
-    link.onload = () => resolve();
-    link.onerror = () => resolve();
+    link.addEventListener('load', () => resolve(), { once: true });
+    link.addEventListener('error', () => resolve(), { once: true });
     document.head.appendChild(link);
   });
 }
@@ -76,8 +78,8 @@ function loadWalineInit() {
       import { init } from '${WALINE_JS}';
       window.__walineInit = init;
     `;
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
+    s.addEventListener('load', () => resolve(true), { once: true });
+    s.addEventListener('error', () => resolve(false), { once: true });
     document.head.appendChild(s);
   });
 }

@@ -40,3 +40,6 @@ prisma/dev.db
 # build-time generated site icons (see scripts/fetch-favicon.mjs)
 public/site-icon.png
 public/apple-touch-icon.png
+
+# build-time vendored Waline assets (see scripts/fetch-waline.mjs)
+public/vendor/

@@ -126,14 +126,30 @@ export async function deployFiles(
   const manifest: Record<string, { path: string; content_type: string; hash: string }> = {};
   const byHash = new Map<string, Buffer>();
   for (const f of files) {
+    // Final safety chokepoint for every deploy source (workspace / git / upload): drop any
+    // path that could escape the deploy root or confuse Pages. Sources may arrive with
+    // control chars, absolute paths, or ".." segments — refuse them here so nothing unsafe
+    // ever reaches Cloudflare.
+    const raw = String(f.path ?? '').replace(/\\/g, '/');
+    const DISALLOWED_CHARS = /[\u0000-\u001f\u007f#?]/;
+    const segs = raw.split('/');
+    if (raw.startsWith('/') || raw.startsWith('.') || /^[a-zA-Z]:/.test(raw)) {
+      throw new Error(`Unsafe deploy path rejected: ${raw}`);
+    }
+    if (segs.some((s) => s === '' || s === '.' || s === '..')) {
+      throw new Error(`Unsafe deploy path rejected: ${raw}`);
+    }
+    if (DISALLOWED_CHARS.test(raw)) {
+      throw new Error(`Unsafe deploy path rejected: ${raw}`);
+    }
     const hash = hashOf(f.content);
     // Cloudflare requires every manifest KEY and `path` to start with a leading slash
     // (e.g. "/index.html"). Workspace paths are stored without it, so normalize here —
     // otherwise Cloudflare rejects the body as "A 'manifest' field was expected".
-    const normalized = f.path.startsWith('/') ? f.path : `/${f.path}`;
+    const normalized = raw.startsWith('/') ? raw : `/${raw}`;
     manifest[normalized] = {
       path: normalized,
-      content_type: f.contentType || contentTypeOf(f.path),
+      content_type: f.contentType || contentTypeOf(raw),
       hash,
     };
     byHash.set(hash, f.content);
@@ -187,7 +203,40 @@ export async function deployFiles(
   return { url: result.url as string, deploymentId: result.id as string };
 }
 
-// Get a deployment's current status: success | failure | active | etc.
+// A summary of one Cloudflare Pages project as seen from the CF API, so the UI can show
+// the live subdomain and the currently bound custom domains rather than a stale snapshot.
+export interface PagesProjectInfo {
+  name: string;
+  subdomain: string | null;
+  domains: string[];
+}
+
+// List every Pages project on the account (paginated), returning each project's live
+// subdomain and bound custom domains. PAGES_KEY must allow Pages read on the account.
+export async function listPagesProjects(): Promise<PagesProjectInfo[]> {
+  const out: PagesProjectInfo[] = [];
+  let page = 1;
+  for (;;) {
+    const data = await cf(
+      `/accounts/${accountId()}/pages/projects?per_page=100&page=${page}&direction=desc&sort_by=name`,
+    );
+    const items: any[] = Array.isArray(data.result) ? data.result : [];
+    for (const p of items) {
+      out.push({
+        name: p.name,
+        subdomain: p.subdomain ?? null,
+        domains: Array.isArray(p.domains) ? p.domains.filter((d: unknown): d is string => typeof d === 'string') : [],
+      });
+    }
+    // CF returns total_count; stop when we've seen every page.
+    const total = Number(data.result_info?.total_count ?? items.length);
+    if (items.length === 0 || out.length >= total) break;
+    page += 1;
+  }
+  return out;
+}
+
+// Get the deployment's current status: success | failure | active | etc.
 export async function getDeploymentStatus(
   project: string,
   deploymentId: string,

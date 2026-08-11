@@ -39,6 +39,8 @@ export const api = {
       googleConnected: boolean;
       githubConnected: boolean;
       githubUsername: string | null;
+      gitlabConnected: boolean;
+      gitlabUsername: string | null;
       microsoftConnected: boolean;
       profileComplete: boolean;
       deleteRequestedAt: string | null;
@@ -335,6 +337,16 @@ export const api = {
       github: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
       gitlab: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
     }>('/api/pages/sources'),
+  // Lightweight variant for list/dashboard pages: skips the (slow) git repo enumeration so
+  // the project list loads fast. repos arrays are empty here; call pagesSources() when the
+  // user actually opens the repo picker.
+  pagesSourcesLight: () =>
+    request<{
+      available: boolean;
+      workspaces: { id: string; title: string; files: number }[];
+      github: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
+      gitlab: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
+    }>('/api/pages/sources?light=1'),
   // Deploy from a GitHub/GitLab repository, streaming logs.
   streamRepoDeploy: (
     provider: 'github' | 'gitlab',
@@ -370,6 +382,9 @@ export const api = {
         workspaceTitle: string | null;
         pagesProject: string;
         projectName: string | null;
+        source: string | null;
+        repo: string | null;
+        repoRef: string | null;
         cfDeploymentId: string | null;
         status: string;
         pagesUrl: string | null;
@@ -397,6 +412,7 @@ export const api = {
         pagesUrl: string | null;
         shortUrl: string | null;
         customDomain: string | null;
+        customDomains: string[];
         error: string | null;
         log: string | null;
         buildCommand: string | null;

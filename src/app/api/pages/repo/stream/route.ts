@@ -1,8 +1,8 @@
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { slugifyProject } from '@/lib/cf-pages';
-import { runDeploy } from '@/lib/deploy-run';
-import { githubRepoFiles, gitlabRepoFiles } from '@/lib/git-fetch';
+import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
+import { githubRepoFiles, gitlabRepoFiles, assertGithubRepoOwned, assertGitlabRepoOwned } from '@/lib/git-fetch';
 import { writeAudit } from '@/lib/audit';
 
 // POST /api/pages/repo/stream — deploy a GitHub/GitLab repository and stream real-time
@@ -33,6 +33,12 @@ export async function POST(req: Request) {
   const provider = body.provider === 'gitlab' ? 'gitlab' : 'github';
   if (!body.repo) return new Response('repo is required', { status: 400 });
 
+  // Sanitize the ref for logging/DB (it's URL-encoded before download, but could carry
+  // newlines/control chars that would corrupt SSE frames if interpolated raw).
+  const safeRef = String(body.ref || '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .slice(0, 200) || null;
+
   const config = {
     installCommand: body.installCommand || null,
     buildCommand: body.buildCommand || null,
@@ -47,8 +53,11 @@ export async function POST(req: Request) {
     data: {
       userId: session.userId,
       workspaceId: null, // Git deploys aren't tied to a workspace
+      source: provider,
+      repo: body.repo,
+      repoRef: safeRef,
       pagesProject: projectName,
-      projectName: body.projectName?.trim() || null,
+      projectName: sanitizeProjectName(body.projectName),
       status: 'deploying',
       buildCommand: config.buildCommand,
       installCommand: config.installCommand,
@@ -72,9 +81,20 @@ export async function POST(req: Request) {
 
       try {
         const tag = `[${provider}]`;
-        send({ type: 'data', text: `${tag} fetching ${body.repo}${body.ref ? `@${body.ref}` : ''}` });
-        logTail = [...logTail, `${tag} fetching ${body.repo}`];
+        send({ type: 'data', text: `${tag} verifying ${body.repo}…` });
+        logTail = [...logTail, `${tag} verifying ${body.repo}`];
 
+        // Ownership check: the requested repo MUST belong to the current user's connected
+        // account. Without this, a caller could feed an arbitrary repo (even one the connected
+        // OAuth token can see) and abuse the token / trigger downloads outside the user's own
+        // projects (SSRF-adjacent). Refuse before any download happens.
+        if (provider === 'gitlab') {
+          await assertGitlabRepoOwned(session.userId, body.repo!);
+        } else {
+          await assertGithubRepoOwned(session.userId, body.repo!);
+        }
+
+        send({ type: 'data', text: `${tag} fetching ${body.repo}${safeRef ? `@${safeRef}` : ''}` });
         const files =
           provider === 'gitlab'
             ? await gitlabRepoFiles(session.userId, body.repo!, body.ref)

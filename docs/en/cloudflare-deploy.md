@@ -1,90 +1,130 @@
-# Workspace Deploy (Cloudflare Pages + short links)
+# Pages Deploy (Cloudflare Pages)
 
-> Deploy a workspace's app to Cloudflare Pages in one click, then auto-generate a
-> **memorable short link** (e.g. `s.legspcpd.top/xxxxxx`) for sharing. Deployment
-> history, on-demand status checks, and custom-domain binding are all in the panel.
+> Deploy static sites to **Cloudflare Pages** from four sources — a workspace, a **GitHub** or
+> **GitLab** repository, or a **ZIP/文件夹** upload — in a Cloudflare Pages–style interface
+> (`/pages`). Deploy with one click, get a real `*.pages.dev` URL, bind custom domains, and
+> optionally auto-generate a memorable **short link** for sharing.
 
 ## Overview
 
-- **One-click deploy**: Workspaces → **Deploy** (top-right) → pick a workspace →
-  **Build & deploy** uploads the workspace's static files to Cloudflare Pages.
-- **Short link**: after a successful deploy, a `s.legspcpd.top/xxxxxx` short link is
-  auto-created that redirects to the long `.pages.dev` URL.
-- **Deployment history**: list all your deploys (workspace, status, Pages URL, short
-  link, time) with copy/open actions.
-- **Check now**: re-verify a deployment's live status on the Cloudflare side.
-- **Custom domain**: bind a custom domain to a deployment's Pages project.
+- **Four deploy sources** (`/pages/new`):
+  - **Workspace** — deploy a workspace's static files.
+  - **GitHub / GitLab** — pick a repo and a branch; the server pulls and deploys it.
+  - **ZIP / 文件夹** — upload a `.zip` (or folder) of static files.
+- **Project list** (`/pages`) — every deployment with live status, the real `.pages.dev`
+  URL, bound custom domains, and copy/open actions.
+- **Redeploy** — the detail page routes you back to the exact source flow that produced the
+  deployment (workspace / git / upload), not a generic picker.
+- **Delete** — remove a project (type the project name to confirm).
+- **Custom domains** — bind a domain to any project's Pages project.
+- **Right-hand usage panel** — usage / billing / account details (billing & account cards are
+  opt-in via env, see below).
 
 ## Prerequisites
 
-The Deploy feature needs these env vars (see [Environment Variables](/en/docs/env)):
+The Pages feature needs these env vars (see [Environment Variables](/en/docs/env)):
 
 | Variable | Description |
 |---|---|
-| `PAGES_KEY` | Cloudflare API Token (must allow Pages Edit/Deploy) |
+| `PAGES_KEY` | Cloudflare API Token (must allow **Cloudflare Pages → Edit/Deploy**) |
 | `PAGES_ACCOUNT_ID` | Cloudflare Account ID |
-| `S_LINK` | Short-link service Token (s.legspcpd.top / sink.cool) |
+| `S_LINK` | Short-link service token (sink.cool) — optional |
 
-> Without `PAGES_KEY` the deploy feature is disabled; without `S_LINK` deploys still
-> work but no short link is created.
+> Without `PAGES_KEY` the Pages feature is disabled. Git-source deploys additionally need the
+> GitHub and/or GitLab OAuth variables (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`,
+> `GITLAB_CLIENT_ID`/`GITLAB_CLIENT_SECRET`).
 
 ### Getting the values
 
-1. **PAGES_KEY**: Cloudflare console → **My Profile → API Tokens → Create Token** →
-   use the **Edit Cloudflare Workers** template (or a custom token granting **Cloudflare
-   Pages → Edit**). Put the token in `PAGES_KEY`.
+1. **PAGES_KEY**: Cloudflare console → **My Profile → API Tokens → Create Token** → use the
+   **Edit Cloudflare Workers** template (or a custom token granting **Cloudflare Pages →
+   Edit**). Put the token in `PAGES_KEY`.
 2. **PAGES_ACCOUNT_ID**: Cloudflare console → **bottom-right of the dashboard**.
 3. **S_LINK**: the sink.cool site token for the short-link service.
 
 Redeploy after configuring.
 
-## Usage
+## Deploying
 
-1. Open the **Workspaces** page.
-2. Top-right, next to **New**, click **Deploy** — a panel slides in from the right.
-3. In **Select a workspace to deploy**, pick a workspace.
-4. Click **Build & deploy** and wait for the upload.
-5. On success the panel shows:
-   - **Pages URL**: `https://<project>.pages.dev` (copy button)
-   - **Short link**: `https://s.legspcpd.top/xxxxxx` (copy button)
-6. Every deploy appears in **Deployment history** with **Check now** / **Open** actions.
+### From a workspace
+
+1. Open **Pages → New project**.
+2. Choose **Workspace**, pick a workspace, optionally set a custom project name.
+3. Click **Deploy**. On success the project appears in the list with its `.pages.dev` URL.
+
+### From a GitHub / GitLab repository
+
+1. **Connect** the service first (Profile → Connections → GitHub/GitLab). The OAuth screen
+   asks you to authorize the repositories you want to deploy — pick the ones you need.
+2. Open **Pages → New project → GitHub / GitLab** (GitLab requires the GitLab OAuth env vars).
+3. Pick a repository (search + paginated list) and a branch.
+4. Click **Deploy**. The server verifies the repo belongs to your connected account, then pulls
+   and deploys it.
+
+> **Security**: only repositories from your own connected account can be deployed. The server
+> refuses to pull an arbitrary repo, so a compromised token can't be used to download external
+> repositories.
+
+### From a ZIP / folder upload
+
+1. Open **Pages → New project → Upload**.
+2. Drop a `.zip` (or a folder), optionally set a project name.
+3. Click **Deploy**. The archive is validated (no path traversal, size/entry caps) and deployed.
+
+## The project list
+
+- Every deployment is shown with its **live** status and the real `.pages.dev` subdomain
+  (fetched from Cloudflare, not a stale snapshot).
+- **Custom domains** bound to the project are listed; use **Add domain** on any project to bind
+  a new one.
+- **Copy** the Pages URL or any domain with one click.
+- **Delete**: open the delete dialog and **type the project name** to confirm before removal.
+
+## Right-hand usage panel
+
+- **Requests** card always shows an estimated monthly request count.
+- **Billing** and **Account Details** cards are **opt-in**: set `PAGES_BILLING_SHOW` /
+  `PAGES_ACCOUNT_SHOW` to `true` to show them. Environment variables take precedence over the
+  admin-panel toggle.
+
+## Redeploy
+
+On a project's detail page, **Redeploy** returns you to the deploy form with the original
+source pre-selected:
+- workspace → the same workspace
+- GitHub/GitLab → the same repo + branch
+- upload → the upload flow
 
 ## Custom domain
 
-1. At the bottom of the panel, enter a domain (e.g. `app.example.com`) under **Bind
-   custom domain**.
-2. Click **Bind**.
-3. At your DNS provider, point that domain to Cloudflare (proxy through Cloudflare).
-4. Once active, visit `https://app.example.com` to reach the deploy.
+1. On the project list, click **Add domain** on the project, enter a domain
+   (e.g. `app.example.com`).
+2. At your DNS provider, point that domain to Cloudflare (proxy through Cloudflare).
+3. Once active, visit `https://app.example.com` to reach the deploy.
 
-> The domain must be managed by Cloudflare (or proxied through it) so Pages can issue
-> a certificate.
+> The domain must be managed by Cloudflare (or proxied through it) so Pages can issue a
+> certificate.
 
-## Deployment record fields
+## Short link
 
-| Field | Description |
-|---|---|
-| Workspace | Deployed workspace name |
-| Status | `deployed` / `failed` / `deploying` |
-| Pages URL | `.pages.dev` domain |
-| Short link | `s.legspcpd.top/xxxxxx` |
-| Custom domain | Bound domain, if any |
-| Time | Deployment creation time |
+After a successful deploy, a short link (`s.your-domain/xxxxxx`) is auto-created that
+redirects to the `.pages.dev` URL, so your audience sees the short link instead of the long
+one. Requires `S_LINK`.
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| `PAGES_KEY is not configured` | Missing `PAGES_KEY`, or not redeployed after adding it |
+| Pages feature disabled | Missing `PAGES_KEY`, or not redeployed after adding it |
 | `PAGES_ACCOUNT_ID is not configured` | Missing `PAGES_ACCOUNT_ID`, or wrong account id |
-| `Cloudflare API 4xx` | Token lacks Pages Edit permission, or project name collision |
+| Cloudflare API 4xx on deploy | Token lacks Pages Edit permission, or project name collision |
 | Pages URL but no short link | `S_LINK` not set; it will be created on the next deploy |
-| Short-link creation fails | Invalid short-link token or service down; deploy itself is unaffected |
+| Git repo deploy fails | Repo isn't in your connected account, or you didn't authorize it on the OAuth screen — reconnect and grant access |
+| ZIP fails | Archive too large, too many entries, or contains unsafe paths |
 
 ## Notes
 
-- Each deploy uploads the workspace's current files as a static site (directly
-  servable HTML/CSS/JS). If the workspace needs compilation (TS/React sources), build
-  the static output locally and put it in the workspace first.
-- Deploy is async: success is reported once the upload completes; **Check now** queries
-  the live Cloudflare status.
+- Deploy uploads files as a **static site** (directly servable HTML/CSS/JS). If the source
+  needs compilation (TS/React), build the static output first or use a Git repo.
+- Every source path is validated server-side (no absolute paths, `..`, control characters) and
+  deploy sizes are capped, so a malicious archive can't escape the project or exhaust memory.

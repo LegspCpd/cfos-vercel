@@ -25,6 +25,10 @@ export async function GET(req: Request) {
   // cookie blocking otherwise breaks the flow).
   const state = signOAuthState('connect', session.userId);
   const redirectUri = siteUrl('/api/gitlab/callback');
+  // `read_api` grants read-only API access — including listing projects and reading repo
+  // files, which the Pages deploy feature needs. WITHOUT it the token is login-only and
+  // `git-fetch` can't pull a repo. GitLab shows the requested scopes on the consent screen
+  // so the user explicitly approves repo read access when they re-auth.
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,

@@ -25,6 +25,9 @@ interface DeploymentDetail {
   workspaceTitle: string | null;
   pagesProject: string;
   projectName: string | null;
+  source: string | null;
+  repo: string | null;
+  repoRef: string | null;
   cfDeploymentId: string | null;
   status: string;
   pagesUrl: string | null;
@@ -123,7 +126,7 @@ export default function DeploymentDetailPage() {
   const statusOk = dep.status === 'deployed';
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <Link href="/pages" className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('dd.back')}
       </Link>
@@ -149,37 +152,37 @@ export default function DeploymentDetailPage() {
         <div className="rounded-lg border bg-card p-5">
           <dl className="space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.project')}</dt>
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.project')}</dt>
               <dd className="font-medium text-foreground">{dep.projectName || dep.pagesProject}</dd>
             </div>
             {dep.projectName && (
               <div className="flex flex-wrap items-center gap-2">
-                <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.pagesProject')}</dt>
+                <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.pagesProject')}</dt>
                 <dd className="font-mono text-foreground">{dep.pagesProject}</dd>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.workspace')}</dt>
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.workspace')}</dt>
               <dd>{dep.workspaceTitle || '—'}</dd>
             </div>
             {dep.pagesUrl && (
               <div className="flex flex-wrap items-center gap-2">
-                <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.pagesUrl')}</dt>
-                <dd>
+                <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.pagesUrl')}</dt>
+                <dd className="min-w-0">
                   <CopyButton url={dep.pagesUrl} copied={copied} onCopy={copy} />
                 </dd>
               </div>
             )}
             {dep.shortUrl && (
               <div className="flex flex-wrap items-center gap-2">
-                <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.shortUrl')}</dt>
-                <dd>
+                <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.shortUrl')}</dt>
+                <dd className="min-w-0">
                   <CopyButton url={dep.shortUrl} copied={copied} onCopy={copy} />
                 </dd>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.createdAt')}</dt>
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.createdAt')}</dt>
               <dd>{new Date(dep.createdAt).toLocaleString()}</dd>
             </div>
           </dl>
@@ -201,7 +204,23 @@ export default function DeploymentDetailPage() {
               {checking ? t('dd.checking') : t('dd.check')}
             </button>
             <button
-              onClick={() => router.push(`/pages/deploy?source=workspace${dep.workspaceId ? `&workspace=${dep.workspaceId}` : ''}`)}
+              onClick={() => {
+                // Route back to the exact deploy flow the record came from, so redeploy
+                // doesn't silently drop the source. Unknown source → back to the picker.
+                const src = dep.source;
+                if (src === 'github' || src === 'gitlab') {
+                  const q = new URLSearchParams({ source: src });
+                  if (dep.repo) q.set('repo', dep.repo);
+                  if (dep.repoRef) q.set('ref', dep.repoRef);
+                  router.push(`/pages/deploy?${q.toString()}`);
+                } else if (src === 'upload') {
+                  router.push('/pages/deploy?source=upload');
+                } else if (src === 'workspace' && dep.workspaceId) {
+                  router.push(`/pages/deploy?source=workspace&workspace=${dep.workspaceId}`);
+                } else {
+                  router.push('/pages/new');
+                }
+              }}
               className="rounded-md border px-3 py-2 text-sm hover:bg-secondary"
             >
               {t('dd.redeploy')}
@@ -216,20 +235,20 @@ export default function DeploymentDetailPage() {
           </h3>
           <dl className="space-y-2 text-sm">
             <div className="flex gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.installCmd')}</dt>
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.installCmd')}</dt>
               <dd className="font-mono">{dep.installCommand || t('dd.none')}</dd>
             </div>
-            <div className="flex gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.buildCmd')}</dt>
-              <dd className="font-mono">{dep.buildCommand || t('dd.none')}</dd>
+            <div className="flex flex-wrap gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.buildCmd')}</dt>
+              <dd className="min-w-0 flex-1 font-mono break-all">{dep.buildCommand || t('dd.none')}</dd>
             </div>
-            <div className="flex gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.outputDir')}</dt>
-              <dd className="font-mono">{dep.outputDir || t('dd.none')}</dd>
+            <div className="flex flex-wrap gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.outputDir')}</dt>
+              <dd className="min-w-0 flex-1 font-mono break-all">{dep.outputDir || t('dd.none')}</dd>
             </div>
-            <div className="flex gap-2">
-              <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.envJson')}</dt>
-              <dd className="font-mono whitespace-pre-wrap break-all">{dep.envJson || t('dd.none')}</dd>
+            <div className="flex flex-wrap gap-2">
+              <dt className="w-24 shrink-0 text-muted-foreground sm:w-32">{t('dd.envJson')}</dt>
+              <dd className="min-w-0 flex-1 font-mono whitespace-pre-wrap break-all">{dep.envJson || t('dd.none')}</dd>
             </div>
           </dl>
         </div>

@@ -43,7 +43,7 @@ This version is a **secondary development (二次开发) rebuilt for Vercel** us
 - [File Sharing (R2)](/en/docs/r2) — set up Cloudflare R2 storage
 - [Cloudflare Access](/en/docs/cf-access) — full SSO gate
 - [Database Backup](/en/docs/backup) — protect data with Neon platform capabilities
-- [Workspace Deploy](/en/docs/cloudflare-deploy) — one-click deploy to Cloudflare Pages + short links
+- [Pages Deploy](/en/docs/cloudflare-deploy) — deploy workspaces, GitHub/GitLab repos, or ZIP uploads to Cloudflare Pages + short links
 - [Usage](/en/docs/usage) — how to use the workspace
 - [FAQ](/en/docs/faq) — troubleshooting & tips
 

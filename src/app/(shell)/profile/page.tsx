@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Upload, Check, Link2, Mail, RefreshCw, X, HelpCircle } from 'lucide-react';
-import { GithubIcon, GoogleIcon, MicrosoftIcon } from '@/components/BrandIcons';
+import { GithubIcon, GoogleIcon, MicrosoftIcon, GitlabIcon } from '@/components/BrandIcons';
 import CaptchaWidget from '@/components/CaptchaWidget';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -19,6 +19,8 @@ interface MeInfo {
   googleConnected: boolean;
   githubConnected: boolean;
   githubUsername: string | null;
+  gitlabConnected: boolean;
+  gitlabUsername: string | null;
   microsoftConnected: boolean;
   deleteRequestedAt: string | null;
   deleteAt: string | null;
@@ -170,6 +172,10 @@ export default function ProfilePage() {
 
   function connectGithub() {
     window.location.href = `/api/github/connect?token=${encodeURIComponent(getToken() || '')}`;
+  }
+
+  function connectGitlab() {
+    window.location.href = `/api/gitlab/connect?token=${encodeURIComponent(getToken() || '')}`;
   }
 
   function connectGoogle() {
@@ -622,6 +628,35 @@ export default function ProfilePage() {
               className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
             >
               <Link2 className="h-3.5 w-3.5" /> {t('pr.connectGithub')}
+            </button>
+          )}
+        </div>
+
+        {/* GitLab — needed to deploy GitLab repos via Pages */}
+        <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+              <GitlabIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">GitLab</p>
+              <p className="text-xs text-muted-foreground">
+                {me?.gitlabConnected
+                  ? `${t('pr.gitlabConnected')}${me.gitlabUsername || ''}`
+                  : t('pr.notConnected')}
+              </p>
+            </div>
+          </div>
+          {me?.gitlabConnected ? (
+            <span className="flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-xs text-green-600">
+              <Check className="h-3.5 w-3.5" /> {t('pr.connected') || '已连接'}
+            </span>
+          ) : (
+            <button
+              onClick={connectGitlab}
+              className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
+            >
+              <Link2 className="h-3.5 w-3.5" /> {t('pr.connectGitlab')}
             </button>
           )}
         </div>

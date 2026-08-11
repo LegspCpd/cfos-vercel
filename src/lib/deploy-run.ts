@@ -19,6 +19,19 @@ export interface DeployConfig {
   envJson?: string | null; // JSON string map of extra env vars
 }
 
+// The user-facing display name shown in the project list. It is never used as the Pages
+// project id (that's always a slugified random name), so we only need to bound its length
+// and strip control characters / newlines to keep the DB and UI safe. Returns a cleaned
+// string, or null when the input was empty.
+export function sanitizeProjectName(name?: string | null): string | null {
+  if (!name) return null;
+  const cleaned = name
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .slice(0, 80);
+  return cleaned || null;
+}
+
 export interface DeployInput {
   projectName: string;
   files: PagesFile[];
@@ -34,14 +47,25 @@ export interface DeployResult {
 }
 
 // Parse the user-supplied env vars JSON into a map. Best-effort: invalid JSON yields {}.
+// Keys are restricted to `$KEY`/`${KEY}`-style identifiers and values capped in length so
+// a crafted payload can't inject weird keys or huge strings into the deployed files.
+const MAX_ENV_KEYS = 32;
+const MAX_ENV_KEY_LEN = 64;
+const MAX_ENV_VAL_LEN = 64 * 1024;
+const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function parseEnv(envJson?: string | null): Record<string, string> {
   if (!envJson) return {};
   try {
     const raw = JSON.parse(envJson);
     if (raw && typeof raw === 'object') {
       const out: Record<string, string> = {};
-      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-        if (typeof v === 'string' || typeof v === 'number') out[k] = String(v);
+      const entries = Object.entries(raw as Record<string, unknown>);
+      if (entries.length > MAX_ENV_KEYS) return out;
+      for (const [k, v] of entries) {
+        if (k.length > MAX_ENV_KEY_LEN || !ENV_KEY_RE.test(k)) continue;
+        const val = typeof v === 'string' || typeof v === 'number' ? String(v) : '';
+        if (val.length > MAX_ENV_VAL_LEN) continue;
+        out[k] = val;
       }
       return out;
     }

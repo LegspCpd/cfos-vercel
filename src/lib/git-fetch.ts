@@ -62,7 +62,7 @@ export async function githubRepoFiles(userId: string, repoFullName: string, ref?
 
   if (!buf) {
     throw new Error(
-      'GitHub: unable to download this repository. If it is private, make sure you connected GitHub and authorized access to this repo (choose "All repositories" when connecting).',
+      'GitHub: unable to download this repository. If it is private, your connected token may lack repo read access. Reconnect GitHub (Profile → Connections) and, on the authorization screen, choose the repositories to grant — then retry.',
     );
   }
 
@@ -189,4 +189,38 @@ async function gitlabToken(userId: string): Promise<string | null> {
   });
   if (!conn) return null;
   return decryptSecret(conn.accessToken) ?? conn.accessToken;
+}
+
+// Strict format check for a GitHub repo "owner/repo": exactly one slash, and only the
+// characters GitHub allows in owner/repo names. Rejects path traversal / extra slashes /
+// control chars that could smuggle extra path segments into download URLs.
+const GITHUB_REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const GITLAB_PROJECT_RE = /^[A-Za-z0-9_.\-/]+$/;
+
+// Verify the requested GitHub repo belongs to the current user's connected account BEFORE
+// any download happens. Without this, a caller could make the server download an arbitrary
+// public repo with the user's OAuth token (and, for private repos they have access to, leak
+// that they're downloading). Throws if the repo isn't in the user's own repo list.
+export async function assertGithubRepoOwned(userId: string, repo: string): Promise<void> {
+  if (!GITHUB_REPO_RE.test(repo)) throw new Error('GitHub: invalid repository name (expected "owner/repo").');
+  const owned = await githubRepos(userId);
+  if (!owned.some((r) => r.name === repo)) {
+    throw new Error(
+      'GitHub: you can only deploy repositories from your own connected account. Reconnect GitHub and grant access to this repo ("All repositories"), then retry.',
+    );
+  }
+}
+
+// Same ownership check for GitLab. The project may contain a namespace slash, so validate
+// with a slightly looser pattern but still require membership.
+export async function assertGitlabRepoOwned(userId: string, project: string): Promise<void> {
+  if (!GITLAB_PROJECT_RE.test(project) || project.includes('..')) {
+    throw new Error('GitLab: invalid repository name.');
+  }
+  const owned = await gitlabRepos(userId);
+  if (!owned.some((r) => r.name === project)) {
+    throw new Error(
+      'GitLab: you can only deploy repositories from your own connected account. Reconnect GitLab and grant access to this repo, then retry.',
+    );
+  }
 }

@@ -71,6 +71,59 @@ Configuring either provider locks that provider's settings in the admin panel; e
 | `R2_SECRET_ACCESS_KEY` | R2 Secret Key. |
 | `R2_BUCKET` | R2 bucket name. |
 
+### Pages Deploy (Cloudflare Pages — deploy apps)
+
+The **Pages** feature (`/pages`) deploys workspace files, Git repositories (GitHub/GitLab),
+or ZIP uploads to Cloudflare Pages as static sites, and auto-creates short links.
+
+| Variable | Description |
+|---|---|
+| `PAGES_KEY` | Cloudflare API Token with **Cloudflare Pages → Edit** (Deploy) permission. Required to enable the Pages feature. |
+| `PAGES_ACCOUNT_ID` | Cloudflare Account ID (the account that owns the Pages projects). |
+| `PAGES_SUBDOMAIN` | Pages workers subdomain, default `pages.dev`. |
+| `S_LINK` | Short-link service token (e.g. sink.cool). Optional — without it deploys still work but no short link is created. |
+| `S_LINK_BASE` | Short-link service base URL, default `https://sink.cool`. |
+| `PAGES_BILLING_SHOW` | Show the "Billing" card in the right-hand usage panel; `true`/`false`, off by default. |
+| `PAGES_ACCOUNT_SHOW` | Show the "Account Details" card in the right-hand usage panel; `true`/`false`, off by default. |
+
+> Git-source deploys (from GitHub / GitLab repositories) also need the corresponding OAuth
+> variables from the **Third-party Sign-in** section (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`
+> and/or `GITLAB_CLIENT_ID`/`GITLAB_CLIENT_SECRET`). Those are reused for Pages Git deploys.
+
+### Cloudflare KV Response Cache (optional)
+
+Used to make slow cross-service calls (the Cloudflare Pages project list, GitHub/GitLab repo enumeration) feel instant on repeat visits. Everything degrades gracefully when not configured (falls back to a per-instance in-memory cache).
+
+**Multi-region (up to 5 KV namespaces).** Reads route to the KV store nearest to the request (from Vercel's `x-vercel-ip-country`), falling back through the other regions on a miss; writes fan out to every configured region so any nearby reader can hit. Region codes: `ASIA`, `NA` (North America), `SA` (South America), `EU` (Europe). If a region has two KV stores, append `-2`.
+
+Each configured region uses three vars (replace `<REGION>` with `ASIA` / `NA` / `SA` / `EU`, and add `_2` for a second store in a region):
+
+| Variable | Description |
+|---|---|
+| `KV_<REGION>_ACCOUNT_ID` | Cloudflare account id (same account as the Pages projects). |
+| `KV_<REGION>_API_TOKEN` | Cloudflare API token with KV read/write on the namespace. You can reuse `PAGES_KEY` if that token also has **Workers KV → Edit** permission, otherwise create a dedicated token. |
+| `KV_<REGION>_NAMESPACE_ID` | The KV namespace id to store into. Create a namespace in Cloudflare → Workers & Pages → KV and paste its ID here — "give it an ID and it just works". |
+
+Example — an Asia store plus a second Asia store:
+```
+KV_ASIA_ACCOUNT_ID=...
+KV_ASIA_API_TOKEN=...
+KV_ASIA_NAMESPACE_ID=...
+KV_ASIA_2_ACCOUNT_ID=...
+KV_ASIA_2_API_TOKEN=...
+KV_ASIA_2_NAMESPACE_ID=...
+```
+
+Shared tuning vars (one set, applies to all regions):
+
+| Variable | Description |
+|---|---|
+| `KV_PREFIX` | Optional cache-key prefix (isolate multiple instances), default `cfos`. |
+| `KV_DEFAULT_TTL` | Default cache TTL in seconds, default `60`. |
+| `KV_PAGES_PROJECTS_TTL` | TTL (seconds) for the Pages project list, default `15`. |
+| `KV_GIT_REPOS_TTL` | TTL (seconds) for the per-user GitHub/GitLab repo lists, default `60`. |
+| `KV_PAGES_STATS_TTL` | TTL (seconds) for the Pages usage panel stats, default `8`. |
+
 ### Cloudflare Access (full-site gate)
 
 | Variable | Description |

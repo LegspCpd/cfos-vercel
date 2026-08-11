@@ -37,10 +37,20 @@ export async function GET(req: Request) {
   const redirectUri = siteUrl('/api/auth/github/callback');
 
   const state = signOAuthState(kind, session.userId);
+  // `repo` grants read access to the user's repositories (including private), which the
+  // Pages deploy feature needs to pull a repo's files. WITHOUT it the token is login-only
+  // and `git-fetch` gets 403/404 on repo contents. `read:user` keeps the profile lookup
+  // working. We drop the redundant `user:email`.
+  //
+  // `prompt=consent` forces GitHub to show the consent screen on EVERY connect, so a user
+  // reconnecting (e.g. after a previous login-only grant) is prompted to pick which repos
+  // to authorize — instead of GitHub silently re-issuing a login-only token because the
+  // OAuth app was already approved.
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,
-    scope: 'read:user user:email repo',
+    scope: 'read:user repo',
+    prompt: 'consent',
     state,
   });
 

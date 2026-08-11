@@ -35,6 +35,7 @@ interface DeploymentRow {
   pagesUrl: string | null;
   shortUrl: string | null;
   customDomain: string | null;
+  customDomains: string[];
   error: string | null;
   createdAt: string;
 }
@@ -72,30 +73,28 @@ export default function PagesPage() {
   const [deleteTarget, setDeleteTarget] = useState<DeploymentRow | null>(null);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Add-domain: which project's input is open + the typed domain + submitting state.
+  const [domainTarget, setDomainTarget] = useState<string | null>(null);
+  const [domainInput, setDomainInput] = useState('');
+  const [domainBusy, setDomainBusy] = useState(false);
+  const [domainMsg, setDomainMsg] = useState<{ key: string; type: 'ok' | 'err' } | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const s = await api.pagesSources();
-      setAvailable(s.available);
-      setGithubEnabled(s.github.enabled);
-      setGitlabEnabled(s.gitlab.enabled);
-    } catch {
-      /* ignore */
+    // Fire all three in parallel — the source check uses the light endpoint (no slow git
+    // repo enumeration) so the project list renders as fast as possible.
+    const [s, r, st] = await Promise.allSettled([
+      api.pagesSourcesLight(),
+      api.listDeployments(),
+      api.pagesStats(),
+    ]);
+    if (s.status === 'fulfilled') {
+      setAvailable(s.value.available);
+      setGithubEnabled(s.value.github.enabled);
+      setGitlabEnabled(s.value.gitlab.enabled);
     }
-    try {
-      const r = await api.listDeployments();
-      setDeployments(r.deployments);
-    } catch {
-      /* ignore */
-    }
-    try {
-      const st = await api.pagesStats();
-      setStats(st);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoading(false);
-    }
+    if (r.status === 'fulfilled') setDeployments(r.value.deployments);
+    if (st.status === 'fulfilled') setStats(st.value);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -116,6 +115,33 @@ export default function PagesPage() {
     }
   }
 
+  async function addDomain(d: DeploymentRow) {
+    if (domainBusy) return;
+    const domain = domainInput.trim().toLowerCase();
+    // Loose domain validation mirroring the server-side check.
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) {
+      setDomainMsg({ key: 'pg.domainInvalid', type: 'err' });
+      return;
+    }
+    setDomainBusy(true);
+    setDomainMsg(null);
+    try {
+      const r = await api.bindDeploymentDomain(d.id, domain);
+      if (!r.ok) {
+        setDomainMsg({ key: r.error || 'pg.domainAddFailed', type: 'err' });
+        return;
+      }
+      setDomainMsg({ key: 'pg.domainAdded', type: 'ok' });
+      setDomainInput('');
+      // Re-fetch so the new domain appears in the list (from live CF state).
+      await load();
+    } catch {
+      setDomainMsg({ key: 'pg.domainAddFailed', type: 'err' });
+    } finally {
+      setDomainBusy(false);
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget || deleteInput !== (deleteTarget.projectName || deleteTarget.pagesProject) || deleting) return;
     setDeleting(true);
@@ -132,7 +158,7 @@ export default function PagesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Left column */}
         <div>
@@ -162,8 +188,17 @@ export default function PagesPage() {
 
       {/* Project list */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-lg border bg-card p-4">
+              <div className="h-4 w-1/2 animate-pulse rounded bg-secondary" />
+              <div className="mt-3 space-y-2">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-secondary" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-secondary" />
+              </div>
+              <div className="mt-4 h-8 w-full animate-pulse rounded-md bg-secondary" />
+            </div>
+          ))}
         </div>
       ) : deployments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
@@ -216,6 +251,79 @@ export default function PagesPage() {
                     <span className="max-w-[14rem] truncate">{d.pagesUrl}</span>
                   </button>
                 )}
+                {/* Custom domains (live from CF) */}
+                {d.customDomains.length > 0 && (
+                  <div className="pt-1">
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{t('pg.domains')}</div>
+                    <div className="mt-0.5 space-y-0.5">
+                      {d.customDomains.map((dom) => (
+                        <div key={dom} className="flex items-center gap-1">
+                          <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          <button
+                            onClick={() => copyText(dom)}
+                            className="flex min-w-0 items-center gap-1 text-primary hover:underline"
+                          >
+                            <span className="max-w-[13rem] truncate">{dom}</span>
+                            <Copy className="h-2.5 w-2.5 shrink-0" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Add-domain control */}
+                <div className="pt-0.5">
+                  {domainTarget === d.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        value={domainInput}
+                        onChange={(e) => {
+                          setDomainInput(e.target.value);
+                          setDomainMsg(null);
+                        }}
+                        placeholder={t('pg.addDomainPlaceholder')}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') addDomain(d);
+                        }}
+                        autoFocus
+                        className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 font-mono text-xs"
+                      />
+                      <button
+                        onClick={() => addDomain(d)}
+                        disabled={domainBusy}
+                        className="shrink-0 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        {domainBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : t('pg.addDomain')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDomainTarget(null);
+                          setDomainInput('');
+                          setDomainMsg(null);
+                        }}
+                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setDomainTarget(d.id);
+                        setDomainInput('');
+                        setDomainMsg(null);
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary"
+                    >
+                      <Plus className="h-3 w-3" /> {t('pg.addDomain')}
+                    </button>
+                  )}
+                  {domainTarget === d.id && domainMsg && (
+                    <div className={`mt-1 text-[11px] ${domainMsg.type === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
+                      {domainMsg.key.startsWith('pg.') ? t(domainMsg.key) : domainMsg.key}
+                    </div>
+                  )}
+                </div>
                 {d.error && <div className="text-red-500">{d.error}</div>}
               </div>
 

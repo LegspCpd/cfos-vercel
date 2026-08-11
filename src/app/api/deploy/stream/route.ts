@@ -1,7 +1,7 @@
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { slugifyProject } from '@/lib/cf-pages';
-import { runDeploy } from '@/lib/deploy-run';
+import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { writeAudit } from '@/lib/audit';
 
 // POST /api/deploy/stream — deploy a workspace and stream real-time build logs to the
@@ -70,8 +70,9 @@ export async function POST(req: Request) {
     data: {
       userId: session.userId,
       workspaceId: ws.id,
+      source: 'workspace',
       pagesProject: projectName,
-      projectName: body.projectName?.trim() || null,
+      projectName: sanitizeProjectName(body.projectName),
       status: 'deploying',
       buildCommand: config.buildCommand,
       installCommand: config.installCommand,
@@ -96,12 +97,26 @@ export async function POST(req: Request) {
 
       try {
         // Static deploy: workspace files become the Pages output. Skip dotfiles except
-        // _redirects / _headers (Pages special files).
+        // _redirects / _headers (Pages special files). Enforce hard caps so a huge
+        // workspace can't exhaust memory/time in the serverless invocation.
+        const MAX_WS_FILES = 500;
+        const MAX_WS_BYTES = 100 * 1024 * 1024;
+        if (ws.files.length > MAX_WS_FILES) {
+          throw new Error(`Workspace has too many files (max ${MAX_WS_FILES}) to deploy`);
+        }
+        let wsTotal = 0;
         const files = ws.files
           .filter((f) =>
             !f.path.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers'),
           )
-          .map((f) => ({ path: f.path, content: Buffer.from(f.content || '') }));
+          .map((f) => {
+            const content = Buffer.from(f.content || '');
+            wsTotal += content.byteLength;
+            return { path: f.path, content };
+          });
+        if (wsTotal > MAX_WS_BYTES) {
+          throw new Error('Workspace exceeds 100 MB total size limit to deploy');
+        }
 
         const log = (line: string) => {
           logTail = [...logTail, line].slice(-500);

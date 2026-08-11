@@ -1,7 +1,7 @@
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { slugifyProject } from '@/lib/cf-pages';
-import { runDeploy } from '@/lib/deploy-run';
+import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { unzip } from '@/lib/unzip';
 import { writeAudit } from '@/lib/audit';
 
@@ -47,7 +47,11 @@ export async function POST(req: Request) {
     outputDir: String(form.get('outputDir') || '') || null,
     envJson: String(form.get('envJson') || '') || null,
   };
-  const userProjectName = String(form.get('projectName') || '').trim() || null;
+  const userProjectName = sanitizeProjectName(String(form.get('projectName') || ''));
+
+  // Strip control chars/newlines from the client-provided file name before it's interpolated
+  // into SSE frames — a crafted name with "\n\n" could otherwise inject fake stream frames.
+  const safeName = String(file.name || 'zip').replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 120);
 
   const buf = Buffer.from(await file.arrayBuffer());
 
@@ -58,6 +62,7 @@ export async function POST(req: Request) {
     data: {
       userId: session.userId,
       workspaceId: null, // bare uploads are not tied to a workspace
+      source: 'upload',
       pagesProject: projectName,
       projectName: userProjectName,
       status: 'deploying',
@@ -82,8 +87,8 @@ export async function POST(req: Request) {
       };
 
       try {
-        logTail = [...logTail, `[zip] reading ${file.name}`];
-        send({ type: 'data', text: `[zip] reading ${file.name}` });
+        logTail = [...logTail, `[zip] reading ${safeName}`];
+        send({ type: 'data', text: `[zip] reading ${safeName}` });
 
         let files;
         try {

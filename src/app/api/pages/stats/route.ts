@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getPagesPanelFlags } from '@/lib/settings';
+import { cachedJson } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -28,40 +29,49 @@ export async function GET(req: Request) {
   const accountId = process.env.PAGES_ACCOUNT_ID || '';
   const subdomain = process.env.PAGES_SUBDOMAIN || 'pages.dev';
 
-  const flags = await getPagesPanelFlags();
+  const payload = await cachedJson(
+    'pagesstats',
+    session.userId,
+    async () => {
+      const flags = await getPagesPanelFlags();
 
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [total, deployed, failed, thisMonth] = await Promise.all([
-    prisma.deployment.count({ where: { userId: session.userId } }),
-    prisma.deployment.count({ where: { userId: session.userId, status: 'deployed' } }),
-    prisma.deployment.count({ where: { userId: session.userId, status: 'failed' } }),
-    prisma.deployment.count({
-      where: { userId: session.userId, createdAt: { gte: start, lt: end } },
-    }),
-  ]);
+      const [total, deployed, failed, thisMonth] = await Promise.all([
+        prisma.deployment.count({ where: { userId: session.userId } }),
+        prisma.deployment.count({ where: { userId: session.userId, status: 'deployed' } }),
+        prisma.deployment.count({ where: { userId: session.userId, status: 'failed' } }),
+        prisma.deployment.count({
+          where: { userId: session.userId, createdAt: { gte: start, lt: end } },
+        }),
+      ]);
 
-  // Simple, deterministic estimate so the bar doesn't fluctuate wildly between renders.
-  // ~500 requests / month / deployed project is a reasonable default for a personal-pages
-  // tier; admins will see a believable number without exposing actual CF metrics yet.
-  const estimatedRequests = deployed * 500;
+      // Simple, deterministic estimate so the bar doesn't fluctuate wildly between renders.
+      // ~500 requests / month / deployed project is a reasonable default for a personal-pages
+      // tier; admins will see a believable number without exposing actual CF metrics yet.
+      const estimatedRequests = deployed * 500;
 
-  return NextResponse.json({
-    account: { id: accountId, subdomain },
-    projects: { total, deployed, failed, thisMonth },
-    usage: { used: estimatedRequests, quota: MONTHLY_REQUEST_QUOTA },
-    panels: {
-      billingShow: flags.billingShow,
-      accountShow: flags.accountShow,
+      return {
+        account: { id: accountId, subdomain },
+        projects: { total, deployed, failed, thisMonth },
+        usage: { used: estimatedRequests, quota: MONTHLY_REQUEST_QUOTA },
+        panels: {
+          billingShow: flags.billingShow,
+          accountShow: flags.accountShow,
+        },
+        period: {
+          start: start.toISOString(),
+          end: end.toISOString(),
+          label: `${monthName(start.getMonth())} ${start.getDate()} – ${monthName(end.getMonth())} ${end.getDate()}`,
+        },
+      };
     },
-    period: {
-      start: start.toISOString(),
-      end: end.toISOString(),
-      label: `${monthName(start.getMonth())} ${start.getDate()} – ${monthName(end.getMonth())} ${end.getDate()}`,
-    },
-  });
+    { ttlSeconds: Number(process.env.KV_PAGES_STATS_TTL) || 8 },
+  );
+
+  return NextResponse.json(payload);
 }
 
 function monthName(m: number): string {

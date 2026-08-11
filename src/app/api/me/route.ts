@@ -24,6 +24,7 @@ export async function GET(req: Request) {
     where: { id: session.userId },
     include: {
       githubConnections: { select: { githubLogin: true }, orderBy: { updatedAt: 'desc' } },
+      gitlabConnections: { select: { gitlabUsername: true }, orderBy: { updatedAt: 'desc' } },
       group: { select: { permissions: true, name: true } },
     },
   });
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
   const isAdmin = await isUserAdmin(user.id);
   const permissions = resolvePermissions(user);
   const githubLogins = user.githubConnections.map((c) => c.githubLogin);
+  const gitlabLogins = user.gitlabConnections.map((c) => c.gitlabUsername);
   return NextResponse.json({
     id: user.id,
     username: user.username,
@@ -47,6 +49,8 @@ export async function GET(req: Request) {
     githubConnected: githubLogins.length > 0,
     githubUsername: githubLogins[0] ?? null,
     githubAccounts: githubLogins,
+    gitlabConnected: gitlabLogins.length > 0,
+    gitlabUsername: gitlabLogins[0] ?? null,
     microsoftConnected: Boolean(user.microsoftId),
     profileComplete: user.profileComplete,
     deleteRequestedAt: user.deleteRequestedAt?.toISOString() ?? null,

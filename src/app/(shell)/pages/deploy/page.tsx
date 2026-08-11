@@ -73,17 +73,16 @@ export default function DeployPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    try {
-      const s = await api.pagesSources();
-      setWorkspaces(s.workspaces);
-      setRepoList({ github: s.github.repos, gitlab: s.gitlab.repos });
-      const wsParam = params.get('workspace');
-      const wantedWs = wsParam && s.workspaces.some((w) => w.id === wsParam) ? wsParam : s.workspaces[0]?.id;
-      if (wantedWs) setSelectedWs(wantedWs);
-    } catch {
-      /* ignore */
-    }
-  }, [params]);
+    const isGit = source === 'github' || source === 'gitlab';
+    // Only a git source needs the repo enumeration (slow — calls GitHub/GitLab). Workspace
+    // and upload flows only need the workspace list, so use the light endpoint there.
+    const s = isGit ? await api.pagesSources() : await api.pagesSourcesLight();
+    setWorkspaces(s.workspaces);
+    setRepoList({ github: s.github.repos, gitlab: s.gitlab.repos });
+    const wsParam = params.get('workspace');
+    const wantedWs = wsParam && s.workspaces.some((w) => w.id === wsParam) ? wsParam : s.workspaces[0]?.id;
+    if (wantedWs) setSelectedWs(wantedWs);
+  }, [params, source]);
 
   useEffect(() => {
     if (!getToken()) {
@@ -200,14 +199,14 @@ export default function DeployPage() {
   const repoPool = source === 'gitlab' ? repoList.gitlab : repoList.github;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       {/* Back link */}
       <Link href="/pages/new" className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('pg.backChooseSource')}
       </Link>
 
       {/* Step indicator */}
-      <div className="mb-8 flex items-center gap-2 text-xs">
+      <div className="mb-8 flex items-center gap-2 overflow-x-auto pb-1 text-xs">
         {STEPS.map((s, i) => (
           <div key={s.key} className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">

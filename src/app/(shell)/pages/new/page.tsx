@@ -8,7 +8,6 @@ import {
   Github,
   Gitlab,
   ChevronRight,
-  Loader2,
   Search,
   Plus,
   RefreshCw,
@@ -45,6 +44,7 @@ export default function NewProjectPage() {
   const [gitlab, setGitlab] = useState<{ enabled: boolean; connected: boolean; repos: Repo[] }>({ enabled: false, connected: false, repos: [] });
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [reposLoading, setReposLoading] = useState(true);
   const PAGE_SIZE = 10;
 
   const loadSources = () =>
@@ -55,21 +55,33 @@ export default function NewProjectPage() {
         setGithub(s.github);
         setGitlab(s.gitlab);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        setLoading(false);
+        setReposLoading(false);
+      });
 
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
       return;
     }
-    loadSources().finally(() => setLoading(false));
+    loadSources();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   if (loading) {
     return (
-      <div className="mx-auto flex max-w-3xl items-center justify-center py-24 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <div className="mb-6 h-4 w-24 animate-pulse rounded bg-secondary" />
+        <div className="mb-8 h-5 w-48 animate-pulse rounded bg-secondary" />
+        <div className="mt-6 h-12 w-full animate-pulse rounded-lg bg-secondary" />
+        <div className="mt-6 h-6 w-40 animate-pulse rounded bg-secondary" />
+        <div className="mt-4 space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 w-full animate-pulse rounded-lg bg-secondary" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -96,14 +108,14 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       {/* Back link */}
       <Link href="/pages" className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('pg.backProjects')}
       </Link>
 
       {/* Step indicator */}
-      <div className="mb-8 flex items-center gap-2 text-xs">
+      <div className="mb-8 flex items-center gap-2 overflow-x-auto pb-1 text-xs">
         {STEPS.map((s, i) => (
           <div key={s.key} className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
@@ -181,7 +193,13 @@ export default function NewProjectPage() {
 
       {/* Repository list */}
       <div className="mt-4 space-y-2">
-        {active.repos.length === 0 ? (
+        {reposLoading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-16 w-full animate-pulse rounded-lg bg-secondary" />
+            ))}
+          </>
+        ) : active.repos.length === 0 ? (
           <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
             {active.connected ? t('pg.noRepos') : t('pg.connectToSeeRepos')}
           </div>

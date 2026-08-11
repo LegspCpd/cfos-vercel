@@ -52,6 +52,12 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **Command terminal** — run a command and stream its output live over SSE; auto-reconnects (up to 5 attempts) on transient failures and shows a clear timeout message if it gives up
 - Host input accepts `host:port`, plain domains, and IPv6 (`[::1]:22`)
 
+### Pages deploy (Cloudflare Pages)
+- **Cloudflare Pages-style deploy** at `/pages` — deploy a static site from a **workspace**, a **GitHub/GitLab repo**, or a **ZIP/文件夹** upload, all in one UI
+- Live project list with real `.pages.dev` subdomains, custom-domain binding, delete-with-confirmation, and source-aware redeploy
+- Optional **short links** (sink.cool) that redirect to the long Pages URL
+- Optional **multi-region Cloudflare KV** response cache (up to 5 namespaces, nearest-store reads) to keep Pages project lists and Git repo enumeration instant
+
 ### Persistence
 - **Postgres** via Prisma (Vercel Postgres or Neon free tier), replacing the original Durable Object + SQLite model
 - **Optional multi-database** — offload cold data (audit logs, email verification codes) to up to 4 secondary Neon databases (`MULTI_DB_ENABLED`) to keep the primary small; reads merge across DBs and cold writes safely fall back to the primary on failure
@@ -59,7 +65,7 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 ### Removed (not part of this rewrite)
 - Real-time multi-user collab (Yjs)
 - Per-gadget sandboxed processes (Dynamic Workers) → replaced by browser iframe static preview
-- Gatekeeper external-OAuth integrations (GitHub/Google/Slack, require external service setup)
+- Gatekeeper external-OAuth integrations (GitHub/Google/Slack, require external service setup). Note: GitHub/GitLab **OAuth is still available** for signing in and for **Pages Git deploys**.
 - Context & Skills (a "coming soon" placeholder in the original)
 
 ## 🧰 Tech Stack

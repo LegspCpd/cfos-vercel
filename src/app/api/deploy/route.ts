@@ -74,7 +74,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, deploymentId, pagesUrl, shortUrl, deployment: { id: record.id, project: name } });
   } catch (e) {
-    const msg = (e as Error).message || 'Deploy failed';
+    // Log the full error server-side (visible in the platform logs) so CF failures can be
+    // diagnosed, and return a non-empty message to the client.
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error('[deploy] failed:', err);
+    const msg = err.message || 'Deploy failed (unknown error)';
     await prisma.deployment
       .update({ where: { id: record.id }, data: { status: 'failed', error: msg } })
       .catch(() => {});

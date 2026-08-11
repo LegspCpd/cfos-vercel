@@ -1,0 +1,14 @@
+fix(deploy): unique Pages project name + better error visibility
+
+Vercel logs showed every workspace was deploying to the SAME Pages project "app"
+because slugifyProject hard-coded the fallback to 'app' and ignored the passed
+workspace id. All Chinese-titled workspaces ("未命名工作区") collapsed onto that
+one project, which then rejected further Direct Upload deploys (502).
+
+- slugifyProject now appends the workspace id suffix and uses the passed fallback,
+  so each workspace gets a unique Pages project (e.g. app-xxxxxx) and never
+  collides with another workspace's project.
+- /api/deploy catch now console.errors the full CF failure (visible in platform
+  logs) and returns a non-empty message to the client for diagnosis.
+
+Verified: tsc --noEmit clean, lint clean.

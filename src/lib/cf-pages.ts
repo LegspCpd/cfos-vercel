@@ -43,14 +43,17 @@ async function cf(path: string, init?: RequestInit): Promise<any> {
   return data;
 }
 
-// Sanitize a workspace title into a valid Pages project name.
+// Sanitize a workspace title into a valid Pages project name. `fallback` is used when the
+// title yields nothing usable (e.g. all-non-ASCII), and is also appended to guarantee
+// uniqueness so different workspaces never collide on one Pages project.
 export function slugifyProject(title: string, fallback: string): string {
-  const base = (title || fallback)
+  const base = (title || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 32);
-  return (base || 'app').replace(/^-*/, '').replace(/-*$/, '') || 'app';
+  const slug = base || fallback.replace(/^ws-/, '') || 'app';
+  return `${slug}-${fallback.slice(0, 8)}`.replace(/^-+|-+$/g, '').slice(0, 32) || fallback;
 }
 
 export interface PagesFile {

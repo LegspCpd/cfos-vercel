@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/fetch-favicon.mjs && node scripts/fetch-waline.mjs && prisma generate --schema=prisma/schema-secondary.prisma && next build",
+    "build": "node scripts/check-multi-db.mjs && node scripts/fetch-favicon.mjs && node scripts/fetch-waline.mjs && prisma generate --schema=prisma/schema-secondary.prisma && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate && prisma generate --schema=prisma/schema-secondary.prisma",

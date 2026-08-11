@@ -16,10 +16,18 @@ function secondaryVerification() {
   return shardForTable('verification')?.emailVerification ?? null;
 }
 
-// Resolve which client owns the EmailVerification table: the secondary DB when
-// multi-db routes this table there, otherwise main database.
-function verificationModel() {
-  return secondaryVerification() ?? prisma.emailVerification;
+// Structural type covering only the EmailVerification operations we use. The primary
+// and secondary Prisma delegates are distinct TS types but share this shape, so typing
+// against it lets us use either client interchangeably without casts.
+interface VerificationOps {
+  updateMany(args: { where: { email: string; used?: boolean }; data: { used: boolean } }): Promise<{ count: number }>;
+  create(args: { data: { email: string; code: string; expiresAt: Date } }): Promise<{ id: string }>;
+  delete(args: { where: { id: string } }): Promise<unknown>;
+  findFirst(args: {
+    where: { email: string; used: boolean };
+    orderBy: { createdAt: 'desc' };
+  }): Promise<VerificationRow | null>;
+  update(args: { where: { id: string }; data: { used: boolean } }): Promise<unknown>;
 }
 
 interface VerificationRow {
@@ -47,18 +55,40 @@ function randomCode(): string {
 // Generate a code for an email, store it (hashing prior rows), send it, return the code
 // (so the caller can show it in dev, or return a masked result).
 // Throws if sending fails, and cleans up the just-created record in that case.
+// STABILITY: if the configured secondary is unreachable, we transparently fall back
+// to the primary so signup/email-change never breaks because of a cold-DB outage.
 export async function issueVerificationCode(email: string): Promise<{ sent: boolean; code: string }> {
   const code = randomCode();
   const expiresAt = new Date(Date.now() + CODE_LIFETIME_MS);
 
+  // Choose the target: secondary if routed, else primary.
+  const primary: VerificationOps = prisma.emailVerification;
+  const secondaryRaw = secondaryVerification();
+  const secondary: VerificationOps | null = secondaryRaw ? (secondaryRaw as unknown as VerificationOps) : null;
+  const target: VerificationOps = secondary ?? primary;
+
+  const write = async <T>(fn: (m: VerificationOps) => Promise<T>, fallback: (m: VerificationOps) => Promise<T>): Promise<T> => {
+    try {
+      return await fn(target);
+    } catch (e) {
+      // If the secondary failed (down / missing schema), fall back to primary so the
+      // feature keeps working. Log once, then continue on the primary.
+      if (secondary) {
+        console.error('[multi-db] secondary verification write failed, falling back to primary', e);
+        return await fallback(primary);
+      }
+      throw e;
+    }
+  };
+
   // Mark any outstanding codes for this email as used so only the newest is valid.
-  await verificationModel().updateMany({
-    where: { email, used: false },
-    data: { used: true },
-  });
-  const record = await verificationModel().create({
-    data: { email, code: hashCode(code), expiresAt },
-  });
+  const updateMany = (m: VerificationOps) => m.updateMany({ where: { email, used: false }, data: { used: true } });
+  await write((m) => updateMany(m), (m) => updateMany(m));
+
+  const record = await write(
+    (m) => m.create({ data: { email, code: hashCode(code), expiresAt } }),
+    (m) => m.create({ data: { email, code: hashCode(code), expiresAt } }),
+  );
 
   let sent = false;
   if (resendConfigured()) {
@@ -67,7 +97,7 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
       sent = true;
     } catch (e) {
       // Sending failed — remove the orphaned code so a retry isn't blocked, then rethrow.
-      await verificationModel().delete({ where: { id: record.id } }).catch(() => {});
+      await target.delete({ where: { id: record.id } }).catch(() => {});
       throw e;
     }
   }

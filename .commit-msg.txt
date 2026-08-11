@@ -1,14 +1,16 @@
-fix(deploy): unique Pages project name + better error visibility
+fix(deploy): random project names (app-xxxx) + reuse existing project per workspace
 
-Vercel logs showed every workspace was deploying to the SAME Pages project "app"
-because slugifyProject hard-coded the fallback to 'app' and ignored the passed
-workspace id. All Chinese-titled workspaces ("未命名工作区") collapsed onto that
-one project, which then rejected further Direct Upload deploys (502).
+Deploys previously collapsed onto one "app" project (slugify hard-coded fallback)
+which rejected further Direct Uploads (502). Now:
 
-- slugifyProject now appends the workspace id suffix and uses the passed fallback,
-  so each workspace gets a unique Pages project (e.g. app-xxxxxx) and never
-  collides with another workspace's project.
-- /api/deploy catch now console.errors the full CF failure (visible in platform
-  logs) and returns a non-empty message to the client for diagnosis.
+- slugifyProject returns "app-" + a random 10-char hash, so every new project name
+  is collision-free and never clashes with another workspace.
+- /api/deploy reuses the workspace's most recent deployed project name, so
+  redeploying the same workspace doesn't pile up new projects; a fresh workspace
+  gets a fresh random name.
+- /api/deploy catch logs the full CF error server-side and returns a non-empty
+  message to the client.
+
+Also removes a stray temp file.
 
 Verified: tsc --noEmit clean, lint clean.

@@ -32,7 +32,14 @@ export async function POST(req: Request) {
   if (!ws) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
   if (ws.files.length === 0) return NextResponse.json({ error: 'Workspace has no files to deploy' }, { status: 400 });
 
-  const projectName = slugifyProject(ws.title, `ws-${ws.id.slice(0, 8)}`);
+  // Reuse the workspace's existing Pages project (so redeploys don't pile up new projects),
+  // or mint a fresh random name on first deploy — random names are collision-free.
+  const prev = await prisma.deployment.findFirst({
+    where: { workspaceId: ws.id, status: 'deployed' },
+    orderBy: { createdAt: 'desc' },
+    select: { pagesProject: true },
+  });
+  const projectName = prev?.pagesProject || slugifyProject(ws.title, `ws-${ws.id.slice(0, 8)}`);
 
   // Record a pending deployment so we can update it below.
   const record = await prisma.deployment.create({

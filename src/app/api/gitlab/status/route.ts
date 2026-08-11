@@ -12,11 +12,18 @@ export async function GET(req: Request) {
   const conns = await prisma.gitlabConnection.findMany({
     where: { userId: session.userId },
     orderBy: { updatedAt: 'desc' },
-    select: { id: true, gitlabUsername: true, updatedAt: true },
+    select: { id: true, gitlabUsername: true, writeAccess: true, updatedAt: true },
   });
 
   return NextResponse.json({
     connected: conns.length > 0,
-    accounts: conns.map((c) => ({ id: c.id, username: c.gitlabUsername, updatedAt: c.updatedAt })),
+    gitlabUsername: conns[0]?.gitlabUsername ?? null,
+    writeAccess: conns[0]?.writeAccess ?? 'readonly', // Gatekeeper capability
+    accounts: conns.map((c) => ({
+      id: c.id,
+      username: c.gitlabUsername,
+      writeAccess: c.writeAccess,
+      updatedAt: c.updatedAt,
+    })),
   });
 }

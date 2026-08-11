@@ -275,9 +275,20 @@ export const api = {
   googleDisconnect: () =>
     request<{ ok: boolean }>('/api/google/disconnect', { method: 'POST' }),
   gitlabStatus: () =>
-    request<{ connected: boolean; gitlabUsername: string | null; updatedAt: string | null }>('/api/gitlab/status'),
+    request<{
+      connected: boolean;
+      gitlabUsername: string | null;
+      writeAccess: string;
+      updatedAt: string | null;
+    }>('/api/gitlab/status'),
+  gitlabSetAccess: (access: 'readonly' | 'readwrite') =>
+    request<{ writeAccess: string }>('/api/gitlab/access', { method: 'POST', body: JSON.stringify({ access }) }),
+  gitlabTool: (args: Record<string, unknown>) =>
+    request<{ result?: string; error?: string }>('/api/gitlab/tool', { method: 'POST', body: JSON.stringify(args) }),
   gitlabDisconnect: () =>
     request<{ ok: boolean }>('/api/gitlab/disconnect', { method: 'POST' }),
+  githubTool: (args: Record<string, unknown>) =>
+    request<{ result?: string; error?: string }>('/api/github/tool', { method: 'POST', body: JSON.stringify(args) }),
   listSshHosts: () =>
     request<{
       hosts: {

@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18n } from '@/lib/client/i18n';
 import { api } from '@/lib/client/api';
+import GatekeeperTools from './GatekeeperTools';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -110,6 +111,14 @@ export default function ChatPanel({
     }
   }
 
+  // Echo an external tool's result (from the Gatekeeper panel) into the session as an
+  // assistant message so the outcome stays in the conversation.
+  function handleToolResult(provider: string, text: string) {
+    const reply = `**[${provider} · Gatekeeper]**\n\n${text}`;
+    setMessages((m) => [...m, { role: 'assistant', content: reply }]);
+    persistMessage('assistant', reply);
+  }
+
   async function send(prompt: string) {
     const trimmed = prompt.trim();
     if (!trimmed || busy) return;
@@ -195,6 +204,8 @@ export default function ChatPanel({
         </div>
       )}
 
+      {/* Gatekeeper external-tools panel: write operations require in-session approval. */}
+      <GatekeeperTools onResult={handleToolResult} />
       <div className="border-t p-2">
         <form
           onSubmit={(e) => {

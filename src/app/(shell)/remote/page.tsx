@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Server,
@@ -19,6 +19,13 @@ import {
   HardDrive,
   RefreshCw,
   Square,
+  Search,
+  Copy,
+  Check,
+  ShieldCheck,
+  ShieldOff,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -77,6 +84,9 @@ const EMPTY_FORM: FormState = {
   saveCreds: true,
 };
 
+// Common commands offered as quick actions in the terminal panel.
+const QUICK_COMMANDS = ['ls -la', 'df -h', 'free -h', 'uptime', 'uname -a', 'whoami'];
+
 // Format a byte count into a human-readable size.
 function fmtBytes(n: number | undefined | null): string {
   if (!n && n !== 0) return '—';
@@ -101,15 +111,23 @@ function fmtUptime(sec: number | undefined): string {
   return `${m}m`;
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+// Short human date, e.g. "2026-08-11 19:46".
+function fmtDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 // A small progress bar for used/available fractions.
 function Bar({ used, total }: { used: number; total: number }) {
   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+  const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-primary';
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-      <div
-        className="h-full rounded-full bg-primary"
-        style={{ width: `${pct}%` }}
-      />
+      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -126,6 +144,8 @@ export default function RemotePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Monitor panel: which host is expanded + its data + loading state.
   const [monitorOpen, setMonitorOpen] = useState<string | null>(null);
@@ -174,9 +194,26 @@ export default function RemotePage() {
     setTimeout(() => setMessage(''), 4000);
   }
 
+  // Client-side filter over name/host/username.
+  const filteredHosts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return hosts;
+    return hosts.filter(
+      (h) =>
+        h.name.toLowerCase().includes(q) ||
+        h.host.toLowerCase().includes(q) ||
+        h.username.toLowerCase().includes(q),
+    );
+  }, [hosts, search]);
+
   async function save() {
     if (!form.name.trim() || !form.host.trim() || !form.username.trim()) {
       notify(t('remote.errRequired') || 'Name, host and username are required', 'err');
+      return;
+    }
+    const port = parseInt(form.port || '22', 10);
+    if (Number.isNaN(port) || port < 1 || port > 65535) {
+      notify(t('remote.errPort') || 'Port must be between 1 and 65535', 'err');
       return;
     }
     setBusy('save');
@@ -184,7 +221,7 @@ export default function RemotePage() {
       const common = {
         name: form.name.trim(),
         host: form.host.trim(),
-        port: Math.max(1, Math.min(65535, parseInt(form.port || '22', 10) || 22)),
+        port,
         username: form.username.trim(),
         authMethod: form.authMethod,
         saveCreds: form.saveCreds,
@@ -217,13 +254,15 @@ export default function RemotePage() {
     }
   }
 
-  async function remove(id: string) {
-    setBusy(id);
+  async function remove(h: SshHost) {
+    const label = t('remote.confirmDelete')?.replace('{name}', h.name) || `Delete host "${h.name}"?`;
+    if (!window.confirm(label)) return;
+    setBusy(h.id);
     try {
-      await api.deleteSshHost(id);
-      notify(t('remote.deleted') || 'Host removed');
-      if (monitorOpen === id) setMonitorOpen(null);
-      if (termOpen === id) {
+      await api.deleteSshHost(h.id);
+      notify(t('remote.deleted') || 'Host deleted');
+      if (monitorOpen === h.id) setMonitorOpen(null);
+      if (termOpen === h.id) {
         termAbortRef.current?.abort();
         termAbortRef.current = null;
         setTermOpen(null);
@@ -250,6 +289,7 @@ export default function RemotePage() {
       saveCreds: h.saveCreds,
     });
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function test(h: SshHost) {
@@ -259,12 +299,24 @@ export default function RemotePage() {
       if (res.ok) {
         notify(`${t('remote.testOk') || 'Connected successfully'} (${h.host}:${h.port})`);
       } else {
-        notify(res.error || 'Connection failed', 'err');
+        notify(res.error || t('remote.testFail') || 'Connection failed', 'err');
       }
     } catch (e) {
-      notify((e as Error).message || 'Connection failed', 'err');
+      notify((e as Error).message || t('remote.testFail') || 'Connection failed', 'err');
     } finally {
       setTestingId(null);
+    }
+  }
+
+  // Copy an SSH connection string to the clipboard.
+  async function copyConn(h: SshHost) {
+    const conn = `ssh ${h.username}@${h.host} -p ${h.port}`;
+    try {
+      await navigator.clipboard.writeText(conn);
+      setCopiedId(h.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      notify(t('remote.testFail') || 'Copy failed', 'err');
     }
   }
 
@@ -304,11 +356,13 @@ export default function RemotePage() {
   }
 
   // Run a command via SSE streaming and append output live.
-  function runCommand(h: SshHost) {
-    if (!termCommand.trim() || termRunning) return;
+  function runCommand(h: SshHost, cmd?: string) {
+    const command = (cmd ?? termCommand).trim();
+    if (!command || termRunning) return;
     setTermRunning(true);
     setTermOutput('');
-    const session = api.execSshHost(h.id, termCommand, (text) => {
+    setTermCommand(command);
+    const session = api.execSshHost(h.id, command, (text) => {
       setTermOutput((prev) => prev + text);
     });
     termAbortRef.current = session;
@@ -318,9 +372,16 @@ export default function RemotePage() {
     });
   }
 
+  function authMethodLabel(method: string): string {
+    if (method === 'password') return t('remote.authPassword') || 'Password';
+    if (method === 'keypassphrase') return t('remote.authKeyPass') || 'Key + Passphrase';
+    return t('remote.authKey') || 'Private Key';
+  }
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <Server className="h-6 w-6" /> {t('remote.title') || 'Remote Connections'}
@@ -329,20 +390,38 @@ export default function RemotePage() {
             {t('remote.subtitle') || 'Manage your SSH servers and encrypted credentials'}
           </p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm((v) => !v);
-            if (showForm) {
-              setEditingId(null);
-              setForm(EMPTY_FORM);
-            }
-          }}
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {showForm ? (t('remote.close') || 'Close') : (t('remote.addHost') || 'Add Host')}
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
+            {t('remote.total')?.replace('{n}', String(hosts.length)) || `${hosts.length} host(s)`}
+          </span>
+          <button
+            onClick={() => {
+              setShowForm((v) => !v);
+              if (showForm) {
+                setEditingId(null);
+                setForm(EMPTY_FORM);
+              }
+            }}
+            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? (t('remote.close') || 'Close') : (t('remote.addHost') || 'Add Host')}
+          </button>
+        </div>
       </div>
+
+      {/* Search bar */}
+      {hosts.length > 0 && (
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('remote.searchPlaceholder') || 'Search name / IP / username...'}
+            className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm"
+          />
+        </div>
+      )}
 
       {message && (
         <div
@@ -354,34 +433,49 @@ export default function RemotePage() {
         </div>
       )}
 
+      {/* Add / edit form */}
       {showForm && (
         <div className="mb-6 rounded-lg border bg-card p-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder={t('remote.fName') || 'Name (e.g. Web Server)'}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            />
-            <input
-              value={form.host}
-              onChange={(e) => setForm({ ...form, host: e.target.value })}
-              placeholder={t('remote.fHost') || 'Host (IP or hostname)'}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            />
-            <input
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder={t('remote.fUsername') || 'Username'}
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            />
-            <input
-              type="number"
-              value={form.port}
-              onChange={(e) => setForm({ ...form, port: e.target.value })}
-              placeholder="22"
-              className="rounded-md border bg-background px-3 py-2 text-sm"
-            />
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fName') || 'Name'}</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder={t('remote.fName') || 'Name (e.g. Web Server)'}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fHost') || 'Host'}</label>
+              <input
+                value={form.host}
+                onChange={(e) => setForm({ ...form, host: e.target.value })}
+                placeholder={t('remote.fHost') || 'Host (IP or hostname)'}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fUsername') || 'Username'}</label>
+              <input
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                placeholder={t('remote.fUsername') || 'Username'}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fPort') || 'Port'}</label>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={form.port}
+                onChange={(e) => setForm({ ...form, port: e.target.value })}
+                placeholder="22"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
           </div>
 
           <div className="mt-4 flex items-center gap-4">
@@ -391,7 +485,7 @@ export default function RemotePage() {
                 checked={form.authMethod === 'password'}
                 onChange={() => setForm({ ...form, authMethod: 'password' })}
               />{' '}
-              Password
+              {t('remote.authPassword') || 'Password'}
             </label>
             <label className="flex items-center gap-1 text-sm">
               <input
@@ -399,7 +493,7 @@ export default function RemotePage() {
                 checked={form.authMethod === 'key'}
                 onChange={() => setForm({ ...form, authMethod: 'key' })}
               />{' '}
-              Private Key
+              {t('remote.authKey') || 'Private Key'}
             </label>
             <label className="flex items-center gap-1 text-sm">
               <input
@@ -407,35 +501,46 @@ export default function RemotePage() {
                 checked={form.authMethod === 'keypassphrase'}
                 onChange={() => setForm({ ...form, authMethod: 'keypassphrase' })}
               />{' '}
-              Key + Passphrase
+              {t('remote.authKeyPass') || 'Key + Passphrase'}
             </label>
           </div>
 
           {form.authMethod === 'password' ? (
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder={t('remote.fPassword') || 'Password'}
-              className="mt-4 w-full rounded-md border bg-background px-3 py-2 text-sm"
-            />
+            <div className="mt-4">
+              <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fPassword') || 'Password'}</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={t('remote.fPassword') || 'Password'}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
           ) : (
             <div className="mt-4 space-y-2">
-              <textarea
-                value={form.privateKey}
-                onChange={(e) => setForm({ ...form, privateKey: e.target.value })}
-                placeholder={t('remote.fKey') || 'Private key (PEM)'}
-                rows={4}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-              />
-              {form.authMethod === 'keypassphrase' && (
-                <input
-                  type="password"
-                  value={form.passphrase}
-                  onChange={(e) => setForm({ ...form, passphrase: e.target.value })}
-                  placeholder={t('remote.fPassphrase') || 'Key passphrase'}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fKey') || 'Private key'}</label>
+                <textarea
+                  value={form.privateKey}
+                  onChange={(e) => setForm({ ...form, privateKey: e.target.value })}
+                  placeholder={t('remote.fKey') || 'Private key (PEM)'}
+                  rows={4}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
                 />
+              </div>
+              {form.authMethod === 'keypassphrase' && (
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    {t('remote.fPassphrase') || 'Key passphrase'}
+                  </label>
+                  <input
+                    type="password"
+                    value={form.passphrase}
+                    onChange={(e) => setForm({ ...form, passphrase: e.target.value })}
+                    placeholder={t('remote.fPassphrase') || 'Key passphrase'}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  />
+                </div>
               )}
             </div>
           )}
@@ -461,39 +566,100 @@ export default function RemotePage() {
         </div>
       )}
 
+      {/* Host list */}
       {loading ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : hosts.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-16 text-center text-muted-foreground">
-          <Server className="mx-auto mb-2 h-8 w-8" />
-          {t('remote.empty') || 'No SSH hosts yet. Add your first server.'}
+        <div className="rounded-lg border border-dashed py-16 text-center">
+          <Server className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+          <div className="text-muted-foreground">
+            {t('remote.empty') || 'No SSH hosts yet. Add your first server.'}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground/70">
+            {t('remote.emptyHint') || 'Supports password / private key auth. Credentials are encrypted at rest.'}
+          </div>
+        </div>
+      ) : filteredHosts.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
+          {t('remote.noMatch') || 'No matching hosts.'}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {hosts.map((h) => (
+          {filteredHosts.map((h) => (
             <div key={h.id} className="rounded-lg border bg-card p-4">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 font-medium">
-                    <Server className="h-4 w-4" />
-                    {h.name}
-                    {h.hasCredential && <KeyRound className="h-3.5 w-3.5 text-green-500" />}
+                    <Server className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{h.name}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-                    <span>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="font-mono">
                       {h.username}@{h.host}:{h.port}
                     </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {/* Auth method badge */}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {h.authMethod === 'password' ? (
+                        <KeyRound className="h-3 w-3" />
+                      ) : (
+                        <ShieldCheck className="h-3 w-3" />
+                      )}
+                      {authMethodLabel(h.authMethod)}
+                    </span>
+                    {/* Credential badge */}
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${
+                        h.hasCredential
+                          ? 'bg-green-500/10 text-green-600'
+                          : 'bg-yellow-500/10 text-yellow-600'
+                      }`}
+                      title={h.hasCredential ? 'Credential saved' : 'No saved credential'}
+                    >
+                      {h.hasCredential ? (
+                        <ShieldCheck className="h-3 w-3" />
+                      ) : (
+                        <ShieldOff className="h-3 w-3" />
+                      )}
+                      {h.hasCredential
+                        ? t('remote.credentialSaved') || 'Credential saved'
+                        : t('remote.noCredential') || 'No saved credential'}
+                    </span>
                     {(h.country || h.region) && (
-                      <span className="flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
                         <Globe className="h-3 w-3" />
                         {[h.country, h.region].filter(Boolean).join(', ')}
                       </span>
                     )}
                   </div>
+                  <div className="mt-2 flex items-center gap-3 text-[10px] text-muted-foreground/70">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {fmtDate(h.createdAt)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {t('remote.updatedAt') || 'Updated'} {fmtDate(h.updatedAt)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex gap-1">
+
+                {/* Action buttons */}
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => copyConn(h)}
+                    title={t('remote.copyInfo') || 'Copy connection info'}
+                    className="rounded p-1.5 hover:bg-secondary"
+                  >
+                    {copiedId === h.id ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
                   <button
                     onClick={() => toggleMonitor(h)}
                     title={t('remote.monitorBtn') || 'Monitor'}
@@ -520,13 +686,17 @@ export default function RemotePage() {
                       <PlugZap className="h-4 w-4" />
                     )}
                   </button>
-                  <button onClick={() => edit(h)} title="Edit" className="rounded p-1.5 hover:bg-secondary">
+                  <button
+                    onClick={() => edit(h)}
+                    title={t('remote.edit') || 'Edit'}
+                    className="rounded p-1.5 hover:bg-secondary"
+                  >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => remove(h.id)}
+                    onClick={() => remove(h)}
                     disabled={busy === h.id}
-                    title="Delete"
+                    title={t('remote.delete') || 'Delete'}
                     className="rounded p-1.5 hover:bg-red-500/10 hover:text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -541,15 +711,13 @@ export default function RemotePage() {
                     <span className="text-sm font-medium">
                       {t('remote.monitor') || 'Monitor'} · {h.host}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleMonitor(h)}
-                        title={t('remote.refreshMonitor') || 'Refresh'}
-                        className="rounded p-1 hover:bg-secondary"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => toggleMonitor(h)}
+                      title={t('remote.refreshMonitor') || 'Refresh'}
+                      className="rounded p-1 hover:bg-secondary"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
                   </div>
 
                   {monitoring && (
@@ -664,6 +832,23 @@ export default function RemotePage() {
                       </span>
                     )}
                     {termRunning && <span className="inline-block h-3 w-2 animate-pulse bg-green-400 align-middle" />}
+                  </div>
+
+                  {/* Quick commands */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-green-400/50">
+                      {t('remote.quickCmd') || 'Quick commands'}:
+                    </span>
+                    {QUICK_COMMANDS.map((cmd) => (
+                      <button
+                        key={cmd}
+                        onClick={() => runCommand(h, cmd)}
+                        disabled={termRunning}
+                        className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-green-400/80 hover:bg-white/10 disabled:opacity-40"
+                      >
+                        {cmd}
+                      </button>
+                    ))}
                   </div>
 
                   <div className="mt-2 flex items-center gap-2">

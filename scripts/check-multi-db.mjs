@@ -15,9 +15,10 @@ const MAX_SECONDARY = 4; // DATABASE_URL_2..5 (plus 1 primary = 5 total)
 
 function main() {
   // Detect any database variable beyond the supported 5.
-  // We scan a generous range (up to 20) so we catch DATABASE_URL_6..DATABASE_URL_20.
+  // Secondaries are DATABASE_URL_2..DATABASE_URL_5 (MAX_SECONDARY=4). Anything at
+  // DATABASE_URL_6 and beyond is EXTRA and must fail the build.
   const extra = [];
-  for (let i = MAX_SECONDARY + 1; i <= 20; i++) {
+  for (let i = MAX_SECONDARY + 2; i <= 20; i++) {
     const name = `DATABASE_URL_${i}`;
     if (process.env[name] && process.env[name].trim() !== '') {
       extra.push(name);

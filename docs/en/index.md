@@ -41,6 +41,7 @@ This version is a **secondary development (二次开发) rebuilt for Vercel** us
 - [Environment Variables](/en/docs/env) — full reference
 - [Sign-in Setup](/en/docs/github-login) — configure GitHub / Google OAuth
 - [File Sharing (R2)](/en/docs/r2) — set up Cloudflare R2 storage
+- [KV Cache](/en/docs/kv) — multi-region KV caching for instant pages
 - [Cloudflare Access](/en/docs/cf-access) — full SSO gate
 - [Database Backup](/en/docs/backup) — protect data with Neon platform capabilities
 - [Pages Deploy](/en/docs/cloudflare-deploy) — deploy workspaces, GitHub/GitLab repos, or ZIP uploads to Cloudflare Pages + short links

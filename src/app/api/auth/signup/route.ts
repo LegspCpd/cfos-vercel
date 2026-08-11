@@ -150,13 +150,10 @@ export async function POST(req: Request) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.errors[0]?.message || 'Invalid request' }, { status: 400 });
     }
+    // Log full details server-side only; return a generic message so internal error
+    // details (DB strings, stack traces) are never leaked to the client.
     console.error('signup error', e);
-    // Surface a short, de-identified hint for troubleshooting (no secrets/keys).
-    const hint = e instanceof Error ? e.message : 'unknown';
-    return NextResponse.json(
-      { error: `Server error: ${hint}` },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });
   }
 }
 

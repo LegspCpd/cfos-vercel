@@ -1,4 +1,13 @@
 import { prisma } from './db';
+import { encryptSecret, decryptSecret } from './credentials';
+
+// OAuth tokens are sensitive: store them encrypted at rest (AES-256-GCM via AUTH_SECRET),
+// never plaintext. decryptGitHubToken tolerates legacy plaintext rows: an encrypted value
+// is decrypted; a value that is not the iv:tag:data format (old plaintext) is returned as-is.
+function decryptGitHubToken(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return decryptSecret(raw) ?? raw;
+}
 
 export interface GitHubUser {
   login: string;
@@ -38,10 +47,12 @@ export async function saveGitHubConnection(userId: string, accessToken: string):
   if (existing && existing.userId !== userId) {
     throw new Error('该 GitHub 账号已绑定到另一个用户');
   }
+  // Encrypt the token at rest; never persist the raw OAuth token.
+  const encrypted = encryptSecret(accessToken);
   await prisma.gitHubConnection.upsert({
     where: { githubId: gh.id },
-    update: { userId, accessToken, githubLogin: login },
-    create: { userId, githubId: gh.id, accessToken, githubLogin: login },
+    update: { userId, accessToken: encrypted, githubLogin: login },
+    create: { userId, githubId: gh.id, accessToken: encrypted, githubLogin: login },
   });
   // Store the GitHub numeric id on the user so a later OAuth sign-in resolves to the
   // same account (even if their GitHub username ever changes).
@@ -66,7 +77,7 @@ export async function getGitHubToken(userId: string): Promise<string | null> {
     where: { userId },
     orderBy: { updatedAt: 'desc' },
   });
-  return conn?.accessToken ?? null;
+  return conn ? decryptGitHubToken(conn.accessToken) : null;
 }
 
 export async function isGitHubConnected(userId: string): Promise<boolean> {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { encryptSecret } from '@/lib/credentials';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
 import { verifyOAuthState } from '@/lib/oauth-state';
 
@@ -56,10 +57,12 @@ export async function GET(req: Request) {
     if (!targetUser) return redirectError('用户不存在');
 
     // Upsert by the account's gitlabId (not userId) → supports multiple GitLab accounts.
+    // Encrypt the token at rest; never persist the raw OAuth token.
+    const encrypted = encryptSecret(tokenJson.access_token);
     await prisma.gitlabConnection.upsert({
       where: { gitlabId },
-      update: { userId, accessToken: tokenJson.access_token, gitlabUsername: username },
-      create: { userId, gitlabId, gitlabUsername: username, accessToken: tokenJson.access_token },
+      update: { userId, accessToken: encrypted, gitlabUsername: username },
+      create: { userId, gitlabId, gitlabUsername: username, accessToken: encrypted },
     });
 
     await writeAudit({ userId, username: targetUser.username, action: 'gitlab.connect', detail: `Connected GitLab @${username}` });

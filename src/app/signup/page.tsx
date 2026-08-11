@@ -41,9 +41,12 @@ export default function SignupPage() {
   // whenever a submit fails, so the (possibly expired) token is auto-refreshed
   // instead of forcing the user to manually reload the widget.
   const [captchaReset, setCaptchaReset] = useState(0);
+  // Only show sign-up providers whose OAuth env vars are configured (no dead buttons).
+  const [available, setAvailable] = useState({ github: true, google: true, microsoft: true });
 
   useEffect(() => {
     api.getPublicSite().then(setSite).catch(() => {});
+    api.connectionsAvailable().then(setAvailable).catch(() => {});
   }, []);
 
   // Handle OAuth cancel/return: ?error= on this page (e.g. code 1001).
@@ -157,33 +160,41 @@ export default function SignupPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.signupSub')}</p>
         </div>
 
-        <button
-          onClick={githubLogin}
-          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <GithubIcon className="h-4 w-4" />
-          {t('auth.github')}
-        </button>
-        <button
-          onClick={googleLogin}
-          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <GoogleIcon className="h-4 w-4" />
-          {t('auth.google')}
-        </button>
-        <button
-          onClick={microsoftLogin}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <MicrosoftIcon className="h-4 w-4" />
-          {t('auth.microsoft')}
-        </button>
-
-        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="h-px flex-1 bg-border" />
-          OR
-          <div className="h-px flex-1 bg-border" />
-        </div>
+        {/* OAuth sign-up — only providers configured in the environment are shown */}
+        {available.github && (
+          <button
+            onClick={githubLogin}
+            className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <GithubIcon className="h-4 w-4" />
+            {t('auth.github')}
+          </button>
+        )}
+        {available.google && (
+          <button
+            onClick={googleLogin}
+            className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <GoogleIcon className="h-4 w-4" />
+            {t('auth.google')}
+          </button>
+        )}
+        {available.microsoft && (
+          <button
+            onClick={microsoftLogin}
+            className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <MicrosoftIcon className="h-4 w-4" />
+            {t('auth.microsoft')}
+          </button>
+        )}
+        {(available.github || available.google || available.microsoft) && (
+          <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            OR
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-6 shadow">
           {error && (

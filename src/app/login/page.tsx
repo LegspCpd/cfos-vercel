@@ -17,6 +17,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Only show sign-in providers whose OAuth env vars are configured (no dead buttons).
+  const [available, setAvailable] = useState({ github: true, google: true, microsoft: true });
+
+  useEffect(() => {
+    api.connectionsAvailable().then(setAvailable).catch(() => {});
+  }, []);
 
   // Handle OAuth callback: ?token= or ?error= on this page.
   useEffect(() => {
@@ -83,28 +89,41 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t('auth.signinTitle')}</p>
         </div>
 
-        {/* OAuth login */}
-        <button
-          onClick={githubLogin}
-          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <GithubIcon className="h-4 w-4" />
-          {t('auth.github')}
-        </button>
-        <button
-          onClick={googleLogin}
-          className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <GoogleIcon className="h-4 w-4" />
-          {t('auth.google')}
-        </button>
-        <button
-          onClick={microsoftLogin}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
-        >
-          <MicrosoftIcon className="h-4 w-4" />
-          {t('auth.microsoft')}
-        </button>
+        {/* OAuth login — only providers configured in the environment are shown */}
+        {available.github && (
+          <button
+            onClick={githubLogin}
+            className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <GithubIcon className="h-4 w-4" />
+            {t('auth.github')}
+          </button>
+        )}
+        {available.google && (
+          <button
+            onClick={googleLogin}
+            className="mb-2 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <GoogleIcon className="h-4 w-4" />
+            {t('auth.google')}
+          </button>
+        )}
+        {available.microsoft && (
+          <button
+            onClick={microsoftLogin}
+            className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium hover:bg-secondary"
+          >
+            <MicrosoftIcon className="h-4 w-4" />
+            {t('auth.microsoft')}
+          </button>
+        )}
+        {(available.github || available.google || available.microsoft) && (
+          <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            OR
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        )}
 
         <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
           <div className="h-px flex-1 bg-border" />

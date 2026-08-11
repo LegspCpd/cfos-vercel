@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { encryptSecret } from '@/lib/credentials';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
 import { verifyOAuthState } from '@/lib/oauth-state';
 
@@ -67,21 +68,25 @@ export async function GET(req: Request) {
       }
     }
 
+    // Encrypt tokens at rest (the refresh token is long-lived and the most sensitive).
+    const encAccess = encryptSecret(tokenJson.access_token);
+    const encRefresh = tokenJson.refresh_token ? encryptSecret(tokenJson.refresh_token) : null;
+
     // Upsert by the account's googleSub (not userId) → supports multiple Google accounts.
     await prisma.googleConnection.upsert({
       where: { googleSub: info.sub || 'n/a' },
       update: {
         userId,
-        accessToken: tokenJson.access_token,
-        refreshToken: tokenJson.refresh_token ?? null,
+        accessToken: encAccess,
+        refreshToken: encRefresh,
         googleEmail: email || 'unknown',
       },
       create: {
         userId,
         googleSub: info.sub || 'n/a',
         googleEmail: email || 'unknown',
-        accessToken: tokenJson.access_token,
-        refreshToken: tokenJson.refresh_token ?? null,
+        accessToken: encAccess,
+        refreshToken: encRefresh,
       },
     });
 

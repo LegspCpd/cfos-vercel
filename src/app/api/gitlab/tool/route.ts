@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { decryptSecret } from '@/lib/credentials';
 import { writeAudit } from '@/lib/audit';
 
 const BASE_URL = (process.env.GITLAB_BASE_URL || 'https://gitlab.com').replace(/\/+$/, '');
@@ -29,7 +30,8 @@ export async function POST(req: Request) {
   });
   if (!conn) return NextResponse.json({ error: 'GitLab is not connected' }, { status: 400 });
 
-  const glToken = conn.accessToken;
+  // Token is encrypted at rest; decrypt, tolerating legacy plaintext rows.
+  const glToken = decryptSecret(conn.accessToken) ?? conn.accessToken;
 
   if (tool === 'list_projects') {
     try {

@@ -91,6 +91,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to upload to R2. Check R2 configuration.' }, { status: 500 });
   }
 
+  // SECURITY: if a source workspace is claimed, it must belong to this user — otherwise a
+  // user could attach their share to (and pollute) someone else's workspace record.
+  if (body.workspaceId) {
+    const owned = await prisma.workspace.findFirst({
+      where: { id: body.workspaceId, ownerId: session.userId },
+      select: { id: true },
+    });
+    if (!owned) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+  }
+
   const file = await prisma.sharedFile.create({
     data: {
       ownerId: session.userId,

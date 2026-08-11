@@ -19,6 +19,15 @@ export async function GET(req: Request, { params }: Ctx) {
   const path = url.searchParams.get('path');
   if (!path) return NextResponse.json({ error: 'path required' }, { status: 400 });
 
+  // SECURITY (IDOR): only the workspace owner may read file-version history. Without this
+  // owner check, any logged-in user could enumerate other users' private workspace file
+  // contents by guessing a workspace id.
+  const owned = await prisma.workspace.findFirst({
+    where: { id: params.id, ownerId: session.userId },
+    select: { id: true },
+  });
+  if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
   const file = await prisma.workspaceFile.findUnique({
     where: { workspaceId_path: { workspaceId: params.id, path } },
     select: { id: true },

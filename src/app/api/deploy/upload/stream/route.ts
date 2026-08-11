@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     outputDir: String(form.get('outputDir') || '') || null,
     envJson: String(form.get('envJson') || '') || null,
   };
+  const userProjectName = String(form.get('projectName') || '').trim() || null;
 
   const buf = Buffer.from(await file.arrayBuffer());
 
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
       userId: session.userId,
       workspaceId: null, // bare uploads are not tied to a workspace
       pagesProject: projectName,
+      projectName: userProjectName,
       status: 'deploying',
       buildCommand: config.buildCommand,
       installCommand: config.installCommand,

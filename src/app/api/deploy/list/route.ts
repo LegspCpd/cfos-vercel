@@ -22,6 +22,7 @@ export async function GET(req: Request) {
       workspaceId: r.workspaceId,
       workspaceTitle: r.workspace?.title ?? '',
       pagesProject: r.pagesProject,
+      projectName: r.projectName,
       status: r.status,
       pagesUrl: r.pagesUrl,
       shortUrl: r.shortUrl,

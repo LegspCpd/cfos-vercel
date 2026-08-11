@@ -170,7 +170,8 @@ model Deployment {
   id            String   @id @default(cuid())
   userId        String
   workspaceId   String?  // null for Git/upload deploys not tied to a workspace
-  pagesProject  String   // Cloudflare Pages project name (workspace slug)
+  pagesProject  String   // Cloudflare Pages project name — the actual project id (e.g. "efsd-acy")
+  projectName   String?  // user-facing display name set by the user (fallback: pagesProject)
   cfDeploymentId String? // Cloudflare deployment id (for status checks)
   status        String   @default("pending") // pending | deploying | deployed | failed
   pagesUrl      String?  // https://<project>.pages.dev

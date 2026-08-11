@@ -307,18 +307,19 @@ export const api = {
   // navigate to the deployment detail page on success.
   streamDeploy: (
     workspaceId: string,
-    config: { buildCommand?: string; installCommand?: string; outputDir?: string; envJson?: string },
+    config: DeployConfig,
     onData: (text: string) => void,
   ): Promise<DeployStreamResult> =>
     streamSse('/api/deploy/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspaceId, ...config }) }, onData),
   // Stream an uploaded ZIP deploy. Body is multipart/form-data (file + optional config).
   streamDeployUpload: (
     file: File,
-    config: { installCommand?: string; buildCommand?: string; outputDir?: string; envJson?: string },
+    config: DeployConfig,
     onData: (text: string) => void,
   ): Promise<DeployStreamResult> => {
     const fd = new FormData();
     fd.append('file', file, file.name);
+    if (config.projectName) fd.append('projectName', config.projectName);
     if (config.installCommand) fd.append('installCommand', config.installCommand);
     if (config.buildCommand) fd.append('buildCommand', config.buildCommand);
     if (config.outputDir) fd.append('outputDir', config.outputDir);
@@ -339,7 +340,7 @@ export const api = {
     provider: 'github' | 'gitlab',
     repo: string,
     ref: string | undefined,
-    config: { installCommand?: string; buildCommand?: string; outputDir?: string; envJson?: string },
+    config: DeployConfig,
     onData: (text: string) => void,
   ): Promise<DeployStreamResult> =>
     streamSse(
@@ -359,6 +360,8 @@ export const api = {
       panels: { billingShow: boolean; accountShow: boolean };
       period: { start: string; end: string; label: string };
     }>('/api/pages/stats'),
+  deleteDeployment: (id: string) =>
+    request<{ ok: boolean }>(`/api/deploy/${id}`, { method: 'DELETE' }),
   getDeployment: (id: string) =>
     request<{
       deployment: {
@@ -366,6 +369,7 @@ export const api = {
         workspaceId: string;
         workspaceTitle: string | null;
         pagesProject: string;
+        projectName: string | null;
         cfDeploymentId: string | null;
         status: string;
         pagesUrl: string | null;
@@ -388,6 +392,7 @@ export const api = {
         workspaceId: string;
         workspaceTitle: string;
         pagesProject: string;
+        projectName: string | null;
         status: string;
         pagesUrl: string | null;
         shortUrl: string | null;
@@ -825,9 +830,17 @@ export interface Ticket {
   user: { username: string; displayName: string; email: string | null };
 }
 
+export interface DeployConfig {
+  projectName?: string; // user-facing display name (fallback: random pagesProject)
+  installCommand?: string;
+  buildCommand?: string;
+  outputDir?: string;
+  envJson?: string;
+}
+
 export interface DeployStreamResult {
   ok: boolean;
-  recordId?: string; // Deployment record id — for navigating to /workspace/deploy/[id]
+  recordId?: string; // Deployment record id — for navigating to /pages/[id]
   pagesUrl?: string;
   shortUrl?: string | null;
   error?: string;

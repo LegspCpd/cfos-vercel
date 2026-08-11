@@ -23,6 +23,7 @@ export async function POST(req: Request) {
 
   let body: {
     workspaceId?: string;
+    projectName?: string;
     buildCommand?: string;
     installCommand?: string;
     outputDir?: string;
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
       userId: session.userId,
       workspaceId: ws.id,
       pagesProject: projectName,
+      projectName: body.projectName?.trim() || null,
       status: 'deploying',
       buildCommand: config.buildCommand,
       installCommand: config.installCommand,

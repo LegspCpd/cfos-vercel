@@ -19,6 +19,7 @@ import {
   Receipt,
   Check,
   ArrowUpRight,
+  Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -29,6 +30,7 @@ interface DeploymentRow {
   workspaceId: string;
   workspaceTitle: string;
   pagesProject: string;
+  projectName: string | null;
   status: string;
   pagesUrl: string | null;
   shortUrl: string | null;
@@ -66,6 +68,10 @@ export default function PagesPage() {
   const [copied, setCopied] = useState('');
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  // Project deletion: target record + the typed name used to confirm.
+  const [deleteTarget, setDeleteTarget] = useState<DeploymentRow | null>(null);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +113,21 @@ export default function PagesPage() {
       setTimeout(() => setCopied(''), 1500);
     } catch {
       /* ignore */
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleteInput !== (deleteTarget.projectName || deleteTarget.pagesProject) || deleting) return;
+    setDeleting(true);
+    try {
+      await api.deleteDeployment(deleteTarget.id);
+      setDeleteTarget(null);
+      setDeleteInput('');
+      await load();
+    } catch {
+      /* ignore */
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -152,26 +173,38 @@ export default function PagesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {deployments.map((d) => (
             <div key={d.id} className="flex flex-col rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-sm font-semibold">{d.pagesProject}</span>
-                <span
-                  className={`flex items-center gap-1 text-xs ${
-                    d.status === 'deployed'
-                      ? 'text-green-600'
-                      : d.status === 'failed'
-                        ? 'text-red-600'
-                        : 'text-muted-foreground'
-                  }`}
-                >
-                  {d.status === 'deployed' ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : d.status === 'failed' ? (
-                    <XCircle className="h-3.5 w-3.5" />
-                  ) : (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  )}
-                  {d.status}
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold">{d.projectName || d.pagesProject}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setDeleteTarget(d);
+                      setDeleteInput('');
+                    }}
+                    className="rounded p-1 text-muted-foreground hover:bg-red-500/10 hover:text-red-600"
+                    title={t('pg.delete')}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  <span
+                    className={`flex items-center gap-1 text-xs ${
+                      d.status === 'deployed'
+                        ? 'text-green-600'
+                        : d.status === 'failed'
+                          ? 'text-red-600'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {d.status === 'deployed' ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : d.status === 'failed' ? (
+                      <XCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    )}
+                    {d.status}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -358,6 +391,69 @@ export default function PagesPage() {
                 <span className="mt-4 inline-flex items-center gap-1 self-start text-sm font-medium text-primary group-hover:underline">
                   {t('pg.getStarted')} <ArrowRight className="h-4 w-4" />
                 </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete project confirmation — must type the project name */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDeleteTarget(null)}>
+          <div
+            className="w-full max-w-md rounded-xl border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="flex items-center gap-2 text-lg font-bold">
+              <Trash2 className="h-5 w-5 text-red-600" /> {t('pg.deleteProjectTitle')}
+            </h2>
+            <p className="mt-1 text-sm text-foreground">
+              {t('pg.deleteProjectWarning')}
+              <code className="font-mono">{deleteTarget.projectName || deleteTarget.pagesProject}</code>
+              {t('pg.deleteProjectWarningSuffix')}
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">{t('pg.deleteProjectConsequences')}</p>
+            <div className="mt-2 rounded-md border bg-background p-3 text-xs text-muted-foreground">
+              <ul className="list-inside list-disc space-y-1">
+                <li>{t('pg.deleteConseqDeployments')}</li>
+                <li>{t('pg.deleteConseqEnv')}</li>
+                <li>{t('pg.deleteConseqAssets')}</li>
+                <li>{t('pg.deleteConseqGit')}</li>
+                <li>{t('pg.deleteConseqAccess')}</li>
+                <li>{t('pg.deleteConseqAnalytics')}</li>
+              </ul>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {t('pg.deleteHostnameNote')}
+              <code className="font-mono">{deleteTarget.pagesProject}-acy.pages.dev</code>
+              {t('pg.deleteHostnameNoteSuffix')}
+            </p>
+
+            <label className="mt-4 block text-sm font-medium">
+              {t('pg.deleteTypeConfirm')} <code className="font-mono">{deleteTarget.projectName || deleteTarget.pagesProject}</code>
+            </label>
+            <input
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              placeholder={deleteTarget.projectName || deleteTarget.pagesProject}
+              autoFocus
+              className="mt-1.5 w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
+            />
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-md border px-3 py-2 text-sm hover:bg-secondary"
+              >
+                {t('pg.cancel')}
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteInput !== (deleteTarget.projectName || deleteTarget.pagesProject) || deleting}
+                className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-40"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {t('pg.delete')}
               </button>
             </div>
           </div>

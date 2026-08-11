@@ -24,6 +24,7 @@ interface DeploymentDetail {
   workspaceId: string;
   workspaceTitle: string | null;
   pagesProject: string;
+  projectName: string | null;
   cfDeploymentId: string | null;
   status: string;
   pagesUrl: string | null;
@@ -149,8 +150,14 @@ export default function DeploymentDetailPage() {
           <dl className="space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.project')}</dt>
-              <dd className="font-mono text-foreground">{dep.pagesProject}</dd>
+              <dd className="font-medium text-foreground">{dep.projectName || dep.pagesProject}</dd>
             </div>
+            {dep.projectName && (
+              <div className="flex flex-wrap items-center gap-2">
+                <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.pagesProject')}</dt>
+                <dd className="font-mono text-foreground">{dep.pagesProject}</dd>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <dt className="w-32 shrink-0 text-muted-foreground">{t('dd.workspace')}</dt>
               <dd>{dep.workspaceTitle || '—'}</dd>

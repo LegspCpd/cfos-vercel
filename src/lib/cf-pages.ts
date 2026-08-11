@@ -204,3 +204,9 @@ export async function bindCustomDomain(project: string, domain: string): Promise
     body: JSON.stringify({ name: domain }),
   });
 }
+
+// Delete a Cloudflare Pages project. Best-effort: the DB record is the source of truth, so
+// a failure here just means the remote project lingers (user can remove it in the CF UI).
+export async function deletePagesProject(project: string): Promise<void> {
+  await cf(`/accounts/${accountId()}/pages/projects/${project}`, { method: 'DELETE' });
+}

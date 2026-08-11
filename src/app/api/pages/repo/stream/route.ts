@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     provider?: string;
     repo?: string;
     ref?: string;
+    projectName?: string;
     buildCommand?: string;
     installCommand?: string;
     outputDir?: string;
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
       userId: session.userId,
       workspaceId: null, // Git deploys aren't tied to a workspace
       pagesProject: projectName,
+      projectName: body.projectName?.trim() || null,
       status: 'deploying',
       buildCommand: config.buildCommand,
       installCommand: config.installCommand,

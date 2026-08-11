@@ -58,6 +58,7 @@ export default function DeployPage() {
   const [folderFiles, setFolderFiles] = useState<File[]>([]);
 
   // Build config (commands optional).
+  const [projectName, setProjectName] = useState('');
   const [buildCommand, setBuildCommand] = useState('');
   const [installCommand, setInstallCommand] = useState('');
   const [outputDir, setOutputDir] = useState('');
@@ -150,6 +151,7 @@ export default function DeployPage() {
       return;
     }
     const cfg = {
+      projectName: projectName.trim() || undefined,
       installCommand: installCommand.trim() || undefined,
       buildCommand: buildCommand.trim() || undefined,
       outputDir: outputDir.trim() || undefined,
@@ -259,6 +261,18 @@ export default function DeployPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-5">
         {/* Left: setup */}
         <div className="space-y-6 lg:col-span-3">
+          {/* Project name */}
+          <div className="rounded-lg border bg-card p-5">
+            <label className="mb-1 block text-sm font-semibold">{t('pg.projectNameLabel')}</label>
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder={t('pg.projectNamePlaceholder')}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{t('pg.projectNameHint')}</p>
+          </div>
+
           {/* Workspace picker */}
           {source === 'workspace' && (
             <div className="rounded-lg border bg-card p-5">

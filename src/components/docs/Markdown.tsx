@@ -20,8 +20,10 @@ function resolveDocsHref(href: string): string {
 
 // Renders markdown with the docs styling (prose).
 export default function Markdown({ content }: { content: string }) {
+  // Responsive typography: keep prose-sm on phones (compact), scale up on larger screens
+  // so the docs are comfortable to read without being oversized.
   return (
-    <div className="prose prose-sm max-w-none dark:prose-invert">
+    <div className="prose prose-sm max-w-none dark:prose-invert sm:prose-base lg:prose-lg">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

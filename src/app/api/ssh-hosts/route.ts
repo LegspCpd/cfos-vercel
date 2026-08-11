@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { encryptSecret } from '@/lib/credentials';
 import { z } from 'zod';
+import { cachedJson, invalidateCache } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -24,27 +25,35 @@ const createSchema = z.object({
 });
 
 // GET /api/ssh-hosts — list the current user's SSH hosts (never exposes secrets).
+// Cached per-user in KV: host lists change rarely, and POST below invalidates the cache on
+// change so it stays fresh.
 export async function GET(req: Request) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const hosts = await prisma.sshHost.findMany({
-    where: { ownerId: session.userId },
-    orderBy: { updatedAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      host: true,
-      port: true,
-      username: true,
-      authMethod: true,
-      saveCreds: true,
-      hasCredential: true,
-      country: true,
-      region: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const hosts = await cachedJson(
+    'sshhosts',
+    session.userId,
+    () =>
+      prisma.sshHost.findMany({
+        where: { ownerId: session.userId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          host: true,
+          port: true,
+          username: true,
+          authMethod: true,
+          saveCreds: true,
+          hasCredential: true,
+          country: true,
+          region: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+    { ttlSeconds: Number(process.env.KV_SSH_HOSTS_TTL) || 10 },
+  );
   return NextResponse.json({ hosts });
 }
 
@@ -71,6 +80,8 @@ export async function POST(req: Request) {
       encryptedSecret = encryptSecret(secret);
     }
   }
+
+  await invalidateCache('sshhosts', session.userId);
 
   const host = await prisma.sshHost.create({
     data: {

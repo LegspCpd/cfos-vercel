@@ -181,6 +181,10 @@ KV_NAMESPACE_ID_2=...
 | `KV_PAGES_PROJECTS_TTL` | Pages 项目列表缓存秒数，默认 `15`。 |
 | `KV_GIT_REPOS_TTL` | Git 仓库列表缓存秒数（按用户），默认 `60`。 |
 | `KV_PAGES_STATS_TTL` | Pages 用量面板缓存秒数，默认 `8`。 |
+| `KV_ME_TTL` | `/api/me`（当前用户资料）缓存秒数，默认 `5`。 |
+| `KV_ANALYTICS_TTL` | `/api/analytics`（按用户；IP 始终实时）缓存秒数，默认 `30`。 |
+| `KV_SITE_TTL` | 公共 `/api/site` 站点设置缓存秒数，默认 `30`。 |
+| `KV_SSH_HOSTS_TTL` | SSH 主机列表缓存秒数（按用户），默认 `10`。 |
 
 ### 多数据库（可选）
 

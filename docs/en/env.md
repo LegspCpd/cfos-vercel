@@ -129,6 +129,10 @@ Shared tuning vars (one set, applies to all stores):
 | `KV_PAGES_PROJECTS_TTL` | TTL (seconds) for the Pages project list, default `15`. |
 | `KV_GIT_REPOS_TTL` | TTL (seconds) for the per-user GitHub/GitLab repo lists, default `60`. |
 | `KV_PAGES_STATS_TTL` | TTL (seconds) for the Pages usage panel stats, default `8`. |
+| `KV_ME_TTL` | TTL (seconds) for `/api/me` (per-user profile), default `5`. |
+| `KV_ANALYTICS_TTL` | TTL (seconds) for `/api/analytics` (per-user, IP always live), default `30`. |
+| `KV_SITE_TTL` | TTL (seconds) for the public `/api/site` settings, default `30`. |
+| `KV_SSH_HOSTS_TTL` | TTL (seconds) for the per-user SSH host list, default `10`. |
 
 ### Cloudflare Access (full-site gate)
 

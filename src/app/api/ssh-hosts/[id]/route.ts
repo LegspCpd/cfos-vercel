@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { encryptSecret } from '@/lib/credentials';
 import { z } from 'zod';
+import { invalidateCache } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -92,6 +93,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       region: true,
     },
   });
+  await invalidateCache('sshhosts', session.userId);
   return NextResponse.json({ host });
 }
 
@@ -102,5 +104,6 @@ export async function DELETE(req: Request, { params }: Ctx) {
   const existing = await prisma.sshHost.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!existing) return NextResponse.json({ error: 'Host not found' }, { status: 404 });
   await prisma.sshHost.delete({ where: { id: existing.id } });
+  await invalidateCache('sshhosts', session.userId);
   return NextResponse.json({ ok: true });
 }

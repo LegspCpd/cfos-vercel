@@ -23,13 +23,25 @@
 
 「部署」功能需要配置以下环境变量（见 [环境变量配置指南](/docs/env)）：
 
+**核心（开启 Pages 部署必需，只有两个）**
+
 | 变量 | 说明 |
 |---|---|
 | `PAGES_KEY` | Cloudflare API Token（需有 Pages 编辑/部署权限） |
 | `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID |
-| `S_LINK` | 短链服务 Token（s.legspcpd.top / sink.cool） |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | 可选，启用「从 GitHub 仓库部署」 |
-| `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` | 可选，启用「从 GitLab 仓库部署」（默认关闭，检测到才放开） |
+
+**可选增强**
+
+| 变量 | 说明 |
+|---|---|
+| `S_LINK` | 短链服务 Token（s.legspcpd.top / sink.cool），配置后自动生成短链 |
+| `S_LINK_BASE` | 短链基址，默认 `https://sink.cool` |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | 启用「从 GitHub 仓库部署」 |
+| `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` | 启用「从 GitLab 仓库部署」（默认关闭，检测到才放开） |
+| `GITLAB_BASE_URL` | GitLab 实例地址，默认 `https://gitlab.com` |
+| `PAGES_BILLING_SHOW` | Pages 右侧「账单」面板是否显示，`true` 显示，默认隐藏 |
+| `PAGES_ACCOUNT_SHOW` | Pages 右侧「Account Details」面板是否显示，`true` 显示，默认隐藏 |
+| `PAGES_SUBDOMAIN` | 账户子域，仅 Account Details 展示用，默认 `pages.dev` |
 
 > 未配置 `PAGES_KEY` 时，「部署」功能不会启用；未配置 `S_LINK` 时部署仍可进行，但不会生成短链。未配置 GitHub/GitLab OAuth 时，对应仓库部署入口默认隐藏/禁用。
 

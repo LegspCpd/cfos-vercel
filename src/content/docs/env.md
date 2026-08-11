@@ -91,14 +91,45 @@
 
 ### 部署服务（Cloudflare Pages + 短链，可选）
 
+> **完整开启 Pages 部署功能，最少只需配 `PAGES_KEY` 和 `PAGES_ACCOUNT_ID` 两个变量**。其余为可选增强。
+
+**A. 核心（部署到 Cloudflare Pages 必需）**
+
 | 变量 | 说明 |
 |---|---|
-| `PAGES_KEY` | Cloudflare API Token，需具备 Cloudflare Pages 编辑/部署权限；配置后启用工作区「部署」功能。 |
-| `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID（控制台首页右下角）。部署到 Pages 必需。 |
-| `S_LINK` | 短链服务（sink.cool / s.legspcpd.top）的站点 Token；配置后部署完成自动生成短链。 |
+| `PAGES_KEY` | Cloudflare API Token，需具备 **Cloudflare Pages 编辑/部署**权限。获取：Cloudflare 控制台 → 我的个人资料 → API 令牌 → 创建令牌 → 选择「编辑 Cloudflare Workers」或自建，权限勾选 **Pages** 的 Edit/Deploy，区域勾选你的账户。 |
+| `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID（控制台首页右下角显示的那串 32 位十六进制，如 `475226a96a69...`）。 |
+
+配置后即可启用 **Pages 菜单 → 新建项目 → 工作区部署 / ZIP 上传 / 文件夹上传**。
+
+**B. 短链（可选）**
+
+| 变量 | 说明 |
+|---|---|
+| `S_LINK` | 短链服务（sink.cool / s.legspcpd.top）的站点 Token（`NUXT_SITE_TOKEN`）。配置后部署完成自动生成短链。 |
 | `S_LINK_BASE` | 短链系统基址，默认 `https://sink.cool`。 |
+
+**C. Git 仓库部署（可选）**
+
+| 变量 | 说明 |
+|---|---|
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID（见「第三方登录（OAuth）」）。配置后启用「从 GitHub 仓库部署」。 |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret。 |
+| `GITLAB_CLIENT_ID` | GitLab OAuth Application ID（见「第三方登录（OAuth）」）。配置后启用「从 GitLab 仓库部署」。 |
+| `GITLAB_CLIENT_SECRET` | GitLab OAuth Secret。 |
+| `GITLAB_BASE_URL` | GitLab 实例地址，默认 `https://gitlab.com`。 |
+
+> 仓库部署会复用「外部连接」页你已授权的账号；未授权时部署界面会提示先连接。
+
+**D. 右侧信息面板（可选）**
+
+| 变量 | 说明 |
+|---|---|
 | `PAGES_BILLING_SHOW` | Pages 页右侧「账单」面板是否显示，`true` 显示。默认隐藏；设置后管理面板对应开关被锁定。 |
 | `PAGES_ACCOUNT_SHOW` | Pages 页右侧「Account Details」面板是否显示，`true` 显示。默认隐藏；设置后管理面板对应开关被锁定。 |
+| `PAGES_SUBDOMAIN` | 账户子域，仅用于「Account Details」展示，默认 `pages.dev`。 |
+
+> 这三个面板开关也可在管理后台（`/admin` → 设置 → Pages 仪表盘面板）开启；但**环境变量优先级更高**，一旦设置了环境变量，管理面板对应开关即被锁定。
 
 ### 其他
 

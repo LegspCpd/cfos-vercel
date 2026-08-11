@@ -84,7 +84,9 @@ function memGet(key: string): string | null {
 }
 
 function memSet(key: string, value: string, ttlMs: number): void {
-  // Trim to the newest MEM_MAX entries (drop the oldest, i.e. first in the map).
+  // Delete first so a re-written key moves to the newest position (true LRU: hot keys are
+  // refreshed to the back instead of staying at the front where they'd be evicted first).
+  mem.delete(key);
   while (mem.size >= MEM_MAX) {
     const oldest = mem.keys().next();
     if (oldest.done) break;

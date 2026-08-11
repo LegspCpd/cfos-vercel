@@ -61,6 +61,10 @@ KV_NAMESPACE_ID_2=...
 | `KV_PAGES_PROJECTS_TTL` | Pages 项目列表缓存（秒） | `15` |
 | `KV_GIT_REPOS_TTL` | Git 仓库列表缓存（秒，按用户） | `60` |
 | `KV_PAGES_STATS_TTL` | Pages 用量面板缓存（秒） | `8` |
+| `KV_ME_TTL` | `/api/me`（当前用户资料）缓存（秒） | `5` |
+| `KV_ANALYTICS_TTL` | `/api/analytics`（按用户）缓存（秒） | `30` |
+| `KV_SITE_TTL` | 公共 `/api/site` 设置缓存（秒） | `30` |
+| `KV_SSH_HOSTS_TTL` | SSH 主机列表缓存（秒，按用户） | `10` |
 
 > 调大 TTL 更快但数据更"旧"；部署新项目后想立刻看到，可适当调小，或等 TTL 过期自动刷新。
 
@@ -75,5 +79,15 @@ KV 缓存已应用到以下接口：
 - `/api/deploy/list` —— Pages 项目列表（含实时子域名、域名）→ 缓存 `KV_PAGES_PROJECTS_TTL`
 - `/api/pages/sources` —— GitHub / GitLab 仓库列表 → 缓存 `KV_GIT_REPOS_TTL`
 - `/api/pages/stats` —— Pages 右侧用量面板 → 缓存 `KV_PAGES_STATS_TTL`
+- `/api/me` —— 当前用户资料/连接状态 → 缓存 `KV_ME_TTL`
+- `/api/analytics` —— 统计面板（按用户）→ 缓存 `KV_ANALYTICS_TTL`（`currentIp` 始终实时，不缓存）
+- `/api/site` —— 公共站点设置 → 缓存 `KV_SITE_TTL`（另有边缘缓存）
+- `/api/ssh-hosts` —— SSH 主机列表 → 缓存 `KV_SSH_HOSTS_TTL`（增删改后立即失效）
+
+**正确性说明**：
+- 每个**用户相关**的缓存键都含用户 ID，互不串数据；`/api/site` 是公共数据，用固定键。
+- `/api/analytics` 的 `currentIp`/`currentIpFamily` 是请求者自己的 IP，**始终实时计算，不进缓存**，避免不同用户读到别人的 IP。
+- `/api/me` 的会话校验与账号删除截止检查每次实时执行，不进缓存。
+- 会**改变数据**的操作（部署、删项目、绑定域名、增删改 SSH 主机）都会主动失效对应缓存，列表立即刷新，不靠 TTL 等待。
 
 所有缓存键均含 `KV_PREFIX` 与（必要时）用户 ID，保证多实例、多用户之间互不串数据。

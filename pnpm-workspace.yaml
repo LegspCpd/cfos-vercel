@@ -2,6 +2,10 @@
 # so it does not inherit the parent cloudflare-os monorepo's dependencies.
 packages:
   - .
+# Force security patches for transitive deps without a breaking major bump:
+# dompurify XSS fixes (>=3.4.13, same major) — monaco-editor still pins an old version.
+overrides:
+  dompurify: ^3.4.13
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true

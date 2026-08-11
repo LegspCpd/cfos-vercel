@@ -39,7 +39,7 @@ Cloudflare OS 是一个 **AI 编程工作区**：用自然语言让 AI agent 帮
 
 - [部署教程](/docs/deploy) — 从零开始部署到 Vercel
 - [环境变量](/docs/env) — 全部环境变量详解
-- [登录配置](/docs/github-login) — 配置 GitHub / Google OAuth 登录
+- [登录与 OAuth](/docs/github-login) — 配置 GitHub / Google / Microsoft 登录 + GitLab 外部连接与 Pages 仓库部署
 - [文件分享 R2](/docs/r2) — 配置 Cloudflare R2 存储
 - [Cloudflare Access](/docs/cf-access) — 完整版 SSO 门禁
 - [数据库备份](/docs/backup) — 用 Neon 平台能力保护数据

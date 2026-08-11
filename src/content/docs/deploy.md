@@ -22,7 +22,7 @@
 
 数据库的 `DATABASE_URL` 是**必填项**，没有它应用跑不起来。
 
-1. 打开 **https://neon.tech**，注册并登录
+1. 打开 [Neon](https://neon.tech)，注册并登录
 2. 点 **Create a project**（创建项目）
 3. 项目名随便填（如 `cfos`），区域建议选 **Singapore**（离国内近，延迟低）
 4. 创建后，Neon 会给一条**连接串**，类似：
@@ -66,7 +66,7 @@ gh repo create 你的仓库名 --public --source=. --push
 
 ### 3.1 导入项目
 
-1. 打开 **https://vercel.com**，用 GitHub 登录
+1. 打开 [Vercel](https://vercel.com)，用 GitHub 登录
 2. 点 **Add New → Project**
 3. 在列表里找到你的仓库，点 **Import**
 4. Vercel 会自动识别为 **Next.js**（Framework 显示 Next.js 就是对的）

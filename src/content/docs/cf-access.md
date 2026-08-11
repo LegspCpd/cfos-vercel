@@ -31,10 +31,10 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 
 ## 第二步：进入 Zero Trust 并创建 Access 应用
 
-> 新版界面入口：直接访问 **https://one.dash.cloudflare.com** 进入 Zero Trust 管理页。
+> 新版界面入口：直接访问 [one.dash.cloudflare.com](https://one.dash.cloudflare.com) 进入 Zero Trust 管理页。
 > 在左侧菜单找到 **Access → Applications**（部分账号界面显示为 **Networks → Access → Applications**，功能相同，以你实际看到的为准）。
 
-1. 打开 **https://one.dash.cloudflare.com**（Zero Trust 管理页，可能需先点"开始使用"开通团队）
+1. 打开 [one.dash.cloudflare.com](https://one.dash.cloudflare.com)（Zero Trust 管理页，可能需先点"开始使用"开通团队）
 2. 左侧菜单：**Access → Applications**（或 **Networks → Access → Applications**）
 3. 点 **Add an application** → 选择 **Self-hosted** → 点 **Next** / **Continue**
 4. 填写应用配置：
@@ -65,7 +65,7 @@ Vercel 后端 → 验证 JWT（签名/iss/aud/exp）→ 放行
 ## 第五步：确认团队名（Team Name）【必填】
 
 团队名用于 JWT 验证的 `issuer`，必须记下来。两个地方能找到：
-1. 打开 **https://one.dash.cloudflare.com**，看浏览器地址栏，形如 `https://lapdsss.cloudflareaccess.com` → 团队名就是 `lapdsss`
+1. 打开 [one.dash.cloudflare.com](https://one.dash.cloudflare.com)，看浏览器地址栏，形如 `https://lapdsss.cloudflareaccess.com` → 团队名就是 `lapdsss`
 2. 或 Zero Trust → **Settings** 页面看 **Team domain** / **Team name**
 
 ## 第六步：配置 Vercel 环境变量【只需一个】

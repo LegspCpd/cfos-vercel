@@ -1,6 +1,6 @@
-# 登录配置（GitHub + Google）
+# 登录与 OAuth 配置（GitHub / Google / Microsoft / GitLab）
 
-> 支持用 GitHub 或 Google 账号一键登录，配置好后只需在 Vercel 环境变量填上密钥并 Redeploy 即可生效，无需改代码。
+> 支持用 GitHub、Google 或 Microsoft 账号一键登录；GitLab 作为**外部连接 + Pages 仓库部署来源**。配置好后只需在 Vercel 环境变量填上密钥并 Redeploy 即可生效，无需改代码。
 
 ## 回调地址（Callback / Redirect URI）速查
 
@@ -17,7 +17,7 @@
 ## GitHub 登录（详细手把手教程）
 
 ### 第 1 步：创建 OAuth App
-1. 打开 **https://github.com/settings/developers**
+1. 打开 [GitHub → Settings → Developer settings](https://github.com/settings/developers)（用 GitHub 账号登录）
 2. 点 **"New OAuth App"（新 OAuth 应用）**
 3. 填写：
    - **Application name（应用名称）**：`Cloudflare OS`
@@ -61,7 +61,7 @@ PUBLIC_SITE_URL=https://os.your-domain.com
 在 **Google Cloud Console** 创建 OAuth 2.0 Client ID：
 
 ### 第 1 步：创建/选择项目
-1. 打开 **https://console.cloud.google.com**，用 Google 账号登录
+1. 打开 [Google Cloud Console](https://console.cloud.google.com)，用 Google 账号登录
 2. 顶部有项目下拉框，点它 → **New Project（新建项目）** 建一个（如 `cfos`），或选已有项目
 
 ### 第 2 步：配置 OAuth 同意屏幕（OAuth consent screen）
@@ -119,7 +119,7 @@ PUBLIC_SITE_URL=https://os.your-domain.com
 
 ### 第 1 步：注册应用
 
-1. 浏览器打开 **https://portal.azure.com**，用你的 Microsoft 账号登录（建议用管理员账号）
+1. 浏览器打开 [Azure 门户](https://portal.azure.com)，用你的 Microsoft 账号登录（建议用管理员账号）
 2. 顶部搜索框输入 **"App registrations"**，点进 **App registrations（应用注册）**
 3. 点页面顶部的 **"+ New registration（新注册）"**
 4. 填写：
@@ -186,51 +186,120 @@ Vercel → 你的项目 → **Settings → Environment Variables**，添加：
 | `AADSTS90002`（租户不存在） | Tenant ID 填错 | 用 `common` 或正确的租户 ID |
 | 登录页没按钮 | 环境变量没配/没 Redeploy | 检查 `MICROSOFT_CLIENT_ID` 是否配置并 Redeploy |
 
-## GitLab 外部连接（GitLab OAuth）
+## GitLab 外部连接 + Pages 仓库部署（GitLab OAuth，详细教程）
 
-GitLab 是**外部连接**（非登录）：配置后，登录用户可在 **外部连接** 页连接自己的 GitLab 账号，agent 可代为读取项目 / 创建 issue（受 Gatekeeper 写权限控制）。
+GitLab 在项目里是**外部连接 + Pages 仓库部署来源**（非登录）：
 
-> **重要**：GitLab 登录与 GitHub/Google/Microsoft **不同**——它**不会**出现在登录页。它是纯"外部连接"功能。
+- **外部连接**：登录用户在「外部连接」页连接自己的 GitLab 账号，agent 可代为读取项目 / 创建 issue（受 Gatekeeper 写权限控制）。
+- **Pages 仓库部署**：在 `/pages` 页「新建项目 → 选择 Git 仓库」里选择 **GitLab**，拉取你的仓库直接部署到 Cloudflare Pages。
 
-### 第 1 步：创建 GitLab OAuth Application
+> **重要**：GitLab 登录与 GitHub/Google/Microsoft **不同**——它**不会**出现在登录页。它是纯"外部连接 + Pages 仓库部署"功能。且**默认关闭**：只有配置了 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` 后，外部连接页和 Pages 页才会显示 GitLab 选项。
 
-1. 打开 **https://gitlab.com/-/profile/applications**（或你的自建 GitLab 实例 → **Preferences → Applications**）
-2. 填写：
-   - **Name（名称）**：`Cloudflare OS`
-   - **Redirect URI（重定向 URI）**：`https://os.your-domain.com/api/gitlab/callback`
-     > 必须精确到 `/api/gitlab/callback`，不能只填域名，否则报 `redirect_uri_mismatch`
-   - **Scopes（权限）**：勾选 **`read_api`**（或 `api`，如需写操作；创建 issue 需要 `api`）
-3. 点 **Save application（保存应用）**
-4. 保存后页面会显示 **Application ID** 和 **Secret**（Secret 只显示一次，**立即复制**）
+### 第 0 步：准备一个 GitLab 账号 / 实例
 
-### 第 2 步：配置到 Vercel 环境变量
+这一步是很多新手卡住的地方，先讲清楚：
 
-```
-GITLAB_CLIENT_ID=你的Application ID
-GITLAB_CLIENT_SECRET=你的Secret
-GITLAB_BASE_URL=https://gitlab.com
-```
+- **用官方 gitlab.com（最简单）**：直接去 [GitLab.com](https://gitlab.com) 免费注册一个账号即可，无需任何付费。本教程默认用 gitlab.com。
+- **用自建 GitLab（私有化部署）**：如果你公司/团队用自建的 GitLab（例如 `git.your-company.com`），需要先登录那个实例，并且后续环境变量要填 `GITLAB_BASE_URL`。GitLab 是开源的（CE 免费版也支持），可以自建，但这里不做展开。
 
-**Redeploy** 后生效。
+> 用哪个 GitLab，取决于你希望从哪里拉取仓库。**选 gitlab.com 就行，不用自己搭服务器。**
 
-### 第 3 步：连接与使用
+### 第 1 步：登录 GitLab 并进入 Application 设置
 
-- 侧边栏 → **外部连接** → GitLab → **连接** → 授权你的 GitLab 账号
-- agent 聊天 → 底部 **外部服务工具（Gatekeeper）** → 选择 GitLab → 读取项目 / 创建 issue
+1. 用浏览器打开 [GitLab.com](https://gitlab.com)，登录你的账号。
+2. 打开 **User Settings → Applications** 页面，地址是：
+   [https://gitlab.com/-/profile/applications](https://gitlab.com/-/profile/applications)
+   （自建实例则是 `https://你的实例域名/-/profile/applications`，或点右上角头像 → **Preferences（偏好设置）→ Applications（应用）**）
+3. 页面标题是 **Applications**，下面有 **Add new application（添加新应用）** 的输入区。
+
+### 第 2 步：填写并创建 Application
+
+在 **Add new application** 表单里填写：
+
+- **Name（名称）**：填 `Cloudflare OS`（随便，只是给你自己看的标识）
+- **Redirect URI（重定向 URI）**：**必须精确填**：
+  ```
+  https://os.your-domain.com/api/gitlab/callback
+  ```
+  > ⚠️ **必须精确到 `/api/gitlab/callback`**，不能只填域名 `https://os.your-domain.com`，否则会报 `redirect_uri_mismatch`。把 `os.your-domain.com` 换成你自己的域名。
+  >
+  > **本地开发**：如需本地联调，在同一框里换行加一条 `http://localhost:3000/api/gitlab/callback`。
+- **Scopes（权限范围）**：勾选下面这些（用 Shift 或逐个勾选）：
+  - **`read_api`** —— 必选，让 agent / Pages 能读取你的项目和仓库（拉取代码、列项目）。
+  - **`api`** —— 可选，如果要创建 issue、写操作；**如果你要在 Pages 页部署私有仓库，或想 agent 帮忙建 issue，勾上它**。勾了 `api` 其实也包含读取能力，可以只勾 `api`。
+  - **`read_user`** —— 可选，读取你的用户信息。
+  - **`profile`** / **`openid`** —— 可选，读取公开资料。
+  > 最小可用组合：**`read_api`**（只读部署用）；要写操作就加 **`api`**。
+- 下方 **Confidential（机密）** 保持勾选（默认勾选，正常）。
+- 点 **Save application（保存应用）**。
+
+### 第 3 步：拿到 Application ID 和 Secret
+
+保存后页面会自动刷新，**在你刚才创建的应用卡片里**显示：
+
+- **Application ID** —— 一长串 UUID，复制 → 对应环境变量 `GITLAB_CLIENT_ID`
+- **Secret** —— 一长串密钥，复制 → 对应环境变量 `GITLAB_CLIENT_SECRET`
+
+> ⚠️ **Secret 只在创建后的这一次显示**，刷新或离开页面后就看不到了。**务必立刻复制保存**。万一没复制，就删掉这个应用重新创建一个。
+
+### 第 4 步：把凭证填到 Vercel 环境变量
+
+去 **Vercel → 你的项目 → Settings → Environment Variables**，添加：
+
+| Key | Value |
+|---|---|
+| `GITLAB_CLIENT_ID` | 第 3 步复制的 Application ID |
+| `GITLAB_CLIENT_SECRET` | 第 3 步复制的 Secret |
+| `GITLAB_BASE_URL` | 用 gitlab.com 就填 `https://gitlab.com`；用自建实例就填 `https://你的实例域名` |
+
+然后到 **Deployments** 页点 **Redeploy（重新部署）** 使其生效。
+
+> 三者在 [env 文档](/docs/env) 里有完整说明。`GITLAB_BASE_URL` 不填时默认就是 `https://gitlab.com`，所以用官方站可以省略。
+
+### 第 5 步：验证是否生效
+
+Redeploy 完成后：
+
+- 打开登录后的侧边栏 → **外部连接** → 应该能看到 **GitLab** 卡片（之前没配是看不到的）。
+- 打开 **/pages** → **新建项目 → 选择 Git 仓库** → 应该能看到 **GitLab** 选项（之前没配是灰的/不显示）。
+
+> 如果还是看不到，说明环境变量没配对或没 Redeploy，见下方排查表。
+
+### 第 6 步：连接你的 GitLab 账号
+
+1. 侧边栏 → **外部连接** → GitLab → 点 **连接**。
+2. 跳转到 GitLab 授权页 → 点 **Authorize（授权）**。
+3. 授权完成后回到你的站点，GitLab 卡片显示已连接。
+
+### 第 7 步：在 Pages 页用 GitLab 仓库部署
+
+连接后就可以拉仓库部署了：
+
+1. 侧边栏 → **Pages** → **新建项目**。
+2. **选择部署来源** → **选择 Git 仓库**。
+3. **仓库平台**选 **GitLab**。
+4. **仓库**下拉框里选你的项目（如 `group/project`），**分支**填默认分支（如 `main` / `master`）。
+5. 填构建配置（安装命令 `npm install`、构建命令 `npm run build`、输出目录 `dist` 等，可留空直接部署静态文件）。
+6. 点 **部署**，实时观看日志，部署完成自动跳转详情页。
+
+> 若仓库是**私有**的，需在创建应用时勾选 `read_api`（或 `api`）权限；未勾选会拉取不到文件。
 
 ### GitLab 报错排查
 
 | 报错 | 原因 | 解决 |
 |---|---|---|
-| `redirect_uri_mismatch` | 回调地址不对 | GitLab 应用的 **Redirect URI** 精确改为 `https://os.your-domain.com/api/gitlab/callback` |
-| `invalid_client` | Client ID/Secret 错 | 检查 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` |
-| 外部连接页不显示 GitLab | `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` 没配置 | 未配置的服务**不会显示**在外部连接页；配置后 Redeploy |
+| `redirect_uri_mismatch` | 回调地址不对 | GitLab 应用的 **Redirect URI** 精确改为 `https://os.your-domain.com/api/gitlab/callback`（末尾无多余斜杠） |
+| `invalid_client` | Client ID/Secret 填错 | 检查 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` 是否与 Application ID / Secret 完全一致 |
+| 外部连接页不显示 GitLab | 环境变量没配/没 Redeploy | 配置 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` 后 Redeploy |
+| Pages 页 GitLab 是灰的 | 未配置环境变量 | 同上一行：配置变量并 Redeploy |
+| 部署时"未连接 GitLab" | 你还没授权连接 | 外部连接 → GitLab → 连接 |
+| 部署私有仓库拉不到文件 | 应用没勾 `read_api`/`api` 权限 | 编辑应用勾上 `read_api`，重新授权 |
 
 ## 关于"未配置的服务不显示"
 
-外部连接页（以及登录页）**只显示已配置环境变量的服务**：
+外部连接页（以及登录页、Pages 页的 GitLab 选项）**只显示已配置环境变量的服务**：
 
-- 若没有设置 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET`，外部连接页就**不会显示 GitLab 卡片**
+- 若没有设置 `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET`，外部连接页和 Pages 页就**不会显示 GitLab**（Pages 页 GitLab 按钮显示"未启用"）
 - 同理，GitHub / Google / Microsoft 登录按钮也只在对应环境变量配置后才出现
 
 这样部署时不会出现"点连接却报未配置"的死卡片。想启用哪个服务，就配置哪个服务的环境变量并 Redeploy。

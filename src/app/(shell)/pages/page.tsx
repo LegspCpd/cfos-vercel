@@ -16,9 +16,6 @@ import {
   ArrowRight,
   Activity,
   Receipt,
-  Cpu,
-  Eye,
-  Package,
   Check,
   ArrowUpRight,
   Search,
@@ -333,31 +330,11 @@ export default function PagesPage() {
               <div className="text-[11px] text-muted-foreground">{t('pg.billingThisMonth')}</div>
             </div>
             <div className="mt-2 text-xs font-medium">{stats?.period.label}</div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="rounded-md border bg-background p-2">
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Activity className="h-3 w-3" /> {t('pg.statRequests')}
-                </div>
-                <div className="mt-0.5 font-mono text-sm font-semibold">{stats ? Math.round(stats.usage.used / 30).toLocaleString() : '—'}</div>
+            <div className="mt-2 rounded-md border bg-background p-2">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Activity className="h-3 w-3" /> {t('pg.statRequests')}
               </div>
-              <div className="rounded-md border bg-background p-2">
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Cpu className="h-3 w-3" /> {t('pg.statCpuTime')}
-                </div>
-                <div className="mt-0.5 font-mono text-sm font-semibold">—</div>
-              </div>
-              <div className="rounded-md border bg-background p-2">
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Eye className="h-3 w-3" /> {t('pg.statObservability')}
-                </div>
-                <div className="mt-0.5 font-mono text-sm font-semibold">—</div>
-              </div>
-              <div className="rounded-md border bg-background p-2">
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Package className="h-3 w-3" /> {t('pg.statBundles')}
-                </div>
-                <div className="mt-0.5 font-mono text-sm font-semibold">—</div>
-              </div>
+              <div className="mt-0.5 font-mono text-sm font-semibold">{stats ? Math.round(stats.usage.used / 30).toLocaleString() : '—'}</div>
             </div>
           </div>
 

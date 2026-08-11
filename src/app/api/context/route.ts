@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
@@ -32,6 +33,9 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.context))) {
+    return NextResponse.json({ error: 'You do not have permission to manage context documents.' }, { status: 403 });
+  }
   const body = createSchema.parse(await req.json());
 
   const doc = await prisma.contextDoc.create({

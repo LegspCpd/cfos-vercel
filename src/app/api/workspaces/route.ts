@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return null;
   return verifySessionToken(token);
+}
+
+function forbidden(): NextResponse {
+  return NextResponse.json({ error: 'You do not have permission to create workspaces.' }, { status: 403 });
 }
 
 // GET /api/workspaces — list current user's workspaces.
@@ -28,6 +33,9 @@ const createSchema = z.object({ title: z.string().min(1).max(200) });
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return forbidden();
+  }
 
   const body = createSchema.parse(await req.json());
   const workspace = await prisma.workspace.create({

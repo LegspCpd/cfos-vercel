@@ -6,6 +6,7 @@ import { clientIp } from '@/lib/ip';
 import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
 import { requireCfAccess } from '@/lib/require-access';
 import { getSiteSettings } from '@/lib/settings';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -25,6 +26,9 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return NextResponse.json({ error: 'You do not have permission to use the AI agent.' }, { status: 403 });
+  }
 
   const workspace = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },

@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return null;
   return verifySessionToken(token);
+}
+
+async function canEditWorkspace(userId: string): Promise<boolean> {
+  return userHasPermission(userId, PERMISSIONS.workspace);
 }
 
 type Ctx = { params: { id: string } };
@@ -27,6 +32,9 @@ export async function GET(req: Request, { params }: Ctx) {
 export async function PATCH(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await canEditWorkspace(session.userId))) {
+    return NextResponse.json({ error: 'You do not have permission to edit workspaces.' }, { status: 403 });
+  }
   const { title } = await req.json();
   const workspace = await prisma.workspace.updateMany({
     where: { id: params.id, ownerId: session.userId },
@@ -40,6 +48,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await canEditWorkspace(session.userId))) {
+    return NextResponse.json({ error: 'You do not have permission to delete workspaces.' }, { status: 403 });
+  }
   const target = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },
     select: { title: true },

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { r2Put, isR2Configured, listSharedFiles } from '@/lib/r2';
 import { requireCfAccess } from '@/lib/require-access';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import crypto from 'node:crypto';
 
 async function authUser(req: Request) {
@@ -29,6 +30,9 @@ export async function POST(req: Request) {
   }
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
+    return NextResponse.json({ error: 'You do not have permission to share files.' }, { status: 403 });
+  }
 
   if (!isR2Configured()) {
     return NextResponse.json(

@@ -4,6 +4,8 @@
 // permissions come from their group (permissions fully decide capability). isAdmin is
 // only a fallback so an admin with NO group isn't locked out (e.g. the first user).
 
+import { prisma } from './db';
+
 // Permission codes (the checkboxes you tick when creating a group).
 export const PERMISSIONS = {
   workspace: 'workspace.create', // workspaces & AI agent
@@ -58,19 +60,39 @@ export function isAdminPermission(code: string): boolean {
   return code === PERMISSIONS.admin || code === PERMISSIONS.userAdmin;
 }
 
+// Base (non-admin) permissions guaranteed to the built-in default group. Backend
+// permission checks are now enforced; guaranteeing these for the default group
+// makes the step-by-step rollout non-breaking even before the group record has
+// been migrated to include them. Management/admin permissions are NOT included.
+export const DEFAULT_GROUP_BASE_PERMISSIONS: PermissionCode[] = [
+  PERMISSIONS.workspace,
+  PERMISSIONS.fileshare,
+  PERMISSIONS.context,
+  PERMISSIONS.connections,
+];
+
+export const DEFAULT_GROUP_NAME = '__default__';
+
 // Resolve a user's effective permissions.
-// - A user with a group: uses the group's permissions (group fully decides).
-// - A user with NO group but isAdmin=true: treated as super admin (full perms, fallback).
+// - isAdmin=true always yields full capabilities (protects bootstrap/admin).
+// - A user with a group: uses the group's permissions, but members of the built-in
+//   default group are always guaranteed the base non-admin permissions.
 // - A user with NO group and not admin: no explicit perms (must be assigned a group).
 export function resolvePermissions(user: {
   isAdmin: boolean;
-  group?: { permissions: string } | null;
+  group?: { permissions: string; name?: string | null } | null;
 }): PermissionCode[] {
-  if (user.group?.permissions) {
-    return parsePermissions(user.group.permissions);
-  }
   if (user.isAdmin) {
     return SUPER_ADMIN_PERMISSIONS;
+  }
+  if (user.group?.permissions) {
+    const perms = parsePermissions(user.group.permissions);
+    if (user.group.name === DEFAULT_GROUP_NAME) {
+      for (const p of DEFAULT_GROUP_BASE_PERMISSIONS) {
+        if (!perms.includes(p)) perms.push(p);
+      }
+    }
+    return perms;
   }
   return [];
 }
@@ -85,4 +107,25 @@ export function canAccessAdmin(perms: PermissionCode[]): boolean {
 }
 export function canManageUsers(perms: PermissionCode[]): boolean {
   return perms.includes(PERMISSIONS.userAdmin) && perms.includes(PERMISSIONS.admin);
+}
+
+// DB-backed resolution of a user's effective permissions by id. Loads the user and
+// their group in one query, then defers to resolvePermissions. Use this in API
+// routes (rather than inlining a findUnique + manual group handling everywhere).
+export async function resolveUserPermissions(userId: string): Promise<PermissionCode[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      isAdmin: true,
+      group: { select: { name: true, permissions: true } },
+    },
+  });
+  if (!user) return [];
+  return resolvePermissions({ isAdmin: user.isAdmin, group: user.group });
+}
+
+// Convenience: does this user (by id) hold the given permission?
+export async function userHasPermission(userId: string, code: PermissionCode): Promise<boolean> {
+  const perms = await resolveUserPermissions(userId);
+  return can(perms, code);
 }

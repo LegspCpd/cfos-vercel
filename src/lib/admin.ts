@@ -1,5 +1,5 @@
 import { prisma } from './db';
-import { ensureDefaultGroups, DEFAULT_GROUP, SUPER_ADMIN_GROUP } from './groups';
+import { ensureDefaultGroups, DEFAULT_GROUP } from './groups';
 
 // ADMIN_USERNAME may be a single username or a comma-separated list, e.g.
 //   ADMIN_USERNAME="admin,ops"

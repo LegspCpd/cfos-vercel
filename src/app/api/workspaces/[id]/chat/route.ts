@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -26,6 +27,9 @@ export async function GET(req: Request, { params }: Ctx) {
 export async function POST(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return NextResponse.json({ error: 'You do not have permission to use workspaces.' }, { status: 403 });
+  }
   const owned = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },
     select: { id: true },

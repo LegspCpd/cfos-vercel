@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -17,6 +18,9 @@ type Ctx = { params: { id: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
+    return NextResponse.json({ error: 'You do not have permission to share blueprints.' }, { status: 403 });
+  }
 
   const workspace = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },

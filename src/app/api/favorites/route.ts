@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -25,6 +26,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return NextResponse.json({ error: 'You do not have permission to manage workspaces.' }, { status: 403 });
+  }
   const { workspaceId, favorite } = await req.json();
   if (!workspaceId || typeof favorite !== 'boolean') {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });

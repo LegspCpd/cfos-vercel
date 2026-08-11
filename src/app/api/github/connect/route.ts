@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import crypto from 'node:crypto';
 import { siteUrl } from '@/lib/site';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
@@ -14,6 +15,9 @@ export async function GET(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.connections))) {
+    return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
+  }
 
   if (!CLIENT_ID) {
     return NextResponse.json(

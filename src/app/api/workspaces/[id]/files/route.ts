@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -15,6 +16,9 @@ type Ctx = { params: { id: string } };
 export async function PUT(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return NextResponse.json({ error: 'You do not have permission to edit workspaces.' }, { status: 403 });
+  }
 
   // Ownership check
   const owned = await prisma.workspace.findFirst({
@@ -86,6 +90,9 @@ export async function PUT(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
+    return NextResponse.json({ error: 'You do not have permission to edit workspaces.' }, { status: 403 });
+  }
   const url = new URL(req.url);
   const path = url.searchParams.get('path');
   if (!path) return NextResponse.json({ error: 'path required' }, { status: 400 });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { verifySessionToken } from '@/lib/auth';
 import { siteUrl } from '@/lib/site';
+import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 
 const CLIENT_ID = process.env.GITLAB_CLIENT_ID;
 const BASE_URL = (process.env.GITLAB_BASE_URL || 'https://gitlab.com').replace(/\/+$/, '');
@@ -16,6 +17,9 @@ export async function GET(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+  if (!(await userHasPermission(session.userId, PERMISSIONS.connections))) {
+    return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
+  }
 
   const state = `connect:${session.userId}:${crypto.randomBytes(8).toString('hex')}`;
   const redirectUri = siteUrl('/api/gitlab/callback');

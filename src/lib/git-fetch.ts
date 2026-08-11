@@ -32,17 +32,29 @@ export async function githubRepoFiles(userId: string, repoFullName: string, ref?
   // the slow per-file contents API (which also mishandles paths with subdirectories) and the
   // trees API 404 quirks. `ref` can be a branch name or SHA.
   const branch = ref || 'HEAD';
-  const res = await fetch(
-    `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/zipball/${encodeURIComponent(branch)}`,
-    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, redirect: 'follow' },
-  );
-  if (res.status === 404) {
-    throw new Error('GitHub: repository or branch not found, or not accessible with the connected account.');
+  const url = `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/zipball/${encodeURIComponent(branch)}`;
+
+  let buf: Buffer | null = null;
+  // Try with the user's token first (needed for private repos). If the token is scoped to a
+  // limited set of repos and this one isn't included, GitHub returns 404 even for public repos
+  // — so fall back to an anonymous download, which works for any public repo.
+  const attempts: Array<Record<string, string> | undefined> = [{ Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, undefined];
+  for (const headers of attempts) {
+    try {
+      const res = await fetch(url, { headers: headers as Record<string, string> | undefined, redirect: 'follow' });
+      if (res.ok) {
+        buf = Buffer.from(await res.arrayBuffer());
+        break;
+      }
+    } catch {
+      // retry the fallback below
+    }
   }
-  if (!res.ok) {
-    throw new Error(`GitHub API error: ${res.status}`);
+  if (!buf) {
+    throw new Error(
+      'GitHub: unable to download this repository. If it is private, make sure you connected GitHub and authorized access to this repo (choose "All repositories" when connecting).',
+    );
   }
-  const buf = Buffer.from(await res.arrayBuffer());
 
   // The zipball archive nests everything under a `<repo>-<sha>/` folder; strip that prefix.
   const entries = unzip(buf);

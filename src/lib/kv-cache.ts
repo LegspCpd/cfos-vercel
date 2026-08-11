@@ -23,6 +23,9 @@
 const API = 'https://api.cloudflare.com/client/v4';
 const PREFIX = process.env.KV_PREFIX || 'cfos';
 const DEFAULT_TTL = () => Math.max(1, Number(process.env.KV_DEFAULT_TTL) || 60);
+// Hard cap on a single KV fetch so a slow/hung store never blocks a request indefinitely
+// (e.g. a deploy's post-deploy cache invalidation, which awaits these calls).
+const FETCH_TIMEOUT_MS = 3000;
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -58,6 +61,11 @@ const kvConfigured = (): boolean => stores().length > 0;
 
 // ---- Bounded in-memory fallback (only used when no KV is configured) ------------------
 // A Map preserves insertion order, so evicting the first key gives a cheap FIFO bound.
+// In-flight loaders keyed by cache key. Used for single-flight: when several requests miss
+// the same key at once (cache stampede / thundering herd — e.g. everyone opening the Pages
+// list right after deploy), they share one upstream call instead of each hammering it.
+const pending = new Map<string, Promise<unknown>>();
+
 const mem = new Map<string, string>(); // key -> "<expMs>\n<value>"
 
 function memGet(key: string): string | null {
@@ -108,7 +116,7 @@ async function kvGet(key: string): Promise<string | null> {
     try {
       const res = await fetch(
         `${API}/accounts/${s.accountId}/storage/kv/namespaces/${s.namespaceId}/values/${encodeURIComponent(key)}`,
-        { headers: { Authorization: `Bearer ${s.token}` } },
+        { headers: { Authorization: `Bearer ${s.token}` }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
       );
       if (res.status === 404) continue;
       if (!res.ok) continue;
@@ -135,6 +143,7 @@ async function kvSet(key: string, value: string, ttlSeconds?: number): Promise<v
           method: 'PUT',
           headers: { Authorization: `Bearer ${s.token}`, 'Content-Type': 'text/plain' },
           body: value,
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         },
       ).catch(() => undefined),
     ),
@@ -151,7 +160,7 @@ async function kvDelete(key: string): Promise<void> {
     stores().map((s) =>
       fetch(
         `${API}/accounts/${s.accountId}/storage/kv/namespaces/${s.namespaceId}/values/${encodeURIComponent(key)}`,
-        { method: 'DELETE', headers: { Authorization: `Bearer ${s.token}` } },
+        { method: 'DELETE', headers: { Authorization: `Bearer ${s.token}` }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
       ).catch(() => undefined),
     ),
   );
@@ -172,9 +181,24 @@ export async function cachedJson<T>(
       /* corrupt — fall through to reload */
     }
   }
-  const fresh = await loader();
-  await kvSet(key, JSON.stringify(fresh), opts?.ttlSeconds);
-  return fresh;
+
+  // Single-flight: if another request on this instance is already loading the same key,
+  // wait on it instead of hitting the upstream again. Ensures the lock is released even when
+  // the loader throws.
+  const existing = pending.get(key);
+  if (existing) return (await existing) as T;
+
+  const run = (async () => {
+    const fresh = await loader();
+    await kvSet(key, JSON.stringify(fresh), opts?.ttlSeconds);
+    return fresh;
+  })();
+  pending.set(key, run);
+  try {
+    return await run;
+  } finally {
+    pending.delete(key);
+  }
 }
 
 // Invalidate a cached group+id. Export so callers can drop stale data immediately after a

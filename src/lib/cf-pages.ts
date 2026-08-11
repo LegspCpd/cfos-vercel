@@ -127,8 +127,12 @@ export async function deployFiles(
   const byHash = new Map<string, Buffer>();
   for (const f of files) {
     const hash = hashOf(f.content);
-    manifest[f.path] = {
-      path: f.path,
+    // Cloudflare requires every manifest KEY and `path` to start with a leading slash
+    // (e.g. "/index.html"). Workspace paths are stored without it, so normalize here —
+    // otherwise Cloudflare rejects the body as "A 'manifest' field was expected".
+    const normalized = f.path.startsWith('/') ? f.path : `/${f.path}`;
+    manifest[normalized] = {
+      path: normalized,
       content_type: f.contentType || contentTypeOf(f.path),
       hash,
     };

@@ -328,6 +328,31 @@ export const api = {
     // Raw fetch — do NOT set Content-Type, so the multipart boundary is preserved.
     return streamSse('/api/deploy/upload/stream', { method: 'POST', headers: {}, body: fd }, onData);
   },
+  // Everything the Pages deploy page needs to build the "pick a source" screen.
+  pagesSources: () =>
+    request<{
+      available: boolean;
+      workspaces: { id: string; title: string; files: number }[];
+      github: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
+      gitlab: { enabled: boolean; connected: boolean; repos: { name: string; branch: string; language: string | null }[] };
+    }>('/api/pages/sources'),
+  // Deploy from a GitHub/GitLab repository, streaming logs.
+  streamRepoDeploy: (
+    provider: 'github' | 'gitlab',
+    repo: string,
+    ref: string | undefined,
+    config: { installCommand?: string; buildCommand?: string; outputDir?: string; envJson?: string },
+    onData: (text: string) => void,
+  ): Promise<DeployStreamResult> =>
+    streamSse(
+      '/api/pages/repo/stream',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, repo, ref, ...config }),
+      },
+      onData,
+    ),
   getDeployment: (id: string) =>
     request<{
       deployment: {

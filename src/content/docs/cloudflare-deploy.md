@@ -1,13 +1,15 @@
-# 工作区部署（Cloudflare Pages + 短链）
+# 部署（Cloudflare Pages + 短链）
 
-> 把工作区里的应用一键部署到 Cloudflare Pages，并自动生成一个**好记的短链**（如 `s.legspcpd.top/xxxxxx`）用于分享。部署记录、实时构建日志、自定义域名都可在独立的部署页完成。
+> 把应用一键部署到 Cloudflare Pages，并自动生成一个**好记的短链**（如 `s.legspcpd.top/xxxxxx`）用于分享。完整的 Pages 管理在左侧菜单 **Pages** 页（`/pages`）。
 
 ## 功能概览
 
-- **独立部署页（双语）**：工作区 → 右上角「部署」→ 跳转到 `/workspace/deploy` 独立页面，支持中文/英文切换。
-- **两种部署来源**：
-  - **工作区部署**：选择一个工作区，把其中的文件部署上去。
-  - **ZIP 上传**：直接上传一个 `.zip` 压缩包部署（适合已构建好的静态站点）。
+- **Pages 管理页（双语）**：左侧菜单新增 **Pages** 入口 → `/pages`，相当于 Cloudflare "Workers & Pages" 的 **Pages 专用版**，可新建项目、选择部署来源、管理项目列表。
+- **新建项目 → 三步部署**：先新建项目（分配三段随机名），再选部署来源，最后填构建配置。
+- **三种部署来源**：
+  - **选择工作区**：把工作区文件部署上去。
+  - **选择 Git 仓库**：拉取 **GitHub / GitLab** 仓库部署（复用你已连接的外部账号；GitLab 需配置了 `GITLAB_CLIENT_ID`/`GITLAB_CLIENT_SECRET` 才启用）。
+  - **上传 ZIP / 文件夹**：直接上传 `.zip` 压缩包，或选择整个文件夹（自动打包）部署。
 - **可配置构建**：可填安装命令、构建命令、输出目录、环境变量；**默认都是空的**，不填也能直接部署。
 - **实时构建日志**：部署过程以 SSE 流式输出到页面的终端控制台，用户可实时观看进度与错误。
 - **部署详情页**：部署完成后**自动跳转**到 `/workspace/deploy/[id]` 详情页，展示该次部署的地址、短链、状态、完整日志、项目名等。
@@ -25,8 +27,10 @@
 | `PAGES_KEY` | Cloudflare API Token（需有 Pages 编辑/部署权限） |
 | `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID |
 | `S_LINK` | 短链服务 Token（s.legspcpd.top / sink.cool） |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | 可选，启用「从 GitHub 仓库部署」 |
+| `GITLAB_CLIENT_ID` / `GITLAB_CLIENT_SECRET` | 可选，启用「从 GitLab 仓库部署」（默认关闭，检测到才放开） |
 
-> 未配置 `PAGES_KEY` 时，「部署」按钮不会启用对应功能；未配置 `S_LINK` 时部署仍可进行，但不会生成短链。
+> 未配置 `PAGES_KEY` 时，「部署」功能不会启用；未配置 `S_LINK` 时部署仍可进行，但不会生成短链。未配置 GitHub/GitLab OAuth 时，对应仓库部署入口默认隐藏/禁用。
 
 ### 如何获取
 

@@ -26,6 +26,7 @@ import {
   Ticket,
   ScrollText,
   Server,
+  Rocket,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -46,6 +47,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/', labelKey: 'nav.home', icon: Home, match: '/workspaces' },
   { href: '/workspaces', labelKey: 'nav.workspaces', icon: LayoutGrid },
+  { href: '/pages', labelKey: 'nav.pages', icon: Rocket },
   { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
   { href: '/connections', labelKey: 'nav.connections', icon: Plug },
   { href: '/remote', labelKey: 'nav.remote', icon: Server },

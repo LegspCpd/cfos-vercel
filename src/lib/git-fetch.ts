@@ -28,28 +28,38 @@ export async function githubRepoFiles(userId: string, repoFullName: string, ref?
   const token = await getGitHubToken(userId);
   if (!token) throw new Error('GitHub is not connected.');
 
-  // Download the whole repo as a zip in ONE request (github `zipball` endpoint). This avoids
-  // the slow per-file contents API (which also mishandles paths with subdirectories) and the
-  // trees API 404 quirks. `ref` can be a branch name or SHA.
+  // Download the whole repo as a zip in ONE request. We prefer codeload's direct zip URL for
+  // public repos — it avoids the api.github.com 302 redirect (which can be flaky on
+  // serverless for large archives). For private repos we fall back to the api zipball with the
+  // user's token.
   const branch = ref || 'HEAD';
-  const url = `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/zipball/${encodeURIComponent(branch)}`;
-
+  const [owner, repo] = repoFullName.split('/');
   let buf: Buffer | null = null;
-  // Try with the user's token first (needed for private repos). If the token is scoped to a
-  // limited set of repos and this one isn't included, GitHub returns 404 even for public repos
-  // — so fall back to an anonymous download, which works for any public repo.
-  const attempts: Array<Record<string, string> | undefined> = [{ Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, undefined];
-  for (const headers of attempts) {
+
+  // 1) codeload direct zip (public repos; no auth, no redirect hop).
+  try {
+    const res = await fetch(
+      `https://codeload.github.com/${encodeURIComponent(owner || '')}/${encodeURIComponent(repo || '')}/zip/refs/heads/${encodeURIComponent(branch)}`,
+      { redirect: 'follow' },
+    );
+    if (res.ok) buf = Buffer.from(await res.arrayBuffer());
+  } catch {
+    buf = null;
+  }
+
+  // 2) api zipball with token (private repos / non-branch refs).
+  if (!buf) {
     try {
-      const res = await fetch(url, { headers: headers as Record<string, string> | undefined, redirect: 'follow' });
-      if (res.ok) {
-        buf = Buffer.from(await res.arrayBuffer());
-        break;
-      }
+      const res = await fetch(
+        `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/zipball/${encodeURIComponent(branch)}`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, redirect: 'follow' },
+      );
+      if (res.ok) buf = Buffer.from(await res.arrayBuffer());
     } catch {
-      // retry the fallback below
+      buf = null;
     }
   }
+
   if (!buf) {
     throw new Error(
       'GitHub: unable to download this repository. If it is private, make sure you connected GitHub and authorized access to this repo (choose "All repositories" when connecting).',

@@ -7,6 +7,7 @@ import { runAgent, type WorkspaceFileDraft } from '@/lib/agent';
 import { requireCfAccess } from '@/lib/require-access';
 import { getSiteSettings } from '@/lib/settings';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { isSafeFilePath } from '@/lib/path';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -112,7 +113,11 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   // Persist the generated files (merge: keep files the agent didn't touch).
-  const incoming = new Map(result.files.map((f) => [f.path, f]));
+  // The agent's file paths come from LLM output and are NOT trusted: drop any path that
+  // isn't safe (rejects ../, absolute paths, control chars) so a model can't write files
+  // outside the intended workspace key-space.
+  const safeFiles = result.files.filter((f) => isSafeFilePath(f.path));
+  const incoming = new Map(safeFiles.map((f) => [f.path, f]));
   const upserts = incoming.size > 0
     ? Array.from(incoming.entries()).map(([path, f]) =>
         prisma.workspaceFile.upsert({

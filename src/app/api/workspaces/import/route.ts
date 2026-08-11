@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { isSafeFilePath } from '@/lib/path';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -78,14 +79,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ workspace }, { status: 201 });
-}
-
-// Validate a workspace file path: reject traversal, empty, control chars, and long paths.
-function isSafeFilePath(path: string): boolean {
-  if (!path || path.length > 255) return false;
-  if (path.includes('..') || path.includes('\\')) return false;
-  // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f]/.test(path)) return false;
-  if (path.startsWith('/') || path.startsWith('.') || path.endsWith('/')) return false;
-  return true;
 }

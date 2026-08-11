@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { isSafeFilePath } from '@/lib/path';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -126,16 +127,4 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!isSafeFilePath(path)) return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
   await prisma.workspaceFile.deleteMany({ where: { workspaceId: params.id, path } });
   return NextResponse.json({ ok: true });
-}
-
-// Validate a workspace file path: reject path traversal, empty, control chars, and
-// overly long paths. Keeps DB keys well-formed and prevents ../ abuse.
-function isSafeFilePath(path: string): boolean {
-  if (!path || path.length > 255) return false;
-  if (path.includes('..') || path.includes('\\')) return false;
-  // Reject control characters and the NUL byte.
-  // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f]/.test(path)) return false;
-  if (path.startsWith('/') || path.startsWith('.') || path.endsWith('/')) return false;
-  return true;
 }

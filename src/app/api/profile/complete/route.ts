@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.errors[0]?.message || 'Invalid request' }, { status: 400 });
     }
     console.error('profile complete error', e);
-    const hint = e instanceof Error ? e.message : 'unknown';
-    return NextResponse.json({ error: `Server error: ${hint}` }, { status: 500 });
+    // Never echo internal error details to the client (could leak DB/implementation internals).
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

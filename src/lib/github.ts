@@ -120,8 +120,21 @@ export async function githubListRepos(userId: string): Promise<string> {
 }
 
 // Read a file's content from a repo.
+// SECURITY: only repos belonging to the user's own connected account may be read. Without
+// this ownership check a caller (or a misdirected agent) could make the server read an
+// arbitrary repo with the user's token — including private repos the user can see but never
+// authorized this app to touch. This mirrors assertGithubRepoOwned used by the Pages deploy
+// flow, but implemented here to avoid an import cycle with git-fetch.ts.
 export async function githubReadFile(userId: string, repoFullName: string, path: string): Promise<string> {
   try {
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repoFullName)) {
+      return 'Error: invalid repository name (expected "owner/repo").';
+    }
+    // Confirm the repo is in the user's own connected account before reading.
+    const owned = (await ghFetch(userId, '/user/repos?per_page=100&sort=updated')) as { full_name: string }[];
+    if (!Array.isArray(owned) || !owned.some((r) => r.full_name === repoFullName)) {
+      return 'Error: you can only read files from your own connected repositories.';
+    }
     const res = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/contents/${encodeURIComponent(path)}`,
       { headers: { Authorization: `Bearer ${await getGitHubToken(userId)}`, Accept: 'application/vnd.github.raw+json' } },

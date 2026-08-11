@@ -544,7 +544,7 @@ export const api = {
       body: JSON.stringify({ title }),
     }),
   getWorkspace: (id: string) =>
-    request<{ workspace: WorkspaceDetail }>(`/api/workspaces/${id}`),
+    request<{ workspace: WorkspaceDetail; previewUrl: string }>(`/api/workspaces/${id}`),
   renameWorkspace: (id: string, title: string) =>
     request<{ ok: boolean }>(`/api/workspaces/${id}`, {
       method: 'PATCH',
@@ -616,6 +616,7 @@ export const api = {
         owner: { displayName: string; username: string };
         files: { path: string; content: string; isEntry: boolean }[];
       };
+      previewUrl: string;
     }>(`/api/blueprint/${token}`),
 };
 

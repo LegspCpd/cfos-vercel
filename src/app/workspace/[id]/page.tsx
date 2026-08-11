@@ -23,6 +23,7 @@ export default function WorkspacePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(true);
   const [previewNonce, setPreviewNonce] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [view, setView] = useState<'split' | 'editor' | 'preview'>('split');
   // Mobile: which single panel is shown (file tree / editor+preview / chat).
   const [mobilePanel, setMobilePanel] = useState<'files' | 'work' | 'chat'>('work');
@@ -50,6 +51,7 @@ export default function WorkspacePage() {
       .getWorkspace(id)
       .then(async (res) => {
         setWorkspace(res.workspace);
+        setPreviewUrl(res.previewUrl);
         filesRef.current = res.workspace.files;
         const entry = res.workspace.files.find((f) => f.isEntry) || res.workspace.files[0];
         setActivePath(entry?.path ?? null);
@@ -363,7 +365,7 @@ export default function WorkspacePage() {
                 view === 'preview' ? 'w-full' : 'w-full md:w-1/2'
               } border-t bg-card md:border-l md:border-t-0`}
             >
-              <Preview workspaceId={id} nonce={previewNonce} />
+              <Preview workspaceId={id} previewUrl={previewUrl} nonce={previewNonce} />
             </div>
           )}
         </div>
@@ -428,7 +430,7 @@ export default function WorkspacePage() {
             </button>
           </header>
           <div className="min-h-0 flex-1">
-            <Preview workspaceId={id} nonce={previewNonce} />
+            <Preview workspaceId={id} previewUrl={previewUrl} nonce={previewNonce} />
           </div>
         </div>
       )}

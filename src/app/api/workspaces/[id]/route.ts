@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { signPreviewUrl } from '@/lib/preview-url';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -25,7 +26,8 @@ export async function GET(req: Request, { params }: Ctx) {
     include: { files: { orderBy: { path: 'asc' } } },
   });
   if (!workspace) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ workspace });
+  // The caller is the owner (verified above), so mint a signed preview URL for the iframe.
+  return NextResponse.json({ workspace, previewUrl: signPreviewUrl(params.id) });
 }
 
 // PATCH /api/workspaces/:id — rename.

@@ -5,10 +5,11 @@ import { useI18n } from '@/lib/client/i18n';
 
 interface PreviewProps {
   workspaceId: string;
+  previewUrl: string; // signed URL from the workspace API (owner-authorized)
   nonce: number; // bump to force iframe reload
 }
 
-export default function Preview({ workspaceId, nonce }: PreviewProps) {
+export default function Preview({ workspaceId, previewUrl, nonce }: PreviewProps) {
   const { t } = useI18n();
   return (
     <div className="flex h-full flex-col">
@@ -16,7 +17,7 @@ export default function Preview({ workspaceId, nonce }: PreviewProps) {
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('ws.preview')}</span>
         <div className="flex items-center gap-1">
           <a
-            href={`/api/preview/${workspaceId}`}
+            href={previewUrl || `/api/preview/${workspaceId}`}
             target="_blank"
             rel="noreferrer"
             className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -35,7 +36,7 @@ export default function Preview({ workspaceId, nonce }: PreviewProps) {
       </div>
       <iframe
         key={nonce}
-        src={`/api/preview/${workspaceId}`}
+        src={previewUrl || `/api/preview/${workspaceId}`}
         className="h-full w-full flex-1 bg-white"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         title="App preview"

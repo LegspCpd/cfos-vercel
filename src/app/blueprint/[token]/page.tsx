@@ -19,6 +19,7 @@ export default function PublicBlueprintPage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useI18n();
   const [bp, setBp] = useState<BlueprintData | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [error, setError] = useState('');
   const [activePath, setActivePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -29,6 +30,7 @@ export default function PublicBlueprintPage() {
       .getPublicBlueprint(token)
       .then((res) => {
         setBp(res.workspace);
+        setPreviewUrl(res.previewUrl);
         const entry = res.workspace.files.find((f) => f.isEntry) || res.workspace.files[0];
         setActivePath(entry?.path ?? null);
       })
@@ -113,7 +115,7 @@ export default function PublicBlueprintPage() {
           <div className="h-1/2 border-b bg-white">
             <iframe
               title="blueprint-preview"
-              src={`/api/preview/${bp.id}`}
+              src={previewUrl || `/api/preview/${bp.id}`}
               className="h-full w-full border-0"
               sandbox="allow-scripts allow-modals"
             />

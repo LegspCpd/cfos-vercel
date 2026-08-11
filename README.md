@@ -148,7 +148,7 @@ Configure the callback exactly as below (replace `os.example.com` with your doma
 - Passwords are hashed server-side with scrypt (`crypto.scrypt`, Node built-in, no native compile).
 - Sessions are JWT (HS256) signed with `AUTH_SECRET`, expiring after 7 days.
 - The preview iframe is sandboxed via CSP.
-- `/api/preview/:id` is currently unauthenticated (single-user / local scenario). For multi-tenant deployments, switch to signed preview URLs (see the comments in that route).
+- `/api/preview/:id` requires a short-lived HMAC-signed URL (10-min TTL) minted server-side after authorizing the caller (the workspace owner, or a valid public blueprint share). A bare workspace id returns `403`, so private workspace source is not exposed by guessing an id.
 
 ## 🤝 Contributing
 

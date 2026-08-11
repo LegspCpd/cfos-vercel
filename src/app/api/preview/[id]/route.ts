@@ -1,10 +1,17 @@
 import { prisma } from '@/lib/db';
+import { verifyPreview } from '@/lib/preview-url';
 
 // GET /api/preview/:id — render a workspace's entry HTML inside the iframe preview.
-// This endpoint is intentionally unauthenticated by a session token: it is loaded inside
-// a sandboxed iframe from the same origin. For single-user/local usage this is acceptable.
-// For production multi-tenant usage, gate this behind a signed preview URL.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+// SECURITY: the endpoint is NOT open by workspace id. A caller must present a short-lived
+// HMAC signature (sig + exp) issued by an authorized route (the workspace owner's GET, or
+// the public blueprint share). Without a valid, unexpired signature it returns 403, so a
+// random id cannot leak a private workspace's source. The iframe runs in a same-origin
+// sandbox with a strict CSP to limit exfiltration from the gadget itself.
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const url = new URL(req.url);
+  if (!verifyPreview(params.id, url.searchParams.get('sig'), url.searchParams.get('exp'))) {
+    return new Response('Forbidden', { status: 403 });
+  }
   const workspace = await prisma.workspace.findUnique({
     where: { id: params.id },
     include: { files: true },

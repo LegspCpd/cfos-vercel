@@ -42,29 +42,33 @@
 | `CF_ACCESS_TEAM` | CF Access | Cloudflare 团队名（必填） |
 | `CF_ACCESS_AUD` | CF Access | Cloudflare AUD Tag（可选，可跳过） |
 | `CRON_SECRET` | 可选 | 清理 cron 的访问密钥 |
-| `DATABASE_URL_2` | 多库（可选） | 第二个 Neon 数据库连接串，用于存冷数据（审计日志/邮箱验证码） |
-| `MULTI_DB_ENABLED` | 多库（可选） | `true` 开启多数据库，默认关闭（必须同时配 `DATABASE_URL_2`） |
-| `MULTI_DB_COLD_TABLES` | 多库（可选） | 哪些冷数据表放副库，逗号分隔，默认 `audit,verification`（`audit`=审计日志、`verification`=邮箱验证码） |
+| `DATABASE_URL_2` | 多库（可选） | 第 2 个 Neon 数据库连接串，用于存冷数据（审计日志/邮箱验证码） |
+| `DATABASE_URL_3` | 多库（可选） | 第 3 个 Neon 数据库连接串 |
+| `DATABASE_URL_4` | 多库（可选） | 第 4 个 Neon 数据库连接串 |
+| `DATABASE_URL_5` | 多库（可选） | 第 5 个 Neon 数据库连接串（最多 1 主库 + 4 副库） |
+| `MULTI_DB_ENABLED` | 多库（可选） | `true` 开启多数据库，默认关闭（必须同时配至少一个 `DATABASE_URL_2..5`） |
+| `MULTI_DB_COLD_TABLES` | 多库（可选） | 冷数据表路由，格式 `表@副库索引`，如 `audit@0,verification@0`；默认 `audit,verification`（都进第 1 个副库） |
 
-## 多数据库（可选，默认关闭）
+## 多数据库（可选，默认关闭，保守设计）
 
-当单个 Neon 数据库快被占满时，可以把**低优先级的冷数据**（审计日志、邮箱验证码）挪到**第二个 Neon 数据库**，主库只留重要数据，降低主库占用。
+当单个 Neon 数据库快被占满时，可以把**低优先级的冷数据**（审计日志、邮箱验证码）路由到**额外的 Neon 数据库**（最多 4 个副库 + 1 个主库 = 5 个），主库只留重要数据。
 
 **启用（必须同时满足）：**
-1. 创建第二个 Neon 数据库，把连接串填入 `DATABASE_URL_2`
+1. 创建副库，把连接串填入 `DATABASE_URL_2`（如需多个副库可加 `DATABASE_URL_3`..`DATABASE_URL_5`）
 2. 设置 `MULTI_DB_ENABLED=true`
-3. （可选）`MULTI_DB_COLD_TABLES` 控制哪些表进副库，默认 `audit,verification`
+3. （可选）`MULTI_DB_COLD_TABLES` 指定哪些冷数据表进哪个副库，如 `audit@0,verification@0`；默认 `audit,verification` 都进第 1 个副库
 
-**如何生效（自动）：**
-- 开启后，新的审计日志和邮箱验证码**直接写入副库**
-- 主库里已存在的旧冷数据，由**定时清理 cron**（`/api/cron/cleanup`）自动分批搬到副库（每次 500 条，从最老开始；插入成功后才删除源记录，中途失败不会丢数据）
-- 主库旧数据搬空后，主库会显著变小
+**如何生效（保守，零数据丢失风险）：**
+- 开启后，**新的**审计日志和邮箱验证码**直接写入指定副库**，主库不再增长
+- **读取是"主库 + 副库合并查询"**：管理面板、分析页、验证码校验会自动同时查询主库和所有副库并合并，所以主库旧数据 + 副库新数据都能看到，任何数据都不会"消失"
+- **主库已有旧数据不会被自动搬移或删除**——跨库搬数据有丢数据风险，因此本功能只做"阻止主库继续增长"，不自动清理旧数据
 
-**注意：**
-- 未配置 `DATABASE_URL_2` 或未设 `MULTI_DB_ENABLED=true` 时，所有数据照常存主库，行为与之前完全一致
-- 副库只在**运行时**被迁移任务和冷数据写入访问；**构建时不做任何数据搬移**
-- 只在 `audit`（审计日志）和 `verification`（邮箱验证码）之间选择，因为它们**没有外键关联**，可以安全隔离；有外键的重要表（工作区、文件、聊天、用户）**不会**被挪动
-- 首次部署需要在 Vercel 的构建命令里已包含 `prisma generate --schema=prisma/schema-secondary.prisma`（本项目已配置）
+**注意（安全边界）：**
+- 未配置 `DATABASE_URL_2..5` 或未设 `MULTI_DB_ENABLED=true` 时，所有数据照常存主库，行为与之前完全一致，多库功能完全关闭
+- **构建时绝不做任何数据搬移**；副库只在运行时被冷数据写入和合并读取访问
+- 只有 `audit`（审计日志）和 `verification`（邮箱验证码）可路由到副库，因为这两张表**没有外键关联**，可安全隔离；有外键的重要表（用户、工作区、文件、聊天）**绝不会**被挪动
+- 副库不可用时，写入会自动回退到主库（不丢数据、不报错）
+- 若副库和主库使用了不同的 Neon 实例，需分别给副库建 `schema-secondary.prisma` 中的两张表（用 `pnpm db:push:secondary` 在副库连接串下执行一次）
 
 ## 生成 AUTH_SECRET
 

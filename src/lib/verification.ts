@@ -3,7 +3,7 @@
 
 import crypto from 'node:crypto';
 import { prisma } from './db';
-import { getMultiDbConfig, multiDbEnabled } from './db-secondary';
+import { shardForTable } from './db-secondary';
 import { sendVerificationEmail, resendConfigured } from './email';
 
 // Verification-code lifetime, configurable via VERIFY_CODE_TTL_MINUTES (default 10 min).
@@ -11,14 +11,24 @@ export const CODE_LIFETIME_MS =
   (Number(process.env.VERIFY_CODE_TTL_MINUTES) || 10) * 60 * 1000;
 const CODE_LENGTH = 6;
 
+// The delegate for the secondary verification table, or null if not routed.
+function secondaryVerification() {
+  return shardForTable('verification')?.emailVerification ?? null;
+}
+
 // Resolve which client owns the EmailVerification table: the secondary DB when
-// multi-db is enabled AND coldTables.verification is on, otherwise main database.
+// multi-db routes this table there, otherwise main database.
 function verificationModel() {
-  if (multiDbEnabled()) {
-    const cfg = getMultiDbConfig();
-    if (cfg.coldTables.verification && cfg.client) return cfg.client.emailVerification;
-  }
-  return prisma.emailVerification;
+  return secondaryVerification() ?? prisma.emailVerification;
+}
+
+interface VerificationRow {
+  id: string;
+  email: string;
+  code: string;
+  expiresAt: Date;
+  used: boolean;
+  createdAt: Date;
 }
 
 function hashCode(code: string): string {
@@ -26,7 +36,7 @@ function hashCode(code: string): string {
 }
 
 function randomCode(): string {
-  // 6 digits, avoiding a leading zero not needed; simple random.
+  // 6 digits; simple random.
   let code = '';
   for (let i = 0; i < CODE_LENGTH; i++) {
     code += Math.floor(Math.random() * 10).toString();
@@ -67,19 +77,32 @@ export async function issueVerificationCode(email: string): Promise<{ sent: bool
 }
 
 // Verify a user-supplied code for an email. Returns true and consumes the code if valid.
+// Searches across the primary and any secondary that holds verification rows, so codes
+// issued before/after multi-db enabling both verify correctly.
 export async function verifyCode(email: string, code: string): Promise<boolean> {
   const normEmail = email.trim().toLowerCase();
-  const record = await verificationModel().findFirst({
-    where: { email: normEmail, used: false },
-    orderBy: { createdAt: 'desc' },
-  });
-  if (!record) return false;
-  if (record.expiresAt.getTime() < Date.now()) return false;
-  if (record.code !== hashCode(code.trim())) return false;
+  const codeHash = hashCode(code.trim());
+  const lookups: { find: () => Promise<VerificationRow | null>; markUsed: (id: string) => Promise<void> }[] = [
+    {
+      find: () => prisma.emailVerification.findFirst({ where: { email: normEmail, used: false }, orderBy: { createdAt: 'desc' } }) as Promise<VerificationRow | null>,
+      markUsed: (id) => prisma.emailVerification.update({ where: { id }, data: { used: true } }).then(() => undefined),
+    },
+  ];
+  const secondary = secondaryVerification();
+  if (secondary) {
+    lookups.push({
+      find: () => secondary.findFirst({ where: { email: normEmail, used: false }, orderBy: { createdAt: 'desc' } }) as Promise<VerificationRow | null>,
+      markUsed: (id) => secondary.update({ where: { id }, data: { used: true } }).then(() => undefined),
+    });
+  }
 
-  await verificationModel().update({
-    where: { id: record.id },
-    data: { used: true },
-  });
-  return true;
+  for (const lookup of lookups) {
+    const record = await lookup.find().catch(() => null);
+    if (!record) continue;
+    if (record.expiresAt.getTime() < Date.now()) continue;
+    if (record.code !== codeHash) continue;
+    await lookup.markUsed(record.id).catch(() => {});
+    return true;
+  }
+  return false;
 }

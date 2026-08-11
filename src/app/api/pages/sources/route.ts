@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { githubRepos } from '@/lib/git-fetch';
+import { githubRepos, gitlabRepos } from '@/lib/git-fetch';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -22,13 +22,14 @@ export async function GET(req: Request) {
   const githubEnabled = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
   const gitlabEnabled = Boolean(process.env.GITLAB_CLIENT_ID && process.env.GITLAB_CLIENT_SECRET);
 
-  const [workspaces, githubConn] = await Promise.all([
+  const [workspaces, githubConn, gitlabConn] = await Promise.all([
     prisma.workspace.findMany({
       where: { ownerId: session.userId },
       select: { id: true, title: true, _count: { select: { files: true } } },
       orderBy: { updatedAt: 'desc' },
     }),
     githubEnabled ? prisma.gitHubConnection.findFirst({ where: { userId: session.userId } }) : null,
+    gitlabEnabled ? prisma.gitlabConnection.findFirst({ where: { userId: session.userId } }) : null,
   ]);
 
   let github = { enabled: githubEnabled, connected: false, repos: [] as { name: string; branch: string; language: string | null }[] };
@@ -41,10 +42,20 @@ export async function GET(req: Request) {
     }
   }
 
+  let gitlab = { enabled: gitlabEnabled, connected: false, repos: [] as { name: string; branch: string; language: string | null }[] };
+  if (gitlabEnabled && gitlabConn) {
+    gitlab.connected = true;
+    try {
+      gitlab.repos = await gitlabRepos(session.userId);
+    } catch {
+      gitlab.repos = [];
+    }
+  }
+
   return NextResponse.json({
     available: Boolean(process.env.PAGES_KEY && process.env.PAGES_ACCOUNT_ID),
     workspaces: workspaces.map((w) => ({ id: w.id, title: w.title, files: w._count.files })),
     github,
-    gitlab: { enabled: gitlabEnabled, connected: false, repos: [] as { name: string; branch: string; language: string | null }[] },
+    gitlab,
   });
 }

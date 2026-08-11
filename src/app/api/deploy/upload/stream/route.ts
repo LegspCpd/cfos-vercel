@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const record = await prisma.deployment.create({
     data: {
       userId: session.userId,
-      workspaceId: '', // bare uploads are not tied to a workspace
+      workspaceId: null, // bare uploads are not tied to a workspace
       pagesProject: projectName,
       status: 'deploying',
       buildCommand: config.buildCommand,
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
           .update({ where: { id: record.id }, data: { status: 'failed', error: msg } })
           .catch(() => {});
         await flushLog().catch(() => {});
-        send({ type: 'done', ok: false, error: msg });
+        send({ type: 'done', ok: false, recordId: record.id, error: msg });
       } finally {
         await flushLog().catch(() => {});
         controller.close();

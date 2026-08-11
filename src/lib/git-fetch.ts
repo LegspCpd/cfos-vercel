@@ -36,17 +36,25 @@ export async function githubRepoFiles(userId: string, repoFullName: string, ref?
   const blobs = (treeData.tree || []).filter((t) => t.type === 'blob' && t.path);
   if (blobs.length > MAX_FILES) throw new Error(`Repo has too many files (max ${MAX_FILES})`);
 
-  // Fetch each blob's content (base64 via contents API is simpler for small repos; use it).
+  // Filter to deployable paths (skip dotfiles except Pages special files), then fetch the
+  // blobs with a bounded concurrency pool — fetching sequentially would blow the serverless
+  // timeout on repos with many files.
+  const paths = blobs
+    .map((b) => b.path as string)
+    .filter((p) => !p.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers'));
   const files: GitFile[] = [];
   let total = 0;
-  for (const b of blobs) {
-    const path = b.path as string;
-    if (path.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers')) continue;
-    const content = await githubBlob(token, api, path);
-    if (!content) continue;
-    total += content.byteLength;
-    if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
-    files.push({ path, content });
+  const CONCURRENCY = 8;
+  for (let i = 0; i < paths.length; i += CONCURRENCY) {
+    const batch = paths.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map((p) => githubBlob(token, api, p)));
+    for (let j = 0; j < batch.length; j++) {
+      const content = results[j];
+      if (!content) continue;
+      total += content.byteLength;
+      if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
+      files.push({ path: batch[j], content });
+    }
   }
   return files;
 }
@@ -106,25 +114,36 @@ export async function gitlabRepoFiles(userId: string, project: string, ref?: str
   );
   if (!treeRes.ok) throw new Error(`GitLab API error: ${treeRes.status}`);
   const tree = (await treeRes.json()) as { type?: string; path?: string }[];
-  const blobs = tree.filter((t) => t.type === 'blob' && t.path);
-  if (blobs.length > MAX_FILES) throw new Error(`Repo has too many files (max ${MAX_FILES})`);
+  const paths = tree
+    .filter((t) => t.type === 'blob' && t.path)
+    .map((t) => t.path as string)
+    .filter((p) => !p.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers'));
+  if (paths.length > MAX_FILES) throw new Error(`Repo has too many files (max ${MAX_FILES})`);
 
+  // Bounded-concurrency fetch to avoid serverless timeouts on larger repos.
   const files: GitFile[] = [];
   let total = 0;
-  for (const b of blobs) {
-    const path = b.path as string;
-    if (path.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers')) continue;
-    const res = await fetch(
-      `${GITLAB_BASE}/api/v4/projects/${proj}/repository/files/${encodeURIComponent(path)}/raw?ref=${encodeURIComponent(branch)}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+  const CONCURRENCY = 8;
+  for (let i = 0; i < paths.length; i += CONCURRENCY) {
+    const batch = paths.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (path) => {
+        const res = await fetch(
+          `${GITLAB_BASE}/api/v4/projects/${proj}/repository/files/${encodeURIComponent(path)}/raw?ref=${encodeURIComponent(branch)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`GitLab API error ${res.status} fetching ${path}`);
+        return Buffer.from(await res.arrayBuffer());
+      }),
     );
-    if (res.status === 404) continue;
-    if (!res.ok) throw new Error(`GitLab API error ${res.status} fetching ${path}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.byteLength > 20 * 1024 * 1024) continue;
-    total += buf.byteLength;
-    if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
-    files.push({ path, content: buf });
+    for (let j = 0; j < batch.length; j++) {
+      const buf = results[j];
+      if (!buf || buf.byteLength > 20 * 1024 * 1024) continue;
+      total += buf.byteLength;
+      if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
+      files.push({ path: batch[j], content: buf });
+    }
   }
   return files;
 }

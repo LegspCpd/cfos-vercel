@@ -169,7 +169,7 @@ model Favorite {
 model Deployment {
   id            String   @id @default(cuid())
   userId        String
-  workspaceId   String
+  workspaceId   String?  // null for Git/upload deploys not tied to a workspace
   pagesProject  String   // Cloudflare Pages project name (workspace slug)
   cfDeploymentId String? // Cloudflare deployment id (for status checks)
   status        String   @default("pending") // pending | deploying | deployed | failed
@@ -187,8 +187,8 @@ model Deployment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([workspaceId])

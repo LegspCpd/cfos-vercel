@@ -155,7 +155,9 @@ export default function DeployPage() {
   async function deploy() {
     if (deploying) return;
     if (source === 'workspace' && !selectedWs) return;
-    if ((source === 'github' || source === 'gitlab') && (!selectedRepo || !(source === 'github' ? github.connected : gitlab.connected))) return;
+    // Use the provider the user actually selected (gitProvider), not the URL `source`,
+    // since the provider toggle is visible inside the git source.
+    if ((source === 'github' || source === 'gitlab') && (!selectedRepo || !(gitProvider === 'github' ? github.connected : gitlab.connected))) return;
     if (source === 'upload' && uploadKind === 'zip' && !zipFile) return;
     if (source === 'upload' && uploadKind === 'folder' && folderFiles.length === 0) return;
 
@@ -180,8 +182,8 @@ export default function DeployPage() {
         pushLog(`$ deploy workspace=${selectedWs}`);
         result = await api.streamDeploy(selectedWs, cfg, pushLog);
       } else if (source === 'github' || source === 'gitlab') {
-        pushLog(`$ deploy ${source}:${selectedRepo}${branch ? `@${branch}` : ''}`);
-        result = await api.streamRepoDeploy(source, selectedRepo, branch || undefined, cfg, pushLog);
+        pushLog(`$ deploy ${gitProvider}:${selectedRepo}${branch ? `@${branch}` : ''}`);
+        result = await api.streamRepoDeploy(gitProvider, selectedRepo, branch || undefined, cfg, pushLog);
       } else if (uploadKind === 'zip') {
         pushLog(`$ deploy zip=${zipFile!.name}`);
         result = await api.streamDeployUpload(zipFile!, cfg, pushLog);
@@ -203,7 +205,7 @@ export default function DeployPage() {
 
   const canDeploy =
     (source === 'workspace' && !!selectedWs) ||
-    ((source === 'github' || source === 'gitlab') && !!selectedRepo && (source === 'github' ? github.connected : gitlab.connected)) ||
+    ((source === 'github' || source === 'gitlab') && !!selectedRepo && (gitProvider === 'github' ? github.connected : gitlab.connected)) ||
     (source === 'upload' && uploadKind === 'zip' && !!zipFile) ||
     (source === 'upload' && uploadKind === 'folder' && folderFiles.length > 0);
 

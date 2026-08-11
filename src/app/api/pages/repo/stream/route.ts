@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const record = await prisma.deployment.create({
     data: {
       userId: session.userId,
-      workspaceId: '',
+      workspaceId: null, // Git deploys aren't tied to a workspace
       pagesProject: projectName,
       status: 'deploying',
       buildCommand: config.buildCommand,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { buildSshConfig, connect, close, exec } from '@/lib/ssh';
+import { buildSshConfig, connectWithRetry, close, exec } from '@/lib/ssh';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -59,7 +59,14 @@ export async function POST(req: Request, { params }: Ctx) {
         }
       };
       try {
-        const conn = await connect(config, 15000);
+        // Establish the connection with retries so transient failures don't drop the
+        // session mid-flight: up to 5 attempts, 10s each. On exhaustion we send a timeout
+        // error (shown as a red line under the command line in the UI).
+        const conn = await connectWithRetry(config, {
+          attempts: 5,
+          timeoutMs: 10000,
+          intervalMs: 1000,
+        });
         try {
           const result = await exec(conn, command, (chunk) => {
             send({ type: 'data', text: chunk.toString('utf8') });

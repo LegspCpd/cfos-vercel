@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { buildSshConfig, connect, close } from '@/lib/ssh';
+import { buildSshConfig, connectWithRetry, close } from '@/lib/ssh';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -37,7 +37,7 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   try {
-    const conn = await connect(config, 20000);
+    const conn = await connectWithRetry(config, { attempts: 3, timeoutMs: 10000, intervalMs: 1000 });
     close(conn);
     return NextResponse.json({ ok: true, message: 'Connected successfully' });
   } catch (e) {

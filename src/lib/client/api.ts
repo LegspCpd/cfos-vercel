@@ -329,10 +329,12 @@ export const api = {
     }>(`/api/ssh-hosts/${id}/monitor`),
   // Stream a command's output over SSE. Returns { abort, done }: call abort() to stop the
   // stream early; await done to know when the stream has fully ended (for resetting UI state).
+  // Each onData chunk carries { text, isError } so the UI can render failures (e.g. a
+  // connection-timeout after retries) as a distinct red line.
   execSshHost: (
     id: string,
     command: string,
-    onData: (text: string) => void,
+    onData: (chunk: { text: string; isError: boolean }) => void,
   ): { abort: () => void; done: Promise<void> } => {
     const controller = new AbortController();
     const done = (async () => {
@@ -373,12 +375,14 @@ export const api = {
             } catch {
               continue;
             }
-            if (parsed.type === 'data' && parsed.text) onData(parsed.text);
-            if (parsed.type === 'error' && parsed.text) onData(`\n${parsed.text}\n`);
+            if (parsed.type === 'data' && parsed.text) onData({ text: parsed.text, isError: false });
+            if (parsed.type === 'error' && parsed.text) onData({ text: parsed.text, isError: true });
           }
         }
       } catch (e) {
-        if (!controller.signal.aborted) onData(`\n${(e as Error).message}\n`);
+        if (!controller.signal.aborted) {
+          onData({ text: (e as Error).message || 'Command failed', isError: true });
+        }
       }
     })();
     return { abort: () => controller.abort(), done };

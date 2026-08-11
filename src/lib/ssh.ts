@@ -13,6 +13,46 @@
 import { Client, ConnectConfig } from 'ssh2';
 import { decryptSecret } from './credentials';
 
+// Parse a host string that may carry an explicit port, supporting:
+//   * plain hostname / domain        -> example.com
+//   * host:port                      -> example.com:2222
+//   * bracketed IPv6                 -> [2001:db8::1]:22  (port optional)
+//   * bare IPv6 (no port)            -> 2001:db8::1
+//   * plain IPv4                     -> 1.2.3.4 (port optional)
+// Returns the separated host and port. When no port is present, `defaultPort` is used.
+// Never throws; malformed trailing ports fall back to the host as-is.
+export function parseHostPort(input: string, defaultPort: number): { host: string; port: number } {
+  const s = input.trim();
+  if (!s) return { host: s, port: defaultPort };
+
+  // Bracketed IPv6: [addr] or [addr]:port
+  if (s.startsWith('[')) {
+    const close = s.indexOf(']');
+    if (close !== -1) {
+      const host = s.slice(1, close);
+      const rest = s.slice(close + 1);
+      if (rest.startsWith(':')) {
+        const p = Number.parseInt(rest.slice(1), 10);
+        if (p >= 1 && p <= 65535) return { host, port: p };
+      }
+      return { host, port: defaultPort };
+    }
+  }
+
+  // A bare IPv6 address contains more than one colon — treat the whole string as host.
+  const colonCount = (s.match(/:/g) || []).length;
+  if (colonCount === 1) {
+    const idx = s.lastIndexOf(':');
+    const host = s.slice(0, idx);
+    const p = Number.parseInt(s.slice(idx + 1), 10);
+    if (host && p >= 1 && p <= 65535) return { host, port: p };
+  }
+
+  return { host: s, port: defaultPort };
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 // A resolved, usable SSH credential set (password or private key + optional passphrase).
 export interface SshCredential {
   password?: string;
@@ -59,9 +99,12 @@ export function buildSshConfig(
     passphrase = provided?.passphrase;
   }
 
+  // The stored host string may embed a port (e.g. "example.com:2222", "[2001:db8::1]:22").
+  // Prefer that embedded port; otherwise fall back to the dedicated port column.
+  const { host, port } = parseHostPort(row.host, row.port);
   const config: ConnectConfig = {
-    host: row.host,
-    port: row.port,
+    host,
+    port,
     username: row.username,
     readyTimeout: 15000,
   };
@@ -95,6 +138,40 @@ export function connect(config: ConnectConfig, timeoutMs = 15000): Promise<Clien
     });
     conn.connect(config);
   });
+}
+
+// Connect with automatic retries. A single ssh2 handshake can fail (timeout, refused,
+// reset) transiently — especially over flaky networks — so we retry a bounded number of
+// times before giving up. Each attempt is bounded by `timeoutMs`; between attempts we wait
+// `intervalMs`. When all attempts are exhausted we reject with a user-facing timeout
+// message rather than the raw error.
+export interface ConnectRetryOptions {
+  attempts?: number;
+  timeoutMs?: number;
+  intervalMs?: number;
+  onAttempt?: (attempt: number, err: unknown) => void;
+}
+
+export async function connectWithRetry(
+  config: ConnectConfig,
+  opts: ConnectRetryOptions = {},
+): Promise<Client> {
+  const attempts = opts.attempts ?? 5;
+  const timeoutMs = opts.timeoutMs ?? 10000;
+  const intervalMs = opts.intervalMs ?? 1000;
+  for (let i = 1; i <= attempts; i++) {
+    if (i > 1) await sleep(intervalMs);
+    try {
+      const conn = await connect(config, timeoutMs);
+      return conn;
+    } catch (err) {
+      opts.onAttempt?.(i, err);
+    }
+  }
+  // Attempts exhausted — surface a clear, actionable message.
+  throw new Error(
+    `连接超时，请重试（已重试 ${attempts} 次，每次 ${Math.round(timeoutMs / 1000)} 秒）`,
+  );
 }
 
 // Run a single command over SSH and collect its stdout/stderr + exit code. Resolves once

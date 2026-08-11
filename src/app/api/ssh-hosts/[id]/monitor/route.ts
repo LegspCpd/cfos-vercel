@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { buildSshConfig, connect, close, exec } from '@/lib/ssh';
+import { buildSshConfig, connectWithRetry, close, exec } from '@/lib/ssh';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -78,7 +78,7 @@ export async function GET(req: Request, { params }: Ctx) {
   }
 
   try {
-    const conn = await connect(config, 15000);
+    const conn = await connectWithRetry(config, { attempts: 3, timeoutMs: 10000, intervalMs: 1000 });
     try {
       const [uname, uptime, free, disk, nproc] = await Promise.all([
         exec(conn, 'uname -srmo').catch(() => ({ stdout: '', stderr: '', code: null })),

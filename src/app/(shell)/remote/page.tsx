@@ -182,7 +182,9 @@ export default function RemotePage() {
   // Terminal panel: which host + command + accumulated output + running state.
   const [termOpen, setTermOpen] = useState<string | null>(null);
   const [termCommand, setTermCommand] = useState('');
-  const [termOutput, setTermOutput] = useState('');
+  // Output is a list of { text, isError } chunks so connection-timeout errors can render
+  // as a distinct red line under the command line instead of mixing into stdout.
+  const [termOutput, setTermOutput] = useState<{ text: string; isError: boolean }[]>([]);
   const [termRunning, setTermRunning] = useState(false);
   const termAbortRef = useRef<{ abort: () => void } | null>(null);
   const termScrollRef = useRef<HTMLDivElement | null>(null);
@@ -378,7 +380,7 @@ export default function RemotePage() {
     }
     setTermOpen(h.id);
     setTermCommand('');
-    setTermOutput('');
+    setTermOutput([]);
     setTermRunning(false);
   }
 
@@ -387,10 +389,10 @@ export default function RemotePage() {
     const command = (cmd ?? termCommand).trim();
     if (!command || termRunning) return;
     setTermRunning(true);
-    setTermOutput('');
+    setTermOutput([]);
     setTermCommand(command);
-    const session = api.execSshHost(h.id, command, (text) => {
-      setTermOutput((prev) => prev + text);
+    const session = api.execSshHost(h.id, command, (chunk) => {
+      setTermOutput((prev) => [...prev, chunk]);
     });
     termAbortRef.current = session;
     session.done.then(() => {
@@ -473,14 +475,17 @@ export default function RemotePage() {
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fHost') || 'Host'}</label>
               <input
                 value={form.host}
                 onChange={(e) => setForm({ ...form, host: e.target.value })}
-                placeholder={t('remote.fHost') || 'Host (IP or hostname)'}
+                placeholder={t('remote.fHostPlaceholder') || 'example.com or example.com:2222'}
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground/70">
+                {t('remote.portHint') || 'Host may include a port; for IPv6 use brackets [::1]:22'}
+              </p>
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">{t('remote.fUsername') || 'Username'}</label>
@@ -904,10 +909,20 @@ export default function RemotePage() {
                     ref={termScrollRef}
                     className="h-56 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed"
                   >
-                    {termOutput || (
+                    {termOutput.length === 0 ? (
                       <span className="text-green-400/60">
                         {t('remote.terminalEmpty') || 'No command run yet. Enter one and click Run.'}
                       </span>
+                    ) : (
+                      termOutput.map((chunk, i) =>
+                        chunk.isError ? (
+                          <div key={i} className="mt-1 border-l-2 border-red-500 pl-2 text-red-400">
+                            {chunk.text}
+                          </div>
+                        ) : (
+                          <span key={i}>{chunk.text}</span>
+                        ),
+                      )
                     )}
                     {termRunning && <span className="inline-block h-3 w-2 animate-pulse bg-green-400 align-middle" />}
                   </div>

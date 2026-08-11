@@ -16,10 +16,11 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     theme_color: '#0a0a0a',
     orientation: 'any',
     icons: [
-      // Primary app icon — the project logo (logo.png, actually a 900x900 JPEG).
-      { src: '/app-icon.png', sizes: '900x900', type: 'image/jpeg', purpose: 'any' },
-      { src: '/app-icon.png', sizes: '900x900', type: 'image/jpeg', purpose: 'maskable' },
-      // PNG fallbacks for iOS / older browsers.
+      // All icons are generated at build time from SITE_IMG_URL and converted to PNG
+      // (see scripts/fetch-favicon.mjs), so PWA/Android/Chrome use the site's own
+      // image rather than a stale static logo.
+      { src: '/app-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/app-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
     ],

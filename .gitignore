@@ -38,6 +38,10 @@ next-env.d.ts
 prisma/dev.db
 
 # build-time generated site icons (see scripts/fetch-favicon.mjs)
+# NOTE: site-icon.png / apple-touch-icon.png are pure build outputs. The PWA icons
+# (app-icon.png, icon-192.png, icon-512.png) stay TRACKED in git as the fallback set
+# used when SITE_IMG_URL is not set; when SITE_IMG_URL IS set, fetch-favicon.mjs
+# overwrites them at build time with the site's own image (also PNG).
 public/site-icon.png
 public/apple-touch-icon.png
 

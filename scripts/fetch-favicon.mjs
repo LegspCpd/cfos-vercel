@@ -4,12 +4,15 @@
  *
  * Reads the SITE_IMG_URL env var (set at build time on Vercel). If present, it
  * downloads that image, converts it to PNG (any source format, incl. JPG) and writes
- * it to:
+ * PNG versions for every icon the site needs:
  *   - public/site-icon.png         (site favicon, 64x64)
  *   - public/apple-touch-icon.png  (iOS home-screen icon, 180x180)
+ *   - public/icon-192.png          (PWA icon, 192x192)
+ *   - public/icon-512.png          (PWA icon, 512x512)
+ *   - public/app-icon.png          (PWA primary/large icon, 512x512)
  *
- * The site then uses public/site-icon.png as its favicon, so a JPG source becomes a
- * proper PNG icon without any manual conversion.
+ * The site uses these as its favicon AND as its PWA manifest icons, so a JPG source
+ * becomes proper PNG icons everywhere (browser, iOS, Android/PWA) without manual work.
  *
  * If SITE_IMG_URL is unset, the script does nothing (exit 0).
  */
@@ -56,12 +59,19 @@ async function main() {
 
   await fs.mkdir(PUBLIC_DIR, { recursive: true });
 
-  // Favicon: always PNG, 64x64 (sharp converts JPG -> PNG automatically).
+  // All outputs are PNG (sharp converts JPG -> PNG automatically).
+  // Favicon: 64x64.
   await src.clone().resize(64, 64, { fit: 'cover' }).png().toFile(path.join(PUBLIC_DIR, 'site-icon.png'));
-  // iOS icon: 180x180 PNG.
+  // iOS home-screen icon: 180x180.
   await src.clone().resize(180, 180, { fit: 'cover' }).png().toFile(path.join(PUBLIC_DIR, 'apple-touch-icon.png'));
+  // PWA icons: 192 and 512 (Android/Chrome), plus a large app-icon (512).
+  await src.clone().resize(192, 192, { fit: 'cover' }).png().toFile(path.join(PUBLIC_DIR, 'icon-192.png'));
+  await src.clone().resize(512, 512, { fit: 'cover' }).png().toFile(path.join(PUBLIC_DIR, 'icon-512.png'));
+  await src.clone().resize(512, 512, { fit: 'cover' }).png().toFile(path.join(PUBLIC_DIR, 'app-icon.png'));
 
-  console.log('[favicon] Generated public/site-icon.png and public/apple-touch-icon.png (PNG).');
+  console.log(
+    '[favicon] Generated site-icon.png, apple-touch-icon.png, icon-192.png, icon-512.png, app-icon.png (all PNG).',
+  );
 }
 
 main().catch((e) => {

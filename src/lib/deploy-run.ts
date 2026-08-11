@@ -76,13 +76,17 @@ export async function runDeploy(input: DeployInput, log: (line: string) => void)
   if (Object.keys(env).length > 0) log(`[env] applying ${Object.keys(env).length} variable(s)`);
 
   log(`[pages] resolving project "${projectName}"`);
-  const { name } = await ensureProject(projectName);
+  const { name, subdomain } = await ensureProject(projectName);
 
   const envFiles = applyEnv(input.files, env);
-  log(`[pages] uploading ${envFiles.length} file(s) to ${name}.pages.dev`);
+  log(`[pages] uploading ${envFiles.length} file(s)`);
 
   const { deploymentId } = await deployFiles(name, envFiles);
-  const pagesUrl = `https://${name}.pages.dev`;
+  // The real pages.dev host is the project's `subdomain` (e.g. "abc-123.xyz"), NOT
+  // "<name>.pages.dev" — constructing the URL from the project name alone yields a
+  // non-existent host and the site 404s. Fall back to the name if no subdomain is known.
+  const host = subdomain && !subdomain.endsWith('.pages.dev') ? `${subdomain}.pages.dev` : subdomain || `${name}.pages.dev`;
+  const pagesUrl = `https://${host}`;
   log(`[pages] deployed → ${pagesUrl}`);
 
   let shortUrl: string | null = null;

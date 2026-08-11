@@ -44,10 +44,11 @@ function hashCode(code: string): string {
 }
 
 function randomCode(): string {
-  // 6 digits; simple random.
+  // 6 digits using a cryptographically secure PRNG. Math.random() is predictable and
+  // must not be used for security tokens; crypto.randomInt is the correct choice.
   let code = '';
   for (let i = 0; i < CODE_LENGTH; i++) {
-    code += Math.floor(Math.random() * 10).toString();
+    code += crypto.randomInt(0, 10).toString();
   }
   return code;
 }

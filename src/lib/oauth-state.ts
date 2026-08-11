@@ -11,7 +11,7 @@
 //   - replay is bounded (a timestamp window),
 //   - no cookie is required to pass the check.
 
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 // SECURITY: require AUTH_SECRET in production (the fallback is publicly known and would
 // let an attacker forge valid OAuth state). Dev may use the fallback.
@@ -33,10 +33,9 @@ const STATE_TTL_MS = 15 * 60 * 1000;
 export type OAuthStateKind = 'connect' | 'delete';
 
 export function signOAuthState(kind: OAuthStateKind, userId: string): string {
-  const nonce = createHmac('sha256', SECRET)
-    .update(`${userId}:${Math.random()}`)
-    .digest('hex')
-    .slice(0, 24);
+  // 16 random bytes (128-bit entropy) — cryptographically secure and unique per issuance,
+  // avoiding the weak Math.random() PRNG. Signing security still rests on AUTH_SECRET.
+  const nonce = randomBytes(16).toString('hex').slice(0, 24);
   const exp = Date.now() + STATE_TTL_MS;
   const payload = `${kind}:${userId}:${nonce}:${exp}`;
   const sig = createHmac('sha256', SECRET).update(payload).digest('hex');

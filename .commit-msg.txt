@@ -1,7 +1,0 @@
-fix(deploy): correct Direct Upload request field from files to manifest
-
-Deploy failed with "Cloudflare API 400: A 'manifest' field was expected in the
-request body but was not provided." The create-deployment body used `files`
-instead of the required `manifest` field name. Switched to `manifest`.
-
-Verified: tsc --noEmit clean, lint clean.

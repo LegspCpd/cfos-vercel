@@ -79,12 +79,12 @@ export default function SharesPage() {
       // Read file as base64.
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
+        reader.addEventListener('load', () => resolve(reader.result as string));
+        reader.addEventListener('error', () => reject(reader.error ?? new Error('Failed to read file')));
         reader.readAsDataURL(selected);
       });
       const base64 = dataUrl.split(',')[1] || dataUrl;
-      const res = await api.uploadShare({
+      await api.uploadShare({
         fileName: selected.name,
         mimeType: selected.type || 'application/octet-stream',
         content: base64,

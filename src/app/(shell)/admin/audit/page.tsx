@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, XCircle, ScrollText } from 'lucide-react';
+import { XCircle, ScrollText } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import AuditLogView from '@/components/AuditLogView';

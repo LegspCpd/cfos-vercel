@@ -180,10 +180,6 @@ export default function ProfilePage() {
     window.location.href = `/api/auth/microsoft/connect?token=${encodeURIComponent(getToken() || '')}`;
   }
 
-  function connectGitlab() {
-    window.location.href = `/api/gitlab/connect?token=${encodeURIComponent(getToken() || '')}`;
-  }
-
   // Countdown for the "resend code" button.
   useEffect(() => {
     if (bindCountdown <= 0) return;

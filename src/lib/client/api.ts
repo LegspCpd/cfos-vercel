@@ -8,7 +8,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
-      ...(options.headers || {}),
+      ...options.headers,
     },
   });
   if (!res.ok) {

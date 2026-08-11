@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Play, Columns2, FileCode2, Loader2, History, X, Maximize, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Play, Columns2, FileCode2, Loader2, History, X, Maximize, RefreshCw } from 'lucide-react';
 import { api, type WorkspaceDetail } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import FileTree from '@/components/FileTree';

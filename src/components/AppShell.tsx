@@ -32,7 +32,7 @@ import { clearToken, getToken } from '@/lib/client/auth';
 import { api } from '@/lib/client/api';
 import CommandPalette from './CommandPalette';
 import WalComment from './WalComment';
-import { useI18n, type Lang } from '@/lib/client/i18n';
+import { useI18n } from '@/lib/client/i18n';
 import { LOGO_URL } from '@/lib/brand';
 import { clsx } from 'clsx';
 
@@ -71,7 +71,6 @@ export default function AppShell({
   const { t, lang, setLang } = useI18n();
   const [theme, setTheme] = useTheme();
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [permissions, setPermissions] = useState<string[]>(initialPermissions);
   const [userName, setUserName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -95,7 +94,6 @@ export default function AppShell({
           router.replace('/profile/complete');
           return;
         }
-        setIsAdmin(me.isAdmin);
         setPermissions(me.permissions || []);
         setUserName(me.displayName || me.username);
         setAvatarUrl(me.avatarUrl || '');

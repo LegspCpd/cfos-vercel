@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogIn,
-  LogOut,
   UserPlus,
   FolderPlus,
   Trash2,

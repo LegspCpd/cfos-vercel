@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Send, FileText, CheckSquare, Gamepad2, BarChart3, Timer } from 'lucide-react';
+import { Send, FileText, CheckSquare, Gamepad2, BarChart3, Timer } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 

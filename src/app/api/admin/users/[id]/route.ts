@@ -58,7 +58,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     data.groupId = body.groupId;
   }
 
-  const updated = await prisma.user.update({ where: { id: params.id }, data });
+  await prisma.user.update({ where: { id: params.id }, data });
   // Re-sync groups so admin/group membership stays consistent.
   await syncUserGroups();
   await writeAudit({ userId: session.userId, username: session.username, action: 'admin.update_user', targetId: params.id, detail: `Updated user ${target.username}` });

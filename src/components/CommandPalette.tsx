@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileCode2, Plus, FileText } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';

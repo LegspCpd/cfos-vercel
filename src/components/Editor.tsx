@@ -1,6 +1,6 @@
 'use client';
 
-import Editor from '@monaco-editor/react';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
@@ -57,7 +57,7 @@ export default function CodeEditor({ path, value, onChange }: EditorProps) {
   };
 
   return (
-    <Editor
+    <MonacoEditor
       path={path}
       language={languageFromPath(path)}
       value={value}

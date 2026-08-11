@@ -7,7 +7,6 @@ import {
   Loader2,
   FolderOpen,
   FileCode2,
-  CalendarDays,
   LogIn,
   BrainCircuit,
   ShieldCheck,

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { slugifyProject } from '@/lib/cf-pages';
 import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 
 // POST /api/deploy/stream — deploy a workspace and stream real-time build logs to the
 // client over SSE. Body: { workspaceId, buildCommand?, installCommand?, outputDir?,
@@ -138,6 +139,8 @@ export async function POST(req: Request) {
           action: 'deploy.pages',
           detail: `Deployed "${ws.title}" → ${pagesUrl}`,
         });
+        // Drop the cached CF project list so the new deploy shows up immediately.
+        await invalidateCache('pages', 'projects');
 
         send({ type: 'done', ok: true, deploymentId, recordId: record.id, pagesUrl, shortUrl, project: projectName });
       } catch (e) {

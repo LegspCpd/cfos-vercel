@@ -17,7 +17,7 @@
 // Read strategy: try the stores in order (store 1 first), falling through on a miss so any
 // store can serve the value. Write strategy: write to EVERY configured store in parallel so
 // every reader finds the value regardless of which store it hits. If NO KV env is configured
-// we fall back to a per-instance in-memory Map. All KV errors are swallowed — a cache
+// we fall back to a bounded per-instance in-memory Map. All KV errors are swallowed — a cache
 // miss/failure never breaks a request.
 
 const API = 'https://api.cloudflare.com/client/v4';
@@ -34,6 +34,9 @@ interface Store {
 }
 
 const MAX_STORES = 5;
+// Bounded in-memory fallback: prevents unbounded growth on a shared serverless instance when
+// KV isn't configured. Insertion order = insertion age; we evict the oldest on overflow.
+const MEM_MAX = 1000;
 
 // All configured stores, in a stable order (store 1 first). The base store (no suffix) is
 // always honored, so a single KV namespace is all that's needed; stores 2..5 are optional.
@@ -51,16 +54,55 @@ function stores(): Store[] {
   return out;
 }
 
-const mem = new Map<string, { v: string; exp: number }>();
-const memEnabled = stores().length === 0;
+const kvConfigured = (): boolean => stores().length > 0;
 
-async function kvGet(key: string): Promise<string | null> {
-  if (memEnabled) {
-    const hit = mem.get(key);
-    if (hit && hit.exp > Date.now()) return hit.v;
-    if (hit) mem.delete(key);
+// ---- Bounded in-memory fallback (only used when no KV is configured) ------------------
+// A Map preserves insertion order, so evicting the first key gives a cheap FIFO bound.
+const mem = new Map<string, string>(); // key -> "<expMs>\n<value>"
+
+function memGet(key: string): string | null {
+  if (!mem.has(key)) return null;
+  const raw = mem.get(key)!;
+  const sep = raw.indexOf('\n');
+  if (sep === -1) {
+    mem.delete(key);
     return null;
   }
+  const exp = Number(raw.slice(0, sep));
+  if (Number.isNaN(exp) || exp < Date.now()) {
+    mem.delete(key);
+    return null;
+  }
+  return raw.slice(sep + 1);
+}
+
+function memSet(key: string, value: string, ttlMs: number): void {
+  // Trim to the newest MEM_MAX entries (drop the oldest, i.e. first in the map).
+  while (mem.size >= MEM_MAX) {
+    const oldest = mem.keys().next();
+    if (oldest.done) break;
+    mem.delete(oldest.value);
+  }
+  mem.set(key, `${Date.now() + ttlMs}\n${value}`);
+}
+
+function memDelete(key: string): void {
+  mem.delete(key);
+}
+
+// ---- Core cache helpers ----------------------------------------------------------------
+
+// Safe cache key: ids are user-supplied in some call sites; strip anything that could alter
+// the key structure (colons, control chars, spaces) to avoid collisions / injection.
+function buildKey(group: string, id: string): string {
+  const safe = String(id)
+    .replace(/[\u0000-\u0020\u007f:]+/g, '_')
+    .slice(0, 128);
+  return `${PREFIX}:${group}:${safe}`;
+}
+
+async function kvGet(key: string): Promise<string | null> {
+  if (!kvConfigured()) return memGet(key);
   // Try each configured store in order; return the first hit.
   for (const s of stores()) {
     try {
@@ -80,8 +122,8 @@ async function kvGet(key: string): Promise<string | null> {
 
 async function kvSet(key: string, value: string, ttlSeconds?: number): Promise<void> {
   const seconds = Math.max(1, ttlSeconds ?? DEFAULT_TTL());
-  if (memEnabled) {
-    mem.set(key, { v: value, exp: Date.now() + seconds * 1000 });
+  if (!kvConfigured()) {
+    memSet(key, value, seconds * 1000);
     return;
   }
   // Write to EVERY configured store in parallel so any reader finds the value.
@@ -99,8 +141,20 @@ async function kvSet(key: string, value: string, ttlSeconds?: number): Promise<v
   );
 }
 
-function buildKey(group: string, id: string): string {
-  return `${PREFIX}:${group}:${id}`;
+// Delete a cached value from every store (used to invalidate stale data after a deploy).
+async function kvDelete(key: string): Promise<void> {
+  if (!kvConfigured()) {
+    memDelete(key);
+    return;
+  }
+  await Promise.all(
+    stores().map((s) =>
+      fetch(
+        `${API}/accounts/${s.accountId}/storage/kv/namespaces/${s.namespaceId}/values/${encodeURIComponent(key)}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${s.token}` } },
+      ).catch(() => undefined),
+    ),
+  );
 }
 
 export async function cachedJson<T>(
@@ -119,12 +173,16 @@ export async function cachedJson<T>(
     }
   }
   const fresh = await loader();
-  if (memEnabled || stores().length > 0) {
-    await kvSet(key, JSON.stringify(fresh), opts?.ttlSeconds);
-  }
+  await kvSet(key, JSON.stringify(fresh), opts?.ttlSeconds);
   return fresh;
 }
 
+// Invalidate a cached group+id. Export so callers can drop stale data immediately after a
+// mutation (e.g. after a Pages deploy, clear the 'pages:projects' cache so the list is fresh).
+export async function invalidateCache(group: string, id: string): Promise<void> {
+  await kvDelete(buildKey(group, id));
+}
+
 export function isKvConfigured(): boolean {
-  return stores().length > 0;
+  return kvConfigured();
 }

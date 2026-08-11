@@ -4,6 +4,7 @@ import { slugifyProject } from '@/lib/cf-pages';
 import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { unzip } from '@/lib/unzip';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 
 // POST /api/deploy/upload/stream — deploy an uploaded ZIP of static files and stream
 // real-time build logs over SSE. Body is multipart/form-data with fields:
@@ -125,6 +126,8 @@ export async function POST(req: Request) {
           action: 'deploy.upload',
           detail: `Deployed uploaded ZIP → ${pagesUrl}`,
         });
+        // Drop the cached CF project list so the new deploy shows up immediately.
+        await invalidateCache('pages', 'projects');
 
         send({ type: 'done', ok: true, deploymentId, recordId: record.id, pagesUrl, shortUrl, project: projectName });
       } catch (e) {

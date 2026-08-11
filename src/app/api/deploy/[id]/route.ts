@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { deletePagesProject } from '@/lib/cf-pages';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -79,6 +80,8 @@ export async function DELETE(req: Request, { params }: Ctx) {
     action: 'pages.delete',
     detail: `Deleted Pages project "${rec.pagesProject}"`,
   }).catch(() => {});
+  // Drop the cached CF project list so the deleted project disappears immediately.
+  await invalidateCache('pages', 'projects');
 
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,7 @@ import { slugifyProject } from '@/lib/cf-pages';
 import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { githubRepoFiles, gitlabRepoFiles, assertGithubRepoOwned, assertGitlabRepoOwned } from '@/lib/git-fetch';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 
 // POST /api/pages/repo/stream — deploy a GitHub/GitLab repository and stream real-time
 // logs over SSE. Body: { provider: "github"|"gitlab", repo, ref?, buildCommand?,
@@ -124,6 +125,8 @@ export async function POST(req: Request) {
           action: 'deploy.repo',
           detail: `Deployed ${provider}:${body.repo} → ${pagesUrl}`,
         });
+        // Drop the cached CF project list so the new deploy shows up immediately.
+        await invalidateCache('pages', 'projects');
 
         send({ type: 'done', ok: true, deploymentId, recordId: record.id, pagesUrl, shortUrl, project: projectName });
       } catch (e) {

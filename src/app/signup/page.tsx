@@ -37,6 +37,10 @@ export default function SignupPage() {
     provider: 'turnstile' | 'recaptcha';
     token: string;
   } | null>(null);
+  // Bumping this forces CaptchaWidget to render a fresh challenge. We bump it
+  // whenever a submit fails, so the (possibly expired) token is auto-refreshed
+  // instead of forcing the user to manually reload the widget.
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   useEffect(() => {
     api.getPublicSite().then(setSite).catch(() => {});
@@ -116,6 +120,10 @@ export default function SignupPage() {
       router.push('/');
     } catch (err) {
       setError((err as Error).message);
+      // Invalidate the old challenge so the user gets a fresh captcha to solve
+      // (the previous token may have expired while they edited the form).
+      setCaptcha(null);
+      setCaptchaReset((c) => c + 1);
     } finally {
       setLoading(false);
     }
@@ -271,6 +279,7 @@ export default function SignupPage() {
                 recaptchaSiteKey: site.recaptchaSiteKey,
               }}
               onVerify={(provider, token) => setCaptcha({ provider, token })}
+              resetSignal={captchaReset}
             />
           )}
 

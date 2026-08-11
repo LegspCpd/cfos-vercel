@@ -30,6 +30,8 @@ export default function CompleteProfilePage() {
   const [codeCountdown, setCodeCountdown] = useState(0);
   const [site, setSite] = useState<PublicSite | null>(null);
   const [captcha, setCaptcha] = useState<{ provider: 'turnstile' | 'recaptcha'; token: string } | null>(null);
+  // Bump to force a fresh captcha after a failed submit (token may have expired).
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -117,6 +119,8 @@ export default function CompleteProfilePage() {
       setDone(true);
     } catch (e) {
       setError((e as Error).message);
+      setCaptcha(null);
+      setCaptchaReset((c) => c + 1);
     } finally {
       setSaving(false);
     }
@@ -247,6 +251,7 @@ export default function CompleteProfilePage() {
                   recaptchaSiteKey: site!.recaptchaSiteKey,
                 }}
                 onVerify={(provider, token) => setCaptcha({ provider, token })}
+                resetSignal={captchaReset}
               />
             )}
 

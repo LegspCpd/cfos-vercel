@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { prisma } from './db';
 
@@ -67,7 +67,7 @@ export async function r2GetPresignedUrl(key: string, expiresInSeconds = 900): Pr
   const client = getClient();
   return getSignedUrl(
     client,
-    new PutObjectCommand({
+    new GetObjectCommand({
       Bucket: getBucket(),
       Key: key,
     }),

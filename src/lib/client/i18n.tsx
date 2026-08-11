@@ -264,6 +264,10 @@ const zh: Record<string, string> = {
   'site.enabled': '已启用',
   'site.disabled': '未启用',
   'site.envHint': '也可在环境变量设置',
+  'site.pagesPanels': 'Pages 仪表盘面板',
+  'site.pagesPanelsHint': '控制 Pages 页右侧面板的显示。默认隐藏；环境变量优先级高于此处开关。',
+  'site.pagesBilling': '账单面板（含请求统计）',
+  'site.pagesAccount': 'Account Details（账户 ID / 子域）',
   'site.save': '保存设置',
   // Context library (上下文文档库)
   'ctx.title': '上下文文档库',
@@ -1061,6 +1065,10 @@ const en: Record<string, string> = {
   'site.enabled': 'Enabled',
   'site.disabled': 'Disabled',
   'site.envHint': 'You can also set these via environment variables:',
+  'site.pagesPanels': 'Pages dashboard panels',
+  'site.pagesPanelsHint': 'Controls the right-side panels on the Pages page. Hidden by default; environment variables take precedence over these toggles.',
+  'site.pagesBilling': 'Billing panel (incl. requests stat)',
+  'site.pagesAccount': 'Account Details (account ID / subdomain)',
   'site.save': 'Save settings',
   // Context library
   'ctx.title': 'Context library',

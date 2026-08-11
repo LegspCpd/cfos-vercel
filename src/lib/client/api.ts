@@ -356,6 +356,7 @@ export const api = {
       account: { id: string; subdomain: string };
       projects: { total: number; deployed: number; failed: number; thisMonth: number };
       usage: { used: number; quota: number };
+      panels: { billingShow: boolean; accountShow: boolean };
       period: { start: string; end: string; label: string };
     }>('/api/pages/stats'),
   getDeployment: (id: string) =>
@@ -583,6 +584,10 @@ export const api = {
         recaptchaSecretKey: string;
         turnstileEnvManaged: boolean;
         recaptchaEnvManaged: boolean;
+        pagesBillingShow: boolean;
+        pagesAccountShow: boolean;
+        pagesBillingEnvManaged: boolean;
+        pagesAccountEnvManaged: boolean;
       };
     }>('/api/admin/settings'),
   updateSiteSettings: (data: Record<string, unknown>) =>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getPagesPanelFlags } from '@/lib/settings';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
   const accountId = process.env.PAGES_ACCOUNT_ID || '';
   const subdomain = process.env.PAGES_SUBDOMAIN || 'pages.dev';
 
+  const flags = await getPagesPanelFlags();
+
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -49,6 +52,10 @@ export async function GET(req: Request) {
     account: { id: accountId, subdomain },
     projects: { total, deployed, failed, thisMonth },
     usage: { used: estimatedRequests, quota: MONTHLY_REQUEST_QUOTA },
+    panels: {
+      billingShow: flags.billingShow,
+      accountShow: flags.accountShow,
+    },
     period: {
       start: start.toISOString(),
       end: end.toISOString(),

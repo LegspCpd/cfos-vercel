@@ -24,6 +24,14 @@ export const SETTING_TURNSTILE_SECRET_KEY = 'turnstileSecretKey';
 export const SETTING_RECAPTCHA_SITE_KEY = 'recaptchaSiteKey';
 export const SETTING_RECAPTCHA_SECRET_KEY = 'recaptchaSecretKey';
 
+// Pages dashboard panel visibility. Controlled EITHER by environment variables
+// (preferred) OR by the admin panel (DB). Env vars win: when set, the admin panel toggles
+// are locked. Defaults to hidden (false).
+export const SETTING_PAGES_BILLING_SHOW = 'pagesBillingShow';
+export const SETTING_PAGES_ACCOUNT_SHOW = 'pagesAccountShow';
+export const ENV_PAGES_BILLING_SHOW = 'PAGES_BILLING_SHOW';
+export const ENV_PAGES_ACCOUNT_SHOW = 'PAGES_ACCOUNT_SHOW';
+
 export const ENV_TURNSTILE_SITE_KEY = 'TURNSTILE_SITE_KEY';
 export const ENV_TURNSTILE_SECRET_KEY = 'TURNSTILE_SECRET_KEY';
 export const ENV_RECAPTCHA_SITE_KEY = 'RECAPTCHA_SITE_KEY';
@@ -51,6 +59,8 @@ const DEFAULTS: Record<string, string> = {
   [SETTING_TURNSTILE_SECRET_KEY]: '',
   [SETTING_RECAPTCHA_SITE_KEY]: '',
   [SETTING_RECAPTCHA_SECRET_KEY]: '',
+  [SETTING_PAGES_BILLING_SHOW]: 'false',
+  [SETTING_PAGES_ACCOUNT_SHOW]: 'false',
 };
 
 export async function getSetting(key: string): Promise<string> {
@@ -104,6 +114,12 @@ export interface SiteSettings {
   // Whether each captcha provider is managed (locked) by environment variables.
   turnstileEnvManaged: boolean;
   recaptchaEnvManaged: boolean;
+  // Pages dashboard panel visibility (env vars win over admin panel).
+  pagesBillingShow: boolean;
+  pagesAccountShow: boolean;
+  // Whether each Pages panel is managed (locked) by environment variables.
+  pagesBillingEnvManaged: boolean;
+  pagesAccountEnvManaged: boolean;
 }
 
 // Human-verification provider config, derived from whether keys are present.
@@ -162,9 +178,10 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     getSetting(SETTING_SITE_FAVICON),
     getSetting(SETTING_SITE_LOGO),
   ]);
-  const [turnstile, recaptcha] = await Promise.all([
+  const [turnstile, recaptcha, pages] = await Promise.all([
     resolveCaptchaKeys('turnstile'),
     resolveCaptchaKeys('recaptcha'),
+    getPagesPanelFlags(),
   ]);
   return {
     signupsEnabled: signupsEnabled === 'true',
@@ -184,10 +201,37 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     recaptchaSecretKey: recaptcha.secretKey,
     turnstileEnvManaged: turnstile.envManaged,
     recaptchaEnvManaged: recaptcha.envManaged,
+    pagesBillingShow: pages.billingShow,
+    pagesAccountShow: pages.accountShow,
+    pagesBillingEnvManaged: pages.billingEnvManaged,
+    pagesAccountEnvManaged: pages.accountEnvManaged,
   };
 }
 
-// Public captcha config exposed to the signup page (site keys only, never secrets).
+// Resolve a Pages dashboard panel flag: environment variable wins; otherwise the admin
+// panel DB value. Returns { value, envManaged }.
+async function resolvePagesPanelFlag(dbKey: string, envKey: string): Promise<{ value: boolean; envManaged: boolean }> {
+  const envVal = process.env[envKey];
+  if (envVal !== undefined && envVal !== '') {
+    return { value: envVal === 'true' || envVal === '1', envManaged: true };
+  }
+  const dbVal = await getSetting(dbKey);
+  return { value: dbVal === 'true', envManaged: false };
+}
+
+export async function getPagesPanelFlags(): Promise<{ billingShow: boolean; accountShow: boolean; billingEnvManaged: boolean; accountEnvManaged: boolean }> {
+  const [billing, account] = await Promise.all([
+    resolvePagesPanelFlag(SETTING_PAGES_BILLING_SHOW, ENV_PAGES_BILLING_SHOW),
+    resolvePagesPanelFlag(SETTING_PAGES_ACCOUNT_SHOW, ENV_PAGES_ACCOUNT_SHOW),
+  ]);
+  return {
+    billingShow: billing.value,
+    accountShow: account.value,
+    billingEnvManaged: billing.envManaged,
+    accountEnvManaged: account.envManaged,
+  };
+}
+
 export async function getPublicCaptchaConfig(): Promise<CaptchaConfig> {
   const [turnstile, recaptcha] = await Promise.all([
     resolveCaptchaKeys('turnstile'),
@@ -232,6 +276,19 @@ export async function updateSiteSettings(patch: Partial<SiteSettings>): Promise<
     if (patch.recaptchaSiteKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SITE_KEY, patch.recaptchaSiteKey));
     if (patch.recaptchaSecretKey !== undefined) writes.push(setSetting(SETTING_RECAPTCHA_SECRET_KEY, patch.recaptchaSecretKey));
   }
+
+  // Pages panel flags — only writable when not env-managed.
+  const [billingEnv, accountEnv] = await Promise.all([
+    resolvePagesPanelFlag(SETTING_PAGES_BILLING_SHOW, ENV_PAGES_BILLING_SHOW),
+    resolvePagesPanelFlag(SETTING_PAGES_ACCOUNT_SHOW, ENV_PAGES_ACCOUNT_SHOW),
+  ]);
+  if (!billingEnv.envManaged && patch.pagesBillingShow !== undefined) {
+    writes.push(setSetting(SETTING_PAGES_BILLING_SHOW, String(patch.pagesBillingShow)));
+  }
+  if (!accountEnv.envManaged && patch.pagesAccountShow !== undefined) {
+    writes.push(setSetting(SETTING_PAGES_ACCOUNT_SHOW, String(patch.pagesAccountShow)));
+  }
+
   await Promise.all(writes);
 }
 

@@ -41,6 +41,7 @@ interface PagesStats {
   account: { id: string; subdomain: string };
   projects: { total: number; deployed: number; failed: number; thisMonth: number };
   usage: { used: number; quota: number };
+  panels: { billingShow: boolean; accountShow: boolean };
   period: { start: string; end: string; label: string };
 }
 
@@ -302,76 +303,80 @@ export default function PagesPage() {
             )}
           </div>
 
-          {/* Billing */}
-          <div className="rounded-lg border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-                <Receipt className="h-4 w-4 text-primary" /> {t('pg.billingTitle')}
-              </h3>
-              <button className="flex items-center gap-0.5 text-[11px] text-primary hover:underline">
-                {t('pg.addPayment')} <ArrowUpRight className="h-3 w-3" />
-              </button>
-            </div>
-            <div className="flex items-center gap-3 py-2">
-              <div className="relative flex h-16 w-16 items-center justify-center">
-                <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="15"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-secondary"
-                  />
-                </svg>
-                <span className="text-xs font-medium">$0.00</span>
+          {/* Billing — hidden by default, enable via env or admin panel */}
+          {stats?.panels.billingShow && (
+            <div className="rounded-lg border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Receipt className="h-4 w-4 text-primary" /> {t('pg.billingTitle')}
+                </h3>
+                <button className="flex items-center gap-0.5 text-[11px] text-primary hover:underline">
+                  {t('pg.addPayment')} <ArrowUpRight className="h-3 w-3" />
+                </button>
               </div>
-              <div className="text-[11px] text-muted-foreground">{t('pg.billingThisMonth')}</div>
-            </div>
-            <div className="mt-2 text-xs font-medium">{stats?.period.label}</div>
-            <div className="mt-2 rounded-md border bg-background p-2">
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Activity className="h-3 w-3" /> {t('pg.statRequests')}
+              <div className="flex items-center gap-3 py-2">
+                <div className="relative flex h-16 w-16 items-center justify-center">
+                  <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-secondary"
+                    />
+                  </svg>
+                  <span className="text-xs font-medium">$0.00</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground">{t('pg.billingThisMonth')}</div>
               </div>
-              <div className="mt-0.5 font-mono text-sm font-semibold">{stats ? Math.round(stats.usage.used / 30).toLocaleString() : '—'}</div>
+              <div className="mt-2 text-xs font-medium">{stats?.period.label}</div>
+              <div className="mt-2 rounded-md border bg-background p-2">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Activity className="h-3 w-3" /> {t('pg.statRequests')}
+                </div>
+                <div className="mt-0.5 font-mono text-sm font-semibold">{stats ? Math.round(stats.usage.used / 30).toLocaleString() : '—'}</div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Account Details */}
-          <div className="rounded-lg border bg-card p-4">
-            <h3 className="mb-2 text-sm font-semibold">{t('pg.accountTitle')}</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Account ID</span>
-                <span className="flex items-center gap-1 truncate font-mono">
-                  <span className="max-w-[10rem] truncate">{stats?.account.id || '—'}</span>
-                  {stats?.account.id && (
-                    <button
-                      onClick={() => stats && copy(stats.account.id, 'acct')}
-                      className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
-                    >
-                      {copied === 'acct' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                    </button>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">{t('pg.subdomain')}</span>
-                <span className="flex items-center gap-1 font-mono">
-                  <span className="truncate">{stats?.account.subdomain || '—'}</span>
-                  {stats?.account.subdomain && (
-                    <button
-                      onClick={() => stats && copy(stats.account.subdomain, 'sub')}
-                      className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
-                    >
-                      {copied === 'sub' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                    </button>
-                  )}
-                </span>
+          {/* Account Details — hidden by default, enable via env or admin panel */}
+          {stats?.panels.accountShow && (
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="mb-2 text-sm font-semibold">{t('pg.accountTitle')}</h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Account ID</span>
+                  <span className="flex items-center gap-1 truncate font-mono">
+                    <span className="max-w-[10rem] truncate">{stats?.account.id || '—'}</span>
+                    {stats?.account.id && (
+                      <button
+                        onClick={() => stats && copy(stats.account.id, 'acct')}
+                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
+                      >
+                        {copied === 'acct' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">{t('pg.subdomain')}</span>
+                  <span className="flex items-center gap-1 font-mono">
+                    <span className="truncate">{stats?.account.subdomain || '—'}</span>
+                    {stats?.account.subdomain && (
+                      <button
+                        onClick={() => stats && copy(stats.account.subdomain, 'sub')}
+                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
+                      >
+                        {copied === 'sub' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

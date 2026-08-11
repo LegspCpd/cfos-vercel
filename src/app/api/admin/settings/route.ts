@@ -37,6 +37,9 @@ const patchSchema = z.object({
   turnstileSecretKey: z.string().max(500).optional(),
   recaptchaSiteKey: z.string().max(500).optional(),
   recaptchaSecretKey: z.string().max(500).optional(),
+  // Pages dashboard panel visibility.
+  pagesBillingShow: z.boolean().optional(),
+  pagesAccountShow: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {

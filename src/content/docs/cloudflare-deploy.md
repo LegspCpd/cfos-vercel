@@ -33,6 +33,8 @@
 
 > 未配置 `PAGES_KEY` 时，「部署」功能不会启用；未配置 `S_LINK` 时部署仍可进行，但不会生成短链。未配置 GitHub/GitLab OAuth 时，对应仓库部署入口默认隐藏/禁用。
 
+> **右侧面板显示开关**：Pages 页右侧的「账单」和「Account Details」面板**默认隐藏**。可在管理面板（设置 → Pages 仪表盘面板）勾选开启；也可通过环境变量 `PAGES_BILLING_SHOW=true` / `PAGES_ACCOUNT_SHOW=true` 开启。环境变量优先级高于管理面板（设置后管理面板对应开关被锁定）。「使用情况」进度条面板始终显示。
+
 ### 如何获取
 
 1. **PAGES_KEY**：Cloudflare 控制台 → **My Profile → API Tokens → Create Token** → 选 **Edit Cloudflare Workers** 模板（或自定义，勾选 **Cloudflare Pages** 的 **Edit** 权限）。把生成的 Token 填到 `PAGES_KEY`。

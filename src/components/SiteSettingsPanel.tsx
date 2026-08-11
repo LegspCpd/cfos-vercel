@@ -23,6 +23,10 @@ interface SiteSettings {
   recaptchaSecretKey: string;
   turnstileEnvManaged: boolean;
   recaptchaEnvManaged: boolean;
+  pagesBillingShow: boolean;
+  pagesAccountShow: boolean;
+  pagesBillingEnvManaged: boolean;
+  pagesAccountEnvManaged: boolean;
 }
 
 const BANNER_COLORS = ['blue', 'amber', 'red', 'green'];
@@ -263,6 +267,58 @@ export default function SiteSettingsPanel() {
             <p className="mt-1 text-xs text-muted-foreground">
               {t('site.envHint')} <code className="rounded bg-secondary px-1">RECAPTCHA_SITE_KEY</code> / <code className="rounded bg-secondary px-1">RECAPTCHA_SECRET_KEY</code>
             </p>
+          </div>
+        </div>
+
+        {/* Pages dashboard panels */}
+        <div className="rounded-md border p-4">
+          <p className="font-medium">{t('site.pagesPanels')}</p>
+          <p className="mb-3 text-sm text-muted-foreground">{t('site.pagesPanelsHint')}</p>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t('site.pagesBilling')}</p>
+                {form.pagesBillingEnvManaged && (
+                  <span className="mt-0.5 inline-block rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">{t('site.envManaged')}</span>
+                )}
+              </div>
+              <button
+                onClick={() => update('pagesBillingShow', !form.pagesBillingShow)}
+                disabled={form.pagesBillingEnvManaged}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.pagesBillingShow ? 'bg-primary' : 'bg-secondary'} ${form.pagesBillingEnvManaged ? 'opacity-50' : ''}`}
+                aria-label="Toggle pages billing panel"
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${form.pagesBillingShow ? 'left-[22px]' : 'left-0.5'}`} />
+              </button>
+            </div>
+            {form.pagesBillingEnvManaged && (
+              <p className="text-xs text-muted-foreground">
+                {t('site.envHint')} <code className="rounded bg-secondary px-1">PAGES_BILLING_SHOW</code>
+              </p>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t('site.pagesAccount')}</p>
+                {form.pagesAccountEnvManaged && (
+                  <span className="mt-0.5 inline-block rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">{t('site.envManaged')}</span>
+                )}
+              </div>
+              <button
+                onClick={() => update('pagesAccountShow', !form.pagesAccountShow)}
+                disabled={form.pagesAccountEnvManaged}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.pagesAccountShow ? 'bg-primary' : 'bg-secondary'} ${form.pagesAccountEnvManaged ? 'opacity-50' : ''}`}
+                aria-label="Toggle pages account panel"
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${form.pagesAccountShow ? 'left-[22px]' : 'left-0.5'}`} />
+              </button>
+            </div>
+            {form.pagesAccountEnvManaged && (
+              <p className="text-xs text-muted-foreground">
+                {t('site.envHint')} <code className="rounded bg-secondary px-1">PAGES_ACCOUNT_SHOW</code>
+              </p>
+            )}
           </div>
         </div>
 

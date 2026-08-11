@@ -97,6 +97,8 @@
 | `PAGES_ACCOUNT_ID` | Cloudflare 账户 ID（控制台首页右下角）。部署到 Pages 必需。 |
 | `S_LINK` | 短链服务（sink.cool / s.legspcpd.top）的站点 Token；配置后部署完成自动生成短链。 |
 | `S_LINK_BASE` | 短链系统基址，默认 `https://sink.cool`。 |
+| `PAGES_BILLING_SHOW` | Pages 页右侧「账单」面板是否显示，`true` 显示。默认隐藏；设置后管理面板对应开关被锁定。 |
+| `PAGES_ACCOUNT_SHOW` | Pages 页右侧「Account Details」面板是否显示，`true` 显示。默认隐藏；设置后管理面板对应开关被锁定。 |
 
 ### 其他
 

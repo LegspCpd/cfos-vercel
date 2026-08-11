@@ -122,7 +122,7 @@ export async function POST(req: Request) {
           detail: `Deployed "${ws.title}" → ${pagesUrl}`,
         });
 
-        send({ type: 'done', ok: true, deploymentId, pagesUrl, shortUrl, project: projectName });
+        send({ type: 'done', ok: true, deploymentId, recordId: record.id, pagesUrl, shortUrl, project: projectName });
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
         console.error('[deploy/stream] failed:', err);
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
           .update({ where: { id: record.id }, data: { status: 'failed', error: msg } })
           .catch(() => {});
         await flushLog().catch(() => {});
-        send({ type: 'done', ok: false, error: msg });
+        send({ type: 'done', ok: false, recordId: record.id, error: msg });
       } finally {
         await flushLog().catch(() => {});
         controller.close();

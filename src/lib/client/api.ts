@@ -305,76 +305,51 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ workspaceId, ...config }) },
     ),
   // Stream a deploy, parsing SSE frames and calling onData({ text }) for each log line.
-  // Resolves { ok, pagesUrl?, shortUrl?, error? } once the stream closes. Used by the
-  // standalone deploy page (/workspace/deploy) to show real-time build logs.
+  // Resolves once the stream closes. Used by the deploy page to show real-time logs and to
+  // navigate to the deployment detail page on success.
   streamDeploy: (
     workspaceId: string,
     config: { buildCommand?: string; installCommand?: string; outputDir?: string; envJson?: string },
     onData: (text: string) => void,
-  ): Promise<{ ok: boolean; pagesUrl?: string; shortUrl?: string | null; error?: string }> =>
-    new Promise((resolve, reject) => {
-      fetch('/api/deploy/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ workspaceId, ...config }),
-      })
-        .then(async (res) => {
-          if (!res.ok || !res.body) {
-            let message = `Deploy failed (${res.status})`;
-            try {
-              const body = await res.json();
-              if (body?.error) message = body.error;
-            } catch {
-              /* ignore */
-            }
-            reject(new Error(message));
-            return;
-          }
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = '';
-          const drainFrames = () => {
-            let idx: number;
-            while ((idx = buf.indexOf('\n\n')) !== -1) {
-              const frame = buf.slice(0, idx);
-              buf = buf.slice(idx + 2);
-              const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
-              if (!dataLine) continue;
-              let parsed: { type?: string; text?: string; ok?: boolean; pagesUrl?: string; shortUrl?: string | null; error?: string };
-              try {
-                parsed = JSON.parse(dataLine.slice(6));
-              } catch {
-                continue;
-              }
-              if (parsed.type === 'data' && parsed.text) onData(parsed.text);
-              if (parsed.type === 'done') {
-                if (parsed.ok) resolve({ ok: true, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl });
-                else resolve({ ok: false, error: parsed.error || 'Deploy failed' });
-              }
-            }
-          };
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buf += decoder.decode(value, { stream: true });
-            drainFrames();
-          }
-          if (buf.trim()) {
-            const dataLine = buf.split('\n').find((l) => l.startsWith('data: '));
-            if (dataLine) {
-              try {
-                const parsed = JSON.parse(dataLine.slice(6));
-                if (parsed.type === 'done' && parsed.ok) resolve({ ok: true, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl });
-                else if (parsed.type === 'done') resolve({ ok: false, error: parsed.error || 'Deploy failed' });
-              } catch {
-                /* ignore malformed tail */
-              }
-            }
-          }
-          resolve({ ok: false, error: 'Deploy stream ended without a result' });
-        })
-        .catch(reject);
-    }),
+  ): Promise<DeployStreamResult> =>
+    streamSse('/api/deploy/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspaceId, ...config }) }, onData),
+  // Stream an uploaded ZIP deploy. Body is multipart/form-data (file + optional config).
+  streamDeployUpload: (
+    file: File,
+    config: { installCommand?: string; buildCommand?: string; outputDir?: string; envJson?: string },
+    onData: (text: string) => void,
+  ): Promise<DeployStreamResult> => {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    if (config.installCommand) fd.append('installCommand', config.installCommand);
+    if (config.buildCommand) fd.append('buildCommand', config.buildCommand);
+    if (config.outputDir) fd.append('outputDir', config.outputDir);
+    if (config.envJson) fd.append('envJson', config.envJson);
+    // Raw fetch — do NOT set Content-Type, so the multipart boundary is preserved.
+    return streamSse('/api/deploy/upload/stream', { method: 'POST', headers: {}, body: fd }, onData);
+  },
+  getDeployment: (id: string) =>
+    request<{
+      deployment: {
+        id: string;
+        workspaceId: string;
+        workspaceTitle: string | null;
+        pagesProject: string;
+        cfDeploymentId: string | null;
+        status: string;
+        pagesUrl: string | null;
+        shortUrl: string | null;
+        customDomain: string | null;
+        error: string | null;
+        log: string | null;
+        buildCommand: string | null;
+        installCommand: string | null;
+        outputDir: string | null;
+        envJson: string | null;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>(`/api/deploy/${id}`),
   listDeployments: () =>
     request<{
       deployments: {
@@ -813,6 +788,84 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   user: { username: string; displayName: string; email: string | null };
+}
+
+export interface DeployStreamResult {
+  ok: boolean;
+  recordId?: string; // Deployment record id — for navigating to /workspace/deploy/[id]
+  pagesUrl?: string;
+  shortUrl?: string | null;
+  error?: string;
+}
+
+// Shared SSE reader: POSTs `init` to `path` (auth headers are added, but the caller is
+// responsible for NOT setting a JSON Content-Type when sending multipart), parses frames,
+// calls onData(text) per log line, and resolves with the done frame's result.
+async function streamSse(path: string, init: RequestInit, onData: (text: string) => void): Promise<DeployStreamResult> {
+  const res = await fetch(path, {
+    ...init,
+    headers: { ...getAuthHeaders(), ...init.headers },
+  });
+  if (!res.ok || !res.body) {
+    let message = `Deploy failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let done: DeployStreamResult | null = null;
+
+  const drainFrames = () => {
+    let idx: number;
+    while ((idx = buf.indexOf('\n\n')) !== -1) {
+      const frame = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
+      if (!dataLine) continue;
+      let parsed: { type?: string; text?: string; ok?: boolean; recordId?: string; pagesUrl?: string; shortUrl?: string | null; error?: string };
+      try {
+        parsed = JSON.parse(dataLine.slice(6));
+      } catch {
+        continue;
+      }
+      if (parsed.type === 'data' && parsed.text) onData(parsed.text);
+      if (parsed.type === 'done') {
+        done = parsed.ok
+          ? { ok: true, recordId: parsed.recordId, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl }
+          : { ok: false, error: parsed.error || 'Deploy failed' };
+      }
+    }
+  };
+
+  while (true) {
+    const { done: streamDone, value } = await reader.read();
+    if (streamDone) break;
+    buf += decoder.decode(value, { stream: true });
+    drainFrames();
+  }
+  if (buf.trim()) {
+    const dataLine = buf.split('\n').find((l) => l.startsWith('data: '));
+    if (dataLine) {
+      try {
+        const parsed = JSON.parse(dataLine.slice(6));
+        if (parsed.type === 'done') {
+          done = parsed.ok
+            ? { ok: true, recordId: parsed.recordId, pagesUrl: parsed.pagesUrl, shortUrl: parsed.shortUrl }
+            : { ok: false, error: parsed.error || 'Deploy failed' };
+        }
+      } catch {
+        /* ignore malformed tail */
+      }
+    }
+  }
+  return done || { ok: false, error: 'Deploy stream ended without a result' };
 }
 
 // Redirect to /login if no token present.

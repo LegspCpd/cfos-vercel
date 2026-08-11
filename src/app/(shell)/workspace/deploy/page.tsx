@@ -49,6 +49,8 @@ export default function DeployPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState('');
   const [available, setAvailable] = useState(true);
+  const [source, setSource] = useState<'workspace' | 'upload'>('workspace');
+  const [zipFile, setZipFile] = useState<File | null>(null);
 
   // Build configuration.
   const [installCommand, setInstallCommand] = useState('');
@@ -75,7 +77,12 @@ export default function DeployPage() {
       .listWorkspaces()
       .then((r) => {
         setWorkspaces(r.workspaces);
-        if (r.workspaces.length) setSelected(r.workspaces[0].id);
+        const q = new URL(window.location.href).searchParams.get('workspace');
+        const wanted = q && r.workspaces.some((w) => w.id === q) ? q : r.workspaces[0]?.id;
+        if (wanted) {
+          setSelected(wanted);
+          setSource('workspace');
+        }
       })
       .catch(() => {});
     refresh();
@@ -106,44 +113,74 @@ export default function DeployPage() {
     setLogs([]);
   }
 
+  // Parse the env-var textarea into a JSON string; returns null if it's invalid JSON.
+  function parseEnvJson(): string | undefined | null {
+    if (!envVars.trim()) return undefined;
+    try {
+      return JSON.stringify(JSON.parse(envVars));
+    } catch {
+      return null;
+    }
+  }
+
+  function handleZip(f: File) {
+    if (!f.name.toLowerCase().endsWith('.zip')) {
+      setError(t('dp.uploadWrongType'));
+      return;
+    }
+    if (f.size > 50 * 1024 * 1024) {
+      setError(t('dp.uploadTooBig'));
+      return;
+    }
+    setError(null);
+    setZipFile(f);
+  }
+
+  // On success, auto-navigate to the deployment detail page /workspace/deploy/[recordId].
+  function finish(result: { ok: boolean; recordId?: string; pagesUrl?: string; shortUrl?: string | null; error?: string }) {
+    if (result.ok && result.recordId) {
+      router.push(`/workspace/deploy/${result.recordId}`);
+    } else {
+      setError(result.error || t('deploy.failed'));
+    }
+  }
+
   async function deploy() {
-    if (!selected || deploying) return;
+    if (deploying) return;
+    if (source === 'workspace' && !selected) return;
+    if (source === 'upload' && !zipFile) return;
+
     setDeploying(true);
     setError(null);
     resetLog();
-    pushLog(`$ deploy workspace=${selected}`);
-    try {
-      const envJson = envVars.trim()
-        ? (() => {
-            try {
-              return JSON.stringify(JSON.parse(envVars));
-            } catch {
-              setError(t('dp.envInvalid'));
-              setDeploying(false);
-              return null;
-            }
-          })()
-        : undefined;
-      if (envJson === null) return;
 
-      const result = await api.streamDeploy(
-        selected,
-        {
-          installCommand: installCommand.trim() || undefined,
-          buildCommand: buildCommand.trim() || undefined,
-          outputDir: outputDir.trim() || undefined,
-          envJson,
-        },
-        pushLog,
-      );
-      if (result.ok) {
-        pushLog(`[done] deployed → ${result.pagesUrl ?? ''}${result.shortUrl ? ` · short link ${result.shortUrl}` : ''}`);
+    // Validate the env-var JSON once, up front, for both sources.
+    const envJson = parseEnvJson();
+    if (envJson === null) {
+      setError(t('dp.envInvalid'));
+      setDeploying(false);
+      return;
+    }
+    const baseConfig = {
+      installCommand: installCommand.trim() || undefined,
+      buildCommand: buildCommand.trim() || undefined,
+      outputDir: outputDir.trim() || undefined,
+      envJson,
+    };
+
+    try {
+      if (source === 'workspace') {
+        pushLog(`$ deploy workspace=${selected}`);
+        const result = await api.streamDeploy(selected, baseConfig, pushLog);
+        finish(result);
       } else {
-        setError(result.error || 'Deploy failed');
+        pushLog(`$ deploy zip=${zipFile!.name}`);
+        const result = await api.streamDeployUpload(zipFile!, baseConfig, pushLog);
+        finish(result);
       }
       await refresh();
     } catch (e) {
-      setError((e as Error).message || 'Deploy failed');
+      setError((e as Error).message || t('deploy.failed'));
     } finally {
       setDeploying(false);
     }
@@ -199,30 +236,98 @@ export default function DeployPage() {
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Left column: configuration */}
           <div className="space-y-6 lg:col-span-3">
-            {/* Workspace */}
+            {/* Source toggle */}
             <div className="rounded-lg border bg-card p-4">
-              <label className="mb-1 block text-sm font-medium">{t('dp.workspace')}</label>
-              <select
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              >
-                {workspaces.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.title} · {w._count.files} {t('dp.workspaceFiles')}
-                  </option>
-                ))}
-              </select>
-              {workspaces.length === 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {t('dp.noWorkspaces')}
-                  <Link href="/workspaces" className="text-primary hover:underline">
-                    {t('dp.createFirst')}
-                  </Link>
-                  .
-                </p>
-              )}
+              <label className="mb-2 block text-sm font-medium">{t('dp.source')}</label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSource('workspace')}
+                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                    source === 'workspace' ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-secondary'
+                  }`}
+                >
+                  {t('dp.sourceWorkspace')}
+                </button>
+                <button
+                  onClick={() => setSource('upload')}
+                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                    source === 'upload' ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-secondary'
+                  }`}
+                >
+                  {t('dp.sourceUpload')}
+                </button>
+              </div>
             </div>
+
+            {/* Workspace source */}
+            {source === 'workspace' && (
+              <div className="rounded-lg border bg-card p-4">
+                <label className="mb-1 block text-sm font-medium">{t('dp.workspace')}</label>
+                <select
+                  value={selected}
+                  onChange={(e) => setSelected(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {workspaces.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.title} · {w._count.files} {t('dp.workspaceFiles')}
+                    </option>
+                  ))}
+                </select>
+                {workspaces.length === 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('dp.noWorkspaces')}
+                    <Link href="/workspaces" className="text-primary hover:underline">
+                      {t('dp.createFirst')}
+                    </Link>
+                    .
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* ZIP upload source */}
+            {source === 'upload' && (
+              <div className="rounded-lg border bg-card p-4">
+                <label className="mb-1 block text-sm font-medium">{t('dp.uploadLabel')}</label>
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) handleZip(f);
+                  }}
+                  className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground"
+                >
+                  {zipFile ? (
+                    <>
+                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      <span className="font-medium text-foreground">{zipFile.name}</span>
+                      <span className="text-xs">{(zipFile.size / 1024).toFixed(1)} KB</span>
+                      <button onClick={() => setZipFile(null)} className="text-xs text-primary hover:underline">
+                        {t('dp.uploadLabel')}…
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept=".zip,application/zip"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleZip(f);
+                        }}
+                        className="hidden"
+                        id="zip-input"
+                      />
+                      <label htmlFor="zip-input" className="cursor-pointer text-primary hover:underline">
+                        {t('dp.dropHint')}
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Build configuration */}
             <div className="rounded-lg border bg-card p-4">
@@ -274,11 +379,15 @@ export default function DeployPage() {
 
             <button
               onClick={deploy}
-              disabled={!selected || deploying || workspaces.length === 0}
+              disabled={deploying || (source === 'workspace' && (!selected || workspaces.length === 0)) || (source === 'upload' && !zipFile)}
               className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               {deploying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-              {deploying ? t('dp.deploying') : t('dp.deployBtn')}
+              {deploying
+                ? t('dp.deploying')
+                : source === 'upload'
+                  ? t('dp.uploadDeployBtn')
+                  : t('dp.deployBtn')}
             </button>
 
             {error && <div className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>}

@@ -1,14 +1,15 @@
-// Download a repository's file tree + contents from GitHub or GitLab, for the Pages
-// deploy feature ("deploy from a Git repository"). Returns a flat list of { path, content }
-// ready to feed the shared deploy pipeline.
+// Download a repository's files from GitHub or GitLab, for the Pages deploy feature
+// ("deploy from a Git repository"). Returns a flat list of { path, content } ready to feed
+// the shared deploy pipeline.
 //
 // Both providers are fetched via their REST APIs using the user's connected OAuth token.
-// GitHub uses the git trees API (recursive) then fetches each blob; GitLab uses the
-// repository tree API with `recursive=true` then the raw file endpoint.
+// GitHub downloads the whole repo as a zip in one request (zipball endpoint, then unzip);
+// GitLab uses the repository tree API with `recursive=true` then the raw file endpoint.
 
 import { getGitHubToken } from '@/lib/github';
 import { prisma } from '@/lib/db';
 import { decryptSecret } from '@/lib/credentials';
+import { unzip } from '@/lib/unzip';
 
 const GITLAB_BASE = (process.env.GITLAB_BASE_URL || 'https://gitlab.com').replace(/\/+$/, '');
 
@@ -26,49 +27,46 @@ const MAX_BYTES = 100 * 1024 * 1024; // 100 MB total
 export async function githubRepoFiles(userId: string, repoFullName: string, ref?: string): Promise<GitFile[]> {
   const token = await getGitHubToken(userId);
   if (!token) throw new Error('GitHub is not connected.');
-  const api = `https://api.github.com/repos/${encodeURIComponent(repoFullName)}`;
-  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
 
-  // Recursive git tree to enumerate every path.
-  const treeRes = await fetch(`${api}/git/trees/${encodeURIComponent(ref || 'HEAD')}?recursive=1`, { headers });
-  if (!treeRes.ok) throw new Error(`GitHub API error: ${treeRes.status}`);
-  const treeData = (await treeRes.json()) as { tree?: { path?: string; type?: string; size?: number }[]; truncated?: boolean };
-  const blobs = (treeData.tree || []).filter((t) => t.type === 'blob' && t.path);
-  if (blobs.length > MAX_FILES) throw new Error(`Repo has too many files (max ${MAX_FILES})`);
+  // Download the whole repo as a zip in ONE request (github `zipball` endpoint). This avoids
+  // the slow per-file contents API (which also mishandles paths with subdirectories) and the
+  // trees API 404 quirks. `ref` can be a branch name or SHA.
+  const branch = ref || 'HEAD';
+  const res = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(repoFullName)}/zipball/${encodeURIComponent(branch)}`,
+    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, redirect: 'follow' },
+  );
+  if (res.status === 404) {
+    throw new Error('GitHub: repository or branch not found, or not accessible with the connected account.');
+  }
+  if (!res.ok) {
+    throw new Error(`GitHub API error: ${res.status}`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
 
-  // Filter to deployable paths (skip dotfiles except Pages special files), then fetch the
-  // blobs with a bounded concurrency pool — fetching sequentially would blow the serverless
-  // timeout on repos with many files.
-  const paths = blobs
-    .map((b) => b.path as string)
-    .filter((p) => !p.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers'));
+  // The zipball archive nests everything under a `<repo>-<sha>/` folder; strip that prefix.
+  const entries = unzip(buf);
+  const prefix = commonRootPrefix(entries.map((e) => e.path));
   const files: GitFile[] = [];
   let total = 0;
-  const CONCURRENCY = 8;
-  for (let i = 0; i < paths.length; i += CONCURRENCY) {
-    const batch = paths.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(batch.map((p) => githubBlob(token, api, p)));
-    for (let j = 0; j < batch.length; j++) {
-      const content = results[j];
-      if (!content) continue;
-      total += content.byteLength;
-      if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
-      files.push({ path: batch[j], content });
-    }
+  for (const e of entries) {
+    const path = prefix ? e.path.slice(prefix.length) : e.path;
+    if (!path) continue;
+    if (path.split('/').some((seg) => seg.startsWith('.') && seg !== '_redirects' && seg !== '_headers')) continue;
+    total += e.content.byteLength;
+    if (total > MAX_BYTES) throw new Error('Repository exceeds 100 MB total size limit');
+    files.push({ path, content: e.content });
   }
+  if (files.length === 0) throw new Error('Repository has no files to deploy');
   return files;
 }
 
-async function githubBlob(token: string, api: string, path: string): Promise<Buffer | null> {
-  const res = await fetch(
-    `${api}/contents/${encodeURIComponent(path)}`,
-    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw+json' } },
-  );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API error ${res.status} fetching ${path}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.byteLength > 20 * 1024 * 1024) return null; // skip files > 20 MB
-  return buf;
+// Find the common leading directory prefix shared by all paths (e.g. "repo-main-abc123/").
+function commonRootPrefix(paths: string[]): string {
+  if (paths.length === 0) return '';
+  const parts = paths[0].split('/');
+  if (parts.length < 2) return '';
+  return `${parts[0]}/`;
 }
 
 // List a connected GitHub user's repos (name + default branch) for the picker.

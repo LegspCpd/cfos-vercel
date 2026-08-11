@@ -182,7 +182,16 @@ export const api = {
         todayUsersActive: number;
         topLoginIps: { ip: string; count: number }[];
       } | null;
+      // The authoritative client IP as seen by the server for this request.
+      currentIp: string | null;
+      currentIpFamily: 'v4' | 'v6' | null;
     }>('/api/analytics'),
+  // Record a "session view" (every visit to the analytics page) so admins can trace a
+  // user's IP per visit. Fire-and-forget.
+  reportVisit: () =>
+    request<{ ok: boolean; ip: string | null }>('/api/analytics/visit', {
+      method: 'POST',
+    }),
   // Account deletion (注销账号): send code → verify + captcha → 4–7 day cooldown → delete.
   sendDeleteAccountCode: (email: string) =>
     request<{ ok: boolean }>('/api/profile/delete-account/send', {

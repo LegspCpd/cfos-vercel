@@ -11,10 +11,13 @@ import {
   BrainCircuit,
   ShieldCheck,
   MapPin,
+  Network,
+  Globe,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
+import { detectMyIps } from '@/lib/client/detect-ip';
 
 interface Analytics {
   joinedAt: string;
@@ -33,6 +36,8 @@ interface Analytics {
     todayUsersActive: number;
     topLoginIps: { ip: string; count: number }[];
   } | null;
+  currentIp: string | null;
+  currentIpFamily: 'v4' | 'v6' | null;
 }
 
 export default function AnalyticsPage() {
@@ -40,12 +45,17 @@ export default function AnalyticsPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Analytics | null>(null);
+  const [browserIps, setBrowserIps] = useState<{ v4: string; v6: string }>({ v4: '', v6: '' });
 
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
       return;
     }
+    // Detect the local IPv4/IPv6 via WebRTC (best-effort, non-blocking).
+    detectMyIps().then(setBrowserIps).catch(() => {});
+    // Record this visit so admins can trace IP per session; fire-and-forget.
+    api.reportVisit().catch(() => {});
     api
       .getAnalytics()
       .then(setData)
@@ -89,6 +99,32 @@ export default function AnalyticsPage() {
           </div>
         ))}
       </div>
+
+      {/* My IPs — this visit (IPv4 + IPv6) */}
+      <section className="mt-8 rounded-lg border bg-card p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
+          <Network className="h-4 w-4 text-emerald-500" /> {t('an.myIps')}
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('an.myIpsHint')}</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-md bg-secondary/50 p-4">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Globe className="h-3.5 w-3.5" /> {t('an.serverIp')}
+            </p>
+            <p className="mt-1 break-all font-mono text-sm">
+              {data.currentIp ? `${data.currentIp}${data.currentIpFamily ? ` (${data.currentIpFamily.toUpperCase()})` : ''}` : t('an.notDetected')}
+            </p>
+          </div>
+          <div className="rounded-md bg-secondary/50 p-4">
+            <p className="text-xs text-muted-foreground">{t('an.browserV4')}</p>
+            <p className="mt-1 break-all font-mono text-sm">{browserIps.v4 || t('an.notDetected')}</p>
+          </div>
+          <div className="rounded-md bg-secondary/50 p-4">
+            <p className="text-xs text-muted-foreground">{t('an.browserV6')}</p>
+            <p className="mt-1 break-all font-mono text-sm">{browserIps.v6 || t('an.notDetected')}</p>
+          </div>
+        </div>
+      </section>
 
       {/* Today's login activity (my IPs) */}
       <section className="mt-8 rounded-lg border bg-card p-6">

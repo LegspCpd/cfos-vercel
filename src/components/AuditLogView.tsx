@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogIn,
+  Globe,
   UserPlus,
   FolderPlus,
   Trash2,
@@ -43,6 +44,7 @@ const PAGE_SIZE = 50;
 function actionMeta(t: (k: string) => string, action: string): { icon: LucideIcon; label: string } {
   const map: Record<string, { icon: LucideIcon; label: string }> = {
     'auth.login': { icon: LogIn, label: t('audit.login') },
+    'auth.online': { icon: Globe, label: t('audit.online') },
     'auth.login_failed': { icon: AlertTriangle, label: t('audit.loginFailed') },
     'auth.signup': { icon: UserPlus, label: t('audit.signup') },
     'workspace.create': { icon: FolderPlus, label: t('audit.workspaceCreate') },
@@ -138,6 +140,7 @@ export default function AuditLogView() {
         >
           <option value="">{t('audit.allActions')}</option>
           <option value="auth.login">{t('audit.login')}</option>
+          <option value="auth.online">{t('audit.online')}</option>
           <option value="auth.login_failed">{t('audit.loginFailed')}</option>
           <option value="auth.signup">{t('audit.signup')}</option>
           <option value="workspace.create">{t('audit.workspaceCreate')}</option>

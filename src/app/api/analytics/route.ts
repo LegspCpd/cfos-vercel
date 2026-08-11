@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isUserAdmin } from '@/lib/admin';
 import { multiDbEnabled, coldShards } from '@/lib/db-secondary';
+import { clientIp, ipFamily } from '@/lib/ip';
 
 type AnyClient = typeof prisma;
 type AnyShard = ReturnType<typeof coldShards>[number];
@@ -103,6 +104,9 @@ export async function GET(req: Request) {
     };
   }
 
+  // The authoritative client IP as seen by the server this request (Vercel injects it).
+  const currentIp = clientIp(req);
+
   return NextResponse.json({
     joinedAt: user.createdAt.toISOString(),
     workspaces: workspaceCount,
@@ -114,5 +118,7 @@ export async function GET(req: Request) {
       tokens: todayTokenTotal,
     },
     site,
+    currentIp,
+    currentIpFamily: ipFamily(currentIp),
   });
 }

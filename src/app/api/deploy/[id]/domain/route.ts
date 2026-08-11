@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { bindCustomDomain } from '@/lib/cf-pages';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -46,6 +47,9 @@ export async function POST(req: Request, { params }: Ctx) {
     action: 'deploy.bind_domain',
     detail: `Bound ${domain} → ${rec.pagesProject}`,
   });
+  // Drop the cached CF project list so the newly bound domain appears in the project list
+  // immediately (the list reads `customDomains` from the cached CF state).
+  await invalidateCache('pages', 'projects');
 
   return NextResponse.json({ ok: true, customDomain: domain });
 }

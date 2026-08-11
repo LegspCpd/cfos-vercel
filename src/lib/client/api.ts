@@ -351,6 +351,13 @@ export const api = {
       },
       onData,
     ),
+  pagesStats: () =>
+    request<{
+      account: { id: string; subdomain: string };
+      projects: { total: number; deployed: number; failed: number; thisMonth: number };
+      usage: { used: number; quota: number };
+      period: { start: string; end: string; label: string };
+    }>('/api/pages/stats'),
   getDeployment: (id: string) =>
     request<{
       deployment: {

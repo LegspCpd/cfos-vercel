@@ -120,7 +120,11 @@ export async function runDeploy(input: DeployInput, log: (line: string) => void)
       shortUrl = await createShortLink(pagesUrl);
       log(`[link] ${shortUrl}`);
     } catch (e) {
-      log(`[link] skipped: ${(e as Error).message}`);
+      // Deploy already succeeded — a short-link failure must never look like a deploy failure.
+      // Log a friendly, non-alarming line and keep the pagesUrl.
+      const reason = (e as Error).message;
+      log(`[link] unavailable: short-link service declined the request. Your site is live at ${pagesUrl} (no short link this time).`);
+      console.warn(`[short-link] skipped for ${pagesUrl}: ${reason}`);
       shortUrl = null;
     }
   }

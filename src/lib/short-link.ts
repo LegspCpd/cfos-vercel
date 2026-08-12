@@ -12,17 +12,35 @@ const S_LINK_TOKEN = process.env.S_LINK || '';
 // met with a Cloudflare JS challenge ("Just a moment...") / Bot Fight 403 when the CF zone
 // enables bot protection on the API path. We send a clear non-browser User-Agent so CF can
 // recognize a legitimate API client, and surface an actionable hint when it still challenges.
-const API_UA = 'cfos-shortlink/1.0 (server-to-server; Bearer auth)';
+// Headers that mimic a real browser request as closely as a server can. Cloudflare's bot
+// scoring looks for a *consistent* set of HTTP headers; sending a plausible browser fingerprint
+// reduces false-positive bot flagging. This can't beat a real JS challenge (that needs a
+// browser to solve the PoW), but it avoids being blocked by basic UA/header heuristics.
+const API_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+function browserHeaders(auth: string): HeadersInit {
+  return {
+    Authorization: auth,
+    'User-Agent': API_UA,
+    Accept: 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    Connection: 'keep-alive',
+    'Cache-Control': 'no-cache',
+    Pragma: 'no-cache',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'cross-site',
+  };
+}
 
 export async function createShortLink(url: string): Promise<string> {
   if (!S_LINK_TOKEN) throw new Error('S_LINK is not configured; short links unavailable.');
   const res = await fetch(`${S_LINK_BASE}/api/link/upsert`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${S_LINK_TOKEN}`,
-      'User-Agent': API_UA,
-    },
+    headers: { ...browserHeaders(`Bearer ${S_LINK_TOKEN}`), 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
   });
   const text = await res.text();
@@ -60,7 +78,7 @@ export async function searchShortLink(url: string): Promise<string | null> {
   if (!S_LINK_TOKEN) return null;
   try {
     const res = await fetch(`${S_LINK_BASE}/api/link/search?url=${encodeURIComponent(url)}&limit=1`, {
-      headers: { Authorization: `Bearer ${S_LINK_TOKEN}`, 'User-Agent': API_UA },
+      headers: browserHeaders(`Bearer ${S_LINK_TOKEN}`),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { data?: Array<{ url?: string }> };

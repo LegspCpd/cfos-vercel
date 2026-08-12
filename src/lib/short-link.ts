@@ -7,16 +7,30 @@ const S_LINK_TOKEN = process.env.S_LINK || '';
 
 // Create (or update) a short link for `url`. Returns the short URL like
 // https://s.legspcpd.top/xxxxxx, or throws on failure.
+//
+// The sink.cool instance sits behind Cloudflare. A server-side (non-browser) request is often
+// met with a Cloudflare JS challenge ("Just a moment...") / Bot Fight 403 when the CF zone
+// enables bot protection on the API path. We send a clear non-browser User-Agent so CF can
+// recognize a legitimate API client, and surface an actionable hint when it still challenges.
+const API_UA = 'cfos-shortlink/1.0 (server-to-server; Bearer auth)';
+
 export async function createShortLink(url: string): Promise<string> {
   if (!S_LINK_TOKEN) throw new Error('S_LINK is not configured; short links unavailable.');
   const res = await fetch(`${S_LINK_BASE}/api/link/upsert`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${S_LINK_TOKEN}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${S_LINK_TOKEN}`,
+      'User-Agent': API_UA,
+    },
     body: JSON.stringify({ url }),
   });
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Short-link error ${res.status}: ${text.slice(0, 200)}`);
+    const hint = isCloudflareChallenge(text)
+      ? ' (Cloudflare bot-protection challenged the request — in the sink.cool zone, disable Bot Fight Mode / JS Challenge for /api/*, or allowlist the deploy server IP)'
+      : '';
+    throw new Error(`Short-link error ${res.status}: ${text.slice(0, 200)}${hint}`);
   }
   let data: { url?: string } = {};
   try {
@@ -31,12 +45,22 @@ export async function createShortLink(url: string): Promise<string> {
   throw new Error(`Short-link created but returned no URL (${res.status})`);
 }
 
+// Detect a Cloudflare challenge/bot-fight page so we can give an actionable error.
+function isCloudflareChallenge(text: string): boolean {
+  return (
+    text.toLowerCase().includes('just a moment') ||
+    text.includes('cf-challenge') ||
+    text.includes('challenge-platform') ||
+    (text.includes('cloudflare') && text.includes('checking your browser'))
+  );
+}
+
 // Find an existing short link for `url` (optional; used as a fallback).
 export async function searchShortLink(url: string): Promise<string | null> {
   if (!S_LINK_TOKEN) return null;
   try {
     const res = await fetch(`${S_LINK_BASE}/api/link/search?url=${encodeURIComponent(url)}&limit=1`, {
-      headers: { Authorization: `Bearer ${S_LINK_TOKEN}` },
+      headers: { Authorization: `Bearer ${S_LINK_TOKEN}`, 'User-Agent': API_UA },
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { data?: Array<{ url?: string }> };

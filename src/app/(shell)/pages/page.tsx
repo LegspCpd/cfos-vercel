@@ -20,6 +20,7 @@ import {
   Check,
   ArrowUpRight,
   Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -205,76 +206,109 @@ export default function PagesPage() {
           {t('pg.emptyProjects')}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {deployments.map((d) => (
-            <div key={d.id} className="flex flex-col rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold">{d.projectName || d.pagesProject}</span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setDeleteTarget(d);
-                      setDeleteInput('');
-                    }}
-                    className="rounded p-1 text-muted-foreground hover:bg-red-500/10 hover:text-red-600"
-                    title={t('pg.delete')}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                  <span
-                    className={`flex items-center gap-1 text-xs ${
-                      d.status === 'deployed'
-                        ? 'text-green-600'
-                        : d.status === 'failed'
-                          ? 'text-red-600'
-                          : 'text-muted-foreground'
-                    }`}
-                  >
-                    {d.status === 'deployed' ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    ) : d.status === 'failed' ? (
-                      <XCircle className="h-3.5 w-3.5" />
-                    ) : (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    )}
-                    {d.status}
+        <div className="overflow-hidden rounded-lg border bg-card">
+          {/* Header row */}
+          <div className="hidden border-b bg-secondary/40 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)_auto] sm:gap-3">
+            <div>{t('dd.project')}</div>
+            <div>{t('dd.status')}</div>
+            <div>Deployment</div>
+            <div>{t('dd.createdAt')}</div>
+            <div className="text-right">Actions</div>
+          </div>
+          {deployments.map((d, idx) => (
+            <div
+              key={d.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(`/pages/${d.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') router.push(`/pages/${d.id}`);
+              }}
+              className={`group flex cursor-pointer flex-col gap-2 px-4 py-3 transition-colors hover:bg-secondary/50 sm:flex-row sm:items-center sm:gap-3 ${
+                idx > 0 ? 'border-t' : ''
+              }`}
+            >
+              {/* Project name + source */}
+              <div className="min-w-0 sm:col-span-1">
+                <div className="flex items-center gap-1.5">
+                  <Rocket className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="truncate text-sm font-semibold">
+                    {d.projectName || d.pagesProject}
                   </span>
+                  {(d as any).source && (
+                    <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                      {(d as any).source}
+                    </span>
+                  )}
                 </div>
+                {d.workspaceTitle && (
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">{d.workspaceTitle}</div>
+                )}
               </div>
 
-              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                {d.workspaceTitle && <div>{d.workspaceTitle}</div>}
-                <div>{new Date(d.createdAt).toLocaleString()}</div>
+              {/* Status */}
+              <div className="flex shrink-0 items-center gap-1 text-xs">
+                {d.status === 'deployed' ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                ) : d.status === 'failed' ? (
+                  <XCircle className="h-3.5 w-3.5 text-red-600" />
+                ) : (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                )}
+                <span
+                  className={
+                    d.status === 'deployed'
+                      ? 'text-green-600'
+                      : d.status === 'failed'
+                        ? 'text-red-600'
+                        : 'text-muted-foreground'
+                  }
+                >
+                  {d.status === 'deployed'
+                    ? t('pg.success')
+                    : d.status}
+                </span>
+              </div>
+
+              {/* Deployment (pagesUrl + domains) */}
+              <div className="min-w-0 space-y-0.5 text-xs sm:col-span-1">
                 {d.pagesUrl && (
-                  <button onClick={() => copyText(d.pagesUrl ?? '')} className="flex items-center gap-1 text-primary hover:underline">
-                    <Copy className="h-3 w-3" />
-                    <span className="max-w-[14rem] truncate">{d.pagesUrl}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyText(d.pagesUrl ?? '');
+                    }}
+                    className="flex max-w-full items-center gap-1 text-primary hover:underline"
+                  >
+                    <Globe className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{d.pagesUrl}</span>
+                    <Copy className="h-2.5 w-2.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
                   </button>
                 )}
-                {/* Custom domains (live from CF) */}
                 {d.customDomains.length > 0 && (
-                  <div className="pt-1">
-                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{t('pg.domains')}</div>
-                    <div className="mt-0.5 space-y-0.5">
-                      {d.customDomains.map((dom) => (
-                        <div key={dom} className="flex items-center gap-1">
-                          <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
-                          <button
-                            onClick={() => copyText(dom)}
-                            className="flex min-w-0 items-center gap-1 text-primary hover:underline"
-                          >
-                            <span className="max-w-[13rem] truncate">{dom}</span>
-                            <Copy className="h-2.5 w-2.5 shrink-0" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                    {d.customDomains.slice(0, 2).map((dom) => (
+                      <button
+                        key={dom}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyText(dom);
+                        }}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary"
+                      >
+                        <Globe className="h-2.5 w-2.5" />
+                        <span className="max-w-[10rem] truncate">{dom}</span>
+                      </button>
+                    ))}
+                    {d.customDomains.length > 2 && (
+                      <span className="text-[11px] text-muted-foreground">+{d.customDomains.length - 2}</span>
+                    )}
                   </div>
                 )}
-                {/* Add-domain control */}
-                <div className="pt-0.5">
+                {/* Add-domain inline */}
+                <div onClick={(e) => e.stopPropagation()}>
                   {domainTarget === d.id ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="mt-1 flex items-center gap-1">
                       <input
                         value={domainInput}
                         onChange={(e) => {
@@ -284,14 +318,18 @@ export default function PagesPage() {
                         placeholder={t('pg.addDomainPlaceholder')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') addDomain(d);
+                          if (e.key === 'Escape') {
+                            setDomainTarget(null);
+                            setDomainMsg(null);
+                          }
                         }}
                         autoFocus
-                        className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1 font-mono text-xs"
+                        className="min-w-0 flex-1 rounded border bg-background px-2 py-0.5 font-mono text-[11px]"
                       />
                       <button
                         onClick={() => addDomain(d)}
                         disabled={domainBusy}
-                        className="shrink-0 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                        className="rounded bg-primary px-2 py-0.5 text-[11px] text-primary-foreground hover:opacity-90 disabled:opacity-50"
                       >
                         {domainBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : t('pg.addDomain')}
                       </button>
@@ -301,7 +339,7 @@ export default function PagesPage() {
                           setDomainInput('');
                           setDomainMsg(null);
                         }}
-                        className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary"
+                        className="rounded p-0.5 text-muted-foreground hover:bg-secondary"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -319,27 +357,42 @@ export default function PagesPage() {
                     </button>
                   )}
                   {domainTarget === d.id && domainMsg && (
-                    <div className={`mt-1 text-[11px] ${domainMsg.type === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
+                    <div className={`mt-0.5 text-[11px] ${domainMsg.type === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
                       {domainMsg.key.startsWith('pg.') ? t(domainMsg.key) : domainMsg.key}
                     </div>
                   )}
                 </div>
-                {d.error && <div className="text-red-500">{d.error}</div>}
               </div>
 
-              <div className="mt-auto flex items-center gap-2 pt-3">
+              {/* Created time */}
+              <div className="shrink-0 text-xs text-muted-foreground sm:w-32">
+                <span className="sm:hidden">· </span>
+                {new Date(d.createdAt).toLocaleString()}
+              </div>
+
+              {/* Actions */}
+              <div className="flex shrink-0 items-center gap-1 sm:ml-auto sm:justify-end">
                 <button
-                  onClick={() => router.push(`/pages/${d.id}`)}
-                  className="rounded-md border px-2.5 py-1 text-xs hover:bg-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    d.pagesUrl && window.open(d.pagesUrl, '_blank');
+                  }}
+                  disabled={!d.pagesUrl}
+                  className="flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] hover:bg-secondary disabled:opacity-40"
+                  title={t('pg.open')}
                 >
-                  {t('pg.check')}
+                  <ExternalLink className="h-3 w-3" />
                 </button>
                 <button
-                  onClick={() => d.pagesUrl && window.open(d.pagesUrl, '_blank')}
-                  disabled={!d.pagesUrl}
-                  className="flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs hover:bg-secondary disabled:opacity-40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(d);
+                    setDeleteInput('');
+                  }}
+                  className="rounded p-1 text-muted-foreground hover:bg-red-500/10 hover:text-red-600"
+                  title={t('pg.delete')}
                 >
-                  <Globe className="h-3 w-3" /> {t('pg.open')}
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>

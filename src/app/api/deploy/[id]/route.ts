@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { deletePagesProject } from '@/lib/cf-pages';
+import { deletePagesProject, listPagesProjects } from '@/lib/cf-pages';
 import { writeAudit } from '@/lib/audit';
-import { invalidateCache } from '@/lib/kv-cache';
+import { invalidateCache, cachedJson } from '@/lib/kv-cache';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -25,6 +25,22 @@ export async function GET(req: Request, { params }: Ctx) {
   });
   if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  // Live custom domains from CF (cached, same as list route so the detail page shows the
+  // up-to-date set even if the saved DB snapshot is stale).
+  let customDomains: string[] = rec.customDomain ? [rec.customDomain] : [];
+  try {
+    const projects = await cachedJson(
+      'pages',
+      'projects',
+      () => listPagesProjects(),
+      { ttlSeconds: Number(process.env.KV_PAGES_PROJECTS_TTL) || 15 },
+    );
+    const live = projects.find((p) => p.name === rec.pagesProject);
+    if (live?.domains) customDomains = live.domains;
+  } catch {
+    /* keep DB fallback */
+  }
+
   return NextResponse.json({
     deployment: {
       id: rec.id,
@@ -40,6 +56,7 @@ export async function GET(req: Request, { params }: Ctx) {
       pagesUrl: rec.pagesUrl,
       shortUrl: rec.shortUrl,
       customDomain: rec.customDomain,
+      customDomains,
       error: rec.error,
       log: rec.log,
       buildCommand: rec.buildCommand,

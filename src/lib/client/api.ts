@@ -390,6 +390,7 @@ export const api = {
         pagesUrl: string | null;
         shortUrl: string | null;
         customDomain: string | null;
+        customDomains: string[];
         error: string | null;
         log: string | null;
         buildCommand: string | null;

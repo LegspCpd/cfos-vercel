@@ -49,6 +49,7 @@ export async function GET(req: Request) {
         workspaceTitle: r.workspace?.title ?? '',
         pagesProject: r.pagesProject,
         projectName: r.projectName,
+        source: r.source,
         status: r.status,
         // Prefer the live subdomain; fall back to the saved pagesUrl (already subdomain-based).
         pagesUrl: liveProj?.subdomain ? `https://${liveProj.subdomain}.pages.dev` : r.pagesUrl,

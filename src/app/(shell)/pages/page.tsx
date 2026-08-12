@@ -32,6 +32,7 @@ interface DeploymentRow {
   workspaceTitle: string;
   pagesProject: string;
   projectName: string | null;
+  source: string | null;
   status: string;
   pagesUrl: string | null;
   shortUrl: string | null;
@@ -235,9 +236,9 @@ export default function PagesPage() {
                   <span className="truncate text-sm font-semibold">
                     {d.projectName || d.pagesProject}
                   </span>
-                  {(d as any).source && (
+                  {d.source && (
                     <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
-                      {(d as any).source}
+                      {d.source}
                     </span>
                   )}
                 </div>

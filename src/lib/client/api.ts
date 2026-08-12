@@ -409,6 +409,7 @@ export const api = {
         workspaceTitle: string;
         pagesProject: string;
         projectName: string | null;
+        source: string | null;
         status: string;
         pagesUrl: string | null;
         shortUrl: string | null;

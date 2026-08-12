@@ -57,12 +57,13 @@ export default function DeployPage() {
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [folderFiles, setFolderFiles] = useState<File[]>([]);
 
-  // Build config (commands optional).
+  // Build config (commands optional). Pre-fill from URL query so "Retry / redeploy with new
+  // env" from a deployment detail page carries the original config through to one-click deploy.
   const [projectName, setProjectName] = useState('');
-  const [buildCommand, setBuildCommand] = useState('');
-  const [installCommand, setInstallCommand] = useState('');
-  const [outputDir, setOutputDir] = useState('');
-  const [envVars, setEnvVars] = useState('');
+  const [buildCommand, setBuildCommand] = useState(params.get('build') || '');
+  const [installCommand, setInstallCommand] = useState(params.get('install') || '');
+  const [outputDir, setOutputDir] = useState(params.get('output') || '');
+  const [envVars, setEnvVars] = useState(params.get('env') || '');
 
   const [deploying, setDeploying] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);

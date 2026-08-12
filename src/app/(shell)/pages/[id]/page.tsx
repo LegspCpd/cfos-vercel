@@ -19,6 +19,7 @@ import {
   Gitlab,
   UploadCloud,
   ArrowUpRight,
+  Settings2,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -111,6 +112,69 @@ export default function DeploymentDetailPage() {
     } finally {
       setChecking(false);
     }
+  }
+
+  // Env-var editing.
+  const [editEnv, setEditEnv] = useState(false);
+  const [envDraft, setEnvDraft] = useState('');
+  const [envSaving, setEnvSaving] = useState(false);
+  const [envMsg, setEnvMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
+
+  function openEnvEditor() {
+    setEnvDraft(dep?.envJson || '');
+    setEnvMsg(null);
+    setEditEnv(true);
+  }
+
+  async function saveEnv(redeploy: boolean) {
+    if (!dep || envSaving) return;
+    // Validate JSON before submitting (must be an object if non-empty).
+    const trimmed = envDraft.trim();
+    if (trimmed) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          setEnvMsg({ text: 'envJson must be a JSON object', type: 'err' });
+          return;
+        }
+      } catch {
+        setEnvMsg({ text: 'envJson is not valid JSON', type: 'err' });
+        return;
+      }
+    }
+    setEnvSaving(true);
+    try {
+      await api.updateDeployment(dep.id, { envJson: trimmed || null });
+      setDep((prev) => (prev ? { ...prev, envJson: trimmed || null } : prev));
+      setEnvMsg({ text: t('dd.envSaved'), type: 'ok' });
+      if (!redeploy) {
+        setEditEnv(false);
+      } else {
+        goRetry(trimmed || null);
+      }
+    } catch {
+      setEnvMsg({ text: t('dd.envSaveFailed'), type: 'err' });
+    } finally {
+      setEnvSaving(false);
+    }
+  }
+
+  // One-click retry: route to the deploy form pre-filled with the original source + config
+  // (and the just-edited env, if any) so the user just hits Deploy again.
+  function goRetry(envOverride?: string | null) {
+    if (!dep) return;
+    const q = new URLSearchParams();
+    const src = dep.source;
+    q.set('source', src || 'workspace');
+    if (dep.repo) q.set('repo', dep.repo);
+    if (dep.repoRef) q.set('ref', dep.repoRef);
+    if (dep.workspaceId) q.set('workspace', dep.workspaceId);
+    if (dep.buildCommand) q.set('build', dep.buildCommand);
+    if (dep.installCommand) q.set('install', dep.installCommand);
+    if (dep.outputDir) q.set('output', dep.outputDir);
+    const env = envOverride !== undefined ? envOverride : dep.envJson;
+    if (env) q.set('env', env);
+    router.push(`/pages/deploy?${q.toString()}`);
   }
 
   if (loading) {
@@ -274,26 +338,21 @@ export default function DeploymentDetailPage() {
 
       {/* Action bar */}
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => {
-            const src = dep.source;
-            if (src === 'github' || src === 'gitlab') {
-              const q = new URLSearchParams({ source: src });
-              if (dep.repo) q.set('repo', dep.repo);
-              if (dep.repoRef) q.set('ref', dep.repoRef);
-              router.push(`/pages/deploy?${q.toString()}`);
-            } else if (src === 'upload') {
-              router.push('/pages/deploy?source=upload');
-            } else if (src === 'workspace' && dep.workspaceId) {
-              router.push(`/pages/deploy?source=workspace&workspace=${dep.workspaceId}`);
-            } else {
-              router.push('/pages/new');
-            }
-          }}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          <RefreshCw className="h-4 w-4" /> {t('dd.redeploy')}
-        </button>
+        {dep.status === 'failed' ? (
+          <button
+            onClick={() => goRetry()}
+            className="flex items-center gap-1.5 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700"
+          >
+            <RefreshCw className="h-4 w-4" /> {t('dd.retry') || 'Retry deployment'}
+          </button>
+        ) : (
+          <button
+            onClick={() => goRetry()}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" /> {t('dd.redeploy')}
+          </button>
+        )}
         {dep.pagesUrl && (
           <button
             onClick={() => window.open(dep.pagesUrl!, '_blank')}
@@ -313,7 +372,24 @@ export default function DeploymentDetailPage() {
           <ConfigRow label={t('dd.installCmd')} value={dep.installCommand || t('dd.none')} mono />
           <ConfigRow label={t('dd.buildCmd')} value={dep.buildCommand || t('dd.none')} mono />
           <ConfigRow label={t('dd.outputDir')} value={dep.outputDir || t('dd.none')} mono />
-          <ConfigRow label={t('dd.envJson')} value={dep.envJson || t('dd.none')} mono multiline />
+          <div className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)] items-center gap-3 px-4 py-2 text-sm sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+            <div className="text-muted-foreground">{t('dd.envJson')}</div>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+                {dep.envJson ? (
+                  <span className="whitespace-pre-wrap break-all">{dep.envJson}</span>
+                ) : (
+                  t('dd.none')
+                )}
+              </div>
+              <button
+                onClick={openEnvEditor}
+                className="shrink-0 flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] hover:bg-secondary"
+              >
+                <Settings2 className="h-3 w-3" /> {t('dd.editEnv') || 'Edit'}
+              </button>
+            </div>
+          </div>
           {dep.workspaceTitle && (
             <ConfigRow label={t('dd.workspace')} value={dep.workspaceTitle} />
           )}
@@ -344,6 +420,55 @@ export default function DeploymentDetailPage() {
           )}
         </div>
       </section>
+
+      {/* Edit env vars modal */}
+      {editEnv && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !envSaving && setEditEnv(false)}>
+          <div className="w-full max-w-lg rounded-lg border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-semibold">{t('dd.editEnvTitle') || 'Edit environment variables'}</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              {t('dd.editEnvHint') || 'Takes effect on the next deploy.'}
+            </p>
+            <textarea
+              value={envDraft}
+              onChange={(e) => {
+                setEnvDraft(e.target.value);
+                setEnvMsg(null);
+              }}
+              rows={8}
+              placeholder={'{"API_URL":"https://api.example.com"}'}
+              className="w-full rounded-md border bg-background p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {envMsg && (
+              <div className={`mt-2 text-xs ${envMsg.type === 'ok' ? 'text-green-600' : 'text-red-500'}`}>{envMsg.text}</div>
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={() => setEditEnv(false)}
+                disabled={envSaving}
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50"
+              >
+                {t('dd.cancel')}
+              </button>
+              <button
+                onClick={() => saveEnv(false)}
+                disabled={envSaving}
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50"
+              >
+                {t('dd.saveOnly') || 'Save'}
+              </button>
+              <button
+                onClick={() => saveEnv(true)}
+                disabled={envSaving}
+                className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {envSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {t('dd.saveAndRedeploy') || 'Save & redeploy'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

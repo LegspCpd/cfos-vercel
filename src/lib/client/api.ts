@@ -374,6 +374,15 @@ export const api = {
     }>('/api/pages/stats'),
   deleteDeployment: (id: string) =>
     request<{ ok: boolean }>(`/api/deploy/${id}`, { method: 'DELETE' }),
+  updateDeployment: (
+    id: string,
+    data: { envJson?: string | null; buildCommand?: string | null; installCommand?: string | null; outputDir?: string | null },
+  ) =>
+    request<{ ok: boolean }>(`/api/deploy/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+    }),
   getDeployment: (id: string) =>
     request<{
       deployment: {

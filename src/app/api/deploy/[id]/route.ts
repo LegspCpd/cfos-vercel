@@ -102,3 +102,65 @@ export async function DELETE(req: Request, { params }: Ctx) {
 
   return NextResponse.json({ ok: true });
 }
+
+// PATCH /api/deploy/:id — update the deployment's build config / env vars (ownership-checked).
+// Env vars take effect on the NEXT redeploy (they're injected into files at deploy time), so
+// the detail page offers "save & redeploy" to push the change live. Only valid JSON env is
+// accepted; build command fields are length-bounded to keep the DB clean.
+export async function PATCH(req: Request, { params }: Ctx) {
+  const session = await auth(req);
+  if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const rec = await prisma.deployment.findFirst({
+    where: { id: params.id, userId: session.userId },
+    select: { id: true },
+  });
+  if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  let body: { envJson?: string; buildCommand?: string; installCommand?: string; outputDir?: string } = {};
+  try {
+    body = (await req.json().catch(() => ({}))) as typeof body;
+  } catch {
+    body = {};
+  }
+
+  const data: {
+    envJson?: string | null;
+    buildCommand?: string | null;
+    installCommand?: string | null;
+    outputDir?: string | null;
+  } = {};
+
+  if (typeof body.envJson === 'string') {
+    const env = body.envJson.trim();
+    if (env) {
+      try {
+        const parsed = JSON.parse(env);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          return NextResponse.json({ error: 'envJson must be a JSON object' }, { status: 400 });
+        }
+      } catch {
+        return NextResponse.json({ error: 'envJson is not valid JSON' }, { status: 400 });
+      }
+    }
+    data.envJson = env || null;
+  }
+  if (typeof body.buildCommand === 'string') data.buildCommand = body.buildCommand.slice(0, 500) || null;
+  if (typeof body.installCommand === 'string') data.installCommand = body.installCommand.slice(0, 500) || null;
+  if (typeof body.outputDir === 'string') data.outputDir = body.outputDir.slice(0, 500) || null;
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  await prisma.deployment.update({ where: { id: rec.id }, data });
+
+  await writeAudit({
+    userId: session.userId,
+    username: session.username,
+    action: 'deploy.update_config',
+    detail: `Updated build config / env for deployment ${rec.id}`,
+  }).catch(() => {});
+
+  return NextResponse.json({ ok: true });
+}

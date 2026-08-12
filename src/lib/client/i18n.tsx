@@ -594,6 +594,8 @@ const zh: Record<string, string> = {
   'pg.deployCmdDesc': '等效的本地部署命令（仅供参考）：',
   // Pages — right-side panel (CF-style)
   'pg.usageTitle': '使用情况',
+  'pg.statBuilds': '构建次数',
+  'pg.usageThisPeriod': '本周期请求',
   'pg.upgrade': '升级',
   'pg.usageTodayRequests': '今天的使用请求事件',
   'pg.viewLimits': '查看限额',
@@ -1427,6 +1429,8 @@ const en: Record<string, string> = {
   'pg.deployCmdDesc': 'Equivalent local deploy command (reference only):',
   // Pages — right-side panel (CF-style)
   'pg.usageTitle': 'Usage',
+  'pg.statBuilds': 'Builds',
+  'pg.usageThisPeriod': 'Requests this period',
   'pg.upgrade': 'Upgrade',
   'pg.usageTodayRequests': 'Today\'s usage request events',
   'pg.viewLimits': 'View limits',

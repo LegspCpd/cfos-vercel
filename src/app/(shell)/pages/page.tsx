@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   Trash2,
   ExternalLink,
+  Settings2,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
@@ -44,6 +45,7 @@ interface DeploymentRow {
 
 interface PagesStats {
   account: { id: string; subdomain: string };
+  projects: { total: number; deployed: number; failed: number; thisMonth: number };
   usage: { used: number; quota: number };
   panels: { billingShow: boolean; accountShow: boolean };
   period: { label: string };
@@ -404,34 +406,53 @@ export default function PagesPage() {
 
         {/* Right column — usage / billing / account */}
         <div className="space-y-4">
-          {/* Usage */}
-          <div className="rounded-lg border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
+          {/* Usage — CF-style flat metric rows */}
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between border-b px-4 py-2.5">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                 <Activity className="h-4 w-4 text-primary" /> {t('pg.usageTitle')}
               </h3>
-              <button className="rounded-md bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground hover:opacity-90">
-                {t('pg.upgrade')}
-              </button>
+              {stats && (
+                <span className="text-[11px] text-muted-foreground">{stats.period.label}</span>
+              )}
             </div>
-            {stats && (
-              <>
-                <p className="text-xs text-muted-foreground">{t('pg.usageTodayRequests')}</p>
-                <div className="mt-1.5 flex items-baseline justify-between text-xs">
-                  <span className="font-mono">
-                    {stats.usage.used.toLocaleString()} / {stats.usage.quota.toLocaleString()}
+            {stats ? (
+              <div className="px-4 py-3">
+                {/* Builds */}
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">{t('pg.statBuilds') || 'Builds'}</span>
+                  <span className="font-mono font-medium tabular-nums">{stats.projects.deployed.toLocaleString()}</span>
+                </div>
+                {/* Requests */}
+                <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">{t('pg.statRequests')}</span>
+                  <span className="font-mono font-medium tabular-nums">
+                    {stats.usage.used.toLocaleString()}
+                    <span className="text-[11px] text-muted-foreground"> / {stats.usage.quota.toLocaleString()}</span>
                   </span>
                 </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className="h-full bg-primary"
-                    style={{ width: `${Math.min(100, (stats.usage.used / stats.usage.quota) * 100).toFixed(1)}%` }}
-                  />
+                {/* Quota bar */}
+                <div className="mt-2.5 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={`h-full rounded-full ${
+                        stats.usage.used / stats.usage.quota >= 0.9 ? 'bg-red-500' : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min(100, (stats.usage.used / stats.usage.quota) * 100).toFixed(1)}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {Math.min(100, Math.round((stats.usage.used / stats.usage.quota) * 100))}%
+                  </span>
                 </div>
-                <button className="mt-2 flex items-center gap-0.5 text-[11px] text-primary hover:underline">
-                  {t('pg.viewLimits')} <ArrowUpRight className="h-3 w-3" />
-                </button>
-              </>
+                {/* Period footer */}
+                <div className="mt-3 flex items-center justify-between border-t pt-2.5 text-[11px] text-muted-foreground">
+                  <span>{t('pg.usageThisPeriod') || 'Requests this period'}</span>
+                  <span className="font-mono tabular-nums">{stats.usage.used.toLocaleString()}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="px-4 py-6 text-xs text-muted-foreground">—</div>
             )}
           </div>
 
@@ -446,34 +467,44 @@ export default function PagesPage() {
                   {t('pg.addPayment')} <ArrowUpRight className="h-3 w-3" />
                 </button>
               </div>
-              <div className="flex items-center gap-3 py-2">
-                <div className="relative flex h-16 w-16 items-center justify-center">
-                  <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" strokeWidth="2" className="text-secondary" />
-                  </svg>
-                  <span className="text-xs font-medium">$0.00</span>
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t('pg.billingThisMonth')}</span>
+                  <span className="font-mono font-medium tabular-nums">$0.00</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground">{t('pg.billingThisMonth')}</div>
-              </div>
-              <div className="mt-2 text-xs font-medium">{stats?.period.label}</div>
-              <div className="mt-2 rounded-md border bg-background p-2">
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Activity className="h-3 w-3" /> {t('pg.statRequests')}
-                </div>
-                <div className="mt-0.5 font-mono text-sm font-semibold">{stats ? Math.round(stats.usage.used / 30).toLocaleString() : '—'}</div>
+                {stats && (
+                  <>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t('pg.statRequests')}</span>
+                      <span className="font-mono font-medium tabular-nums">
+                        {Math.round(stats.usage.used / 30).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between border-t pt-2.5 text-[11px] text-muted-foreground">
+                      <span>{stats.period.label}</span>
+                      <span className="font-mono tabular-nums">
+                        {stats.projects.total} {t('pg.statBuilds') || 'builds'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
 
           {/* Account Details — hidden by default, enable via env or admin panel */}
           {stats?.panels.accountShow && (
-            <div className="rounded-lg border bg-card p-4">
-              <h3 className="mb-2 text-sm font-semibold">{t('pg.accountTitle')}</h3>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between gap-2">
+            <div className="rounded-lg border bg-card">
+              <div className="border-b px-4 py-2.5">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Settings2 className="h-4 w-4 text-primary" /> {t('pg.accountTitle')}
+                </h3>
+              </div>
+              <div className="divide-y px-4 text-xs">
+                <div className="flex items-center justify-between gap-2 py-2.5">
                   <span className="text-muted-foreground">Account ID</span>
                   <span className="flex items-center gap-1 truncate font-mono">
-                    <span className="max-w-[10rem] truncate">{stats?.account.id || '—'}</span>
+                    <span className="max-w-[9rem] truncate">{stats?.account.id || '—'}</span>
                     {stats?.account.id && (
                       <button onClick={() => stats && copy(stats.account.id, 'acct')} className="rounded p-0.5 text-muted-foreground hover:bg-secondary">
                         {copied === 'acct' ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
@@ -481,7 +512,7 @@ export default function PagesPage() {
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 py-2.5">
                   <span className="text-muted-foreground">{t('pg.subdomain')}</span>
                   <span className="flex items-center gap-1 font-mono">
                     <span className="truncate">{stats?.account.subdomain || '—'}</span>

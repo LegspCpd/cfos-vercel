@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { backupNeonToD1, dumpD1ToR2 } from '@/lib/d1-backup';
+import { backupNeonToD1, dumpD1ToD1 } from '@/lib/d1-backup';
 import { isD1Enabled } from '@/lib/d1';
 
 // GET /api/cron/d1-backup — two scheduled jobs:
 //   1. Copy the most important Neon (Prisma) data into D1 as a secondary snapshot.
-//   2. Dump the D1 database(s) to R2 as periodic .sqlite backups.
+//   2. Dump the D1 database(s) into D1 as periodic backups (retention-limited).
 //
 // SECURITY: CRON_SECRET is REQUIRED. If it's missing (or D1 is disabled) the endpoint reports a
 // skip rather than running, so the backup is never triggered by an unauthenticated caller.
@@ -21,8 +21,8 @@ export async function GET(req: Request) {
 
   // 1. Neon → D1 snapshot.
   const neon = await backupNeonToD1();
-  // 2. D1 → R2 dump.
-  const dump = await dumpD1ToR2();
+  // 2. D1 → D1 dump (retention-limited).
+  const dump = await dumpD1ToD1();
 
   return NextResponse.json({
     ok: true,

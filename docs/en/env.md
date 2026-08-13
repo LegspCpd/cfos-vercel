@@ -143,12 +143,18 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | Variable | Description |
 |---|---|
 | `D1_ENABLED` | Set to `true`/`1` to enable the D1 mirror. Omit to keep it off. |
-| `D1-api-key` | Cloudflare API token (needs **Workers D1 read/write** on the database). |
-| `D1-access` | Cloudflare account id (usually the same as `PAGES_ACCOUNT_ID`). |
-| `D1-SQL-1` … `D1-SQL-5` | Up to **5** D1 database ids. Configuring **more than 5** raises an error asking you to remove one. |
+| `D1_API_KEY` | Cloudflare API token (needs **Workers D1 read/write** on the database). |
+| `D1_ACCESS` | Cloudflare account id (usually the same as `PAGES_ACCOUNT_ID`). |
+| `D1_SQL_1` … `D1_SQL_5` | Up to **5** D1 database ids. Configuring **more than 5** raises an error asking you to remove one. |
+| `D1_BACKUP_RETENTION` | How many recent snapshots/dumps to keep (default `30`). |
+| `CRON_SECRET` | Required to run `/api/cron/d1-backup` (shared with `/api/cron/cleanup`). |
 
 > The mirror table (`cache_store`) is created automatically on first use. All D1 operations are
 > best-effort: a D1 failure never breaks a request — it just means the mirror/fallback is skipped.
+>
+> **Backups are stored IN D1 (not R2 — R2 is reserved for file sharing).** The cron job copies the
+> most important Neon data into D1 (`neon_backup` snapshot) and dumps the D1 database(s) into D1
+> (`d1_dumps` table), keeping only the newest `D1_BACKUP_RETENTION` entries.
 
 ### Cloudflare Access (full-site gate)
 

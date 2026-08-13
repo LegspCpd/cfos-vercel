@@ -6,9 +6,9 @@
 //
 // Env (all optional; feature is OFF unless D1_ENABLED is set):
 //   D1_ENABLED     - set to "true"/"1" to enable the D1 mirror
-//   D1-api-key     - Cloudflare API token (needs Workers D1 read/write on the database)
-//   D1-access      - Cloudflare account id (usually the same as PAGES_ACCOUNT_ID)
-//   D1-SQL-1 … D1-SQL-5 - up to 5 D1 database ids. Configuring MORE than 5 raises an error
+//   D1_API_KEY     - Cloudflare API token (needs Workers D1 read/write on the database)
+//   D1_ACCESS      - Cloudflare account id (usually the same as PAGES_ACCOUNT_ID)
+//   D1_SQL_1 … D1_SQL_5 - up to 5 D1 database ids. Configuring MORE than 5 raises an error
 //                          asking you to remove one.
 //
 // All operations are best-effort and swallow errors: D1 failure never breaks a request, it just
@@ -42,18 +42,18 @@ function ensureTable(): Promise<void> {
 function cfg() {
   const enabled = process.env.D1_ENABLED === 'true' || process.env.D1_ENABLED === '1';
   if (!enabled) return null;
-  const token = process.env['D1-api-key'];
-  const account = process.env['D1-access'];
+  const token = process.env.D1_API_KEY;
+  const account = process.env.D1_ACCESS;
   const dbs: string[] = [];
   for (let i = 1; i <= MAX_DBS; i++) {
-    const id = process.env[`D1-SQL-${i}`];
+    const id = process.env[`D1_SQL_${i}`];
     if (id) dbs.push(id);
   }
   // Sanity: refuse to start if MORE than 5 are configured (protects against a typo silently
   // selecting the wrong set of databases).
-  if (process.env['D1-SQL-6']) {
+  if (process.env.D1_SQL_6) {
     throw new Error(
-      'D1 supports at most 5 databases. Remove the extra D1-SQL-6 (and beyond) environment variables.',
+      'D1 supports at most 5 databases. Remove the extra D1_SQL_6 (and beyond) environment variables.',
     );
   }
   if (!token || !account || dbs.length === 0) return null;
@@ -66,9 +66,9 @@ export function isD1Enabled(): boolean {
   // ignored. "Silent fallback to KV-only" is reserved for the *optional* case (not enabled or
   // not fully configured).
   if (process.env.D1_ENABLED === 'true' || process.env.D1_ENABLED === '1') {
-    if (process.env['D1-SQL-6']) {
+    if (process.env.D1_SQL_6) {
       throw new Error(
-        'D1 supports at most 5 databases. Remove the extra D1-SQL-6 (and beyond) environment variables.',
+        'D1 supports at most 5 databases. Remove the extra D1_SQL_6 (and beyond) environment variables.',
       );
     }
     return true;
@@ -180,6 +180,34 @@ export async function d1WriteTable(table: string, rowKey: string, value: string)
             }).catch(() => undefined);
           }
         })(),
+      ),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+// Prune a D1 table so only the newest `keep` rows (by rowKey) remain. Used for backup
+// retention. Best-effort; skips on error.
+export async function d1Prune(table: string, keep: number): Promise<void> {
+  if (!isD1Enabled() || keep < 1) return;
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) return;
+  try {
+    const c = cfg();
+    if (!c) return;
+    // Keep rows whose rowKey is among the newest `keep` (rowKey is a sortable timestamp key,
+    // so lexicographic DESC == newest first). Delete the rest.
+    const sql = `DELETE FROM ${table} WHERE k NOT IN (
+      SELECT k FROM ${table} ORDER BY k DESC LIMIT ?
+    )`;
+    await Promise.all(
+      c.dbs.map((db) =>
+        fetch(`${API}/accounts/${c.account}/d1/database/${db}/query`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sql, params: [keep] }),
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        }).catch(() => undefined),
       ),
     );
   } catch {

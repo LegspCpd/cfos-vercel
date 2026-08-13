@@ -193,15 +193,19 @@ KV_NAMESPACE_ID_2=...
 | 变量 | 说明 |
 |---|---|
 | `D1_ENABLED` | 设为 `true`/`1` 开启 D1 镜像；不设则关闭。 |
-| `D1-api-key` | Cloudflare API Token（需有该数据库的 **Workers D1 读/写** 权限）。 |
-| `D1-access` | Cloudflare 账户 ID（通常与 `PAGES_ACCOUNT_ID` 相同）。 |
-| `D1-SQL-1` … `D1-SQL-5` | 最多 **5 个** D1 数据库 ID。配置 **超过 5 个会报错**，要求删掉一个。 |
+| `D1_API_KEY` | Cloudflare API Token（需有该数据库的 **Workers D1 读/写** 权限）。 |
+| `D1_ACCESS` | Cloudflare 账户 ID（通常与 `PAGES_ACCOUNT_ID` 相同）。 |
+| `D1_SQL_1` … `D1_SQL_5` | 最多 **5 个** D1 数据库 ID。配置 **超过 5 个会报错**，要求删掉一个。 |
+| `D1_BACKUP_RETENTION` | 保留最近多少份快照/dump（默认 `30`）。 |
+| `CRON_SECRET` | 运行 `/api/cron/d1-backup` 需要（与 `/api/cron/cleanup` 共用）。 |
 
 > 镜像表（`cache_store`）会在首次使用时自动创建。所有 D1 操作都是尽力而为：D1 故障不会影响请求，只是跳过镜像/回退。
 >
 > **定期备份（需 `CRON_SECRET`）**：`/api/cron/d1-backup`（vercel.json 里配置为每天凌晨 1 点）会自动执行两项备份：
 > 1. **Neon → D1**：把最重要的 Neon 数据（用户账号 id/邮箱/是否管理员、站点设置、AI 提供商）复制到 D1 的 `neon_backup` 表作为二级快照（不含密码哈希/加密 token）。
-> 2. **D1 → R2**：把每个 D1 数据库整体 dump 成 `.sqlite` 文件存到 R2 的 `backups/d1/`（需配置 `R2_*`）。
+> 2. **D1 → D1 dump**：把每个 D1 数据库整体 dump 成 `.sqlite` **存回 D1** 的 `d1_dumps` 表。**备份不用 R2**（R2 仅用于文件分享）。
+>
+> **保留策略**：`neon_backup` 与 `d1_dumps` 都只保留最近 `D1_BACKUP_RETENTION` 份（默认 30），避免 D1 无限增长。
 
 ### 多数据库（可选）
 

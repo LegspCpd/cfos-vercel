@@ -100,6 +100,6 @@ You can mirror the KV cache into Cloudflare **D1** as a redundant store (see
 - every KV cache write is **also copied to D1** (best-effort, non-blocking);
 - a KV miss **falls back to D1** before the upstream loader runs.
 
-Set `D1_ENABLED=true` and configure up to 5 D1 database ids (`D1-SQL-1` … `D1-SQL-5`).
+Set `D1_ENABLED=true` and configure up to 5 D1 database ids (`D1_SQL_1` … `D1_SQL_5`).
 Configuring more than 5 raises an error. The mirror table (`cache_store`) is created
 automatically on first use.

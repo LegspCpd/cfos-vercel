@@ -98,12 +98,13 @@ redundancy layer, you can enable the Cloudflare **D1** mirror (see
   (user accounts id/username/email/isAdmin, site settings, AI providers) into D1's
   `neon_backup` table. **Sensitive fields (password hashes, encrypted tokens) are excluded** —
   this is a recovery reference, not a full clone.
-- **D1 → R2 dump** (same cron): dumps each D1 database to a `.sqlite` file under R2's
-  `backups/d1/`.
+- **D1 → D1 dump** (same cron): dumps each D1 database and stores the `.sqlite` backup **inside
+  D1** (`d1_dumps` table). Backups are NOT written to R2 — R2 is reserved for file sharing.
 
-Both run under `CRON_SECRET` protection and are **best-effort** — a D1/R2 failure is logged and
-skipped, never breaking the app. This is optional; Neon's own backups remain the authoritative
-restore path.
+**Retention**: both `neon_backup` and `d1_dumps` keep only the newest `D1_BACKUP_RETENTION`
+entries (default 30), so D1 doesn't grow without bound. The cron runs under `CRON_SECRET`
+protection and is **best-effort** — a D1 failure is logged and skipped, never breaking the app.
+This is optional; Neon's own backups remain the authoritative restore path.
 
 ## Key points
 

@@ -8,10 +8,15 @@
 //  - We cap total uncompressed size, entry count, and per-path length to bound memory and
 //    avoid deploying absurdly long / weird file names to Cloudflare.
 //  - Only regular files are returned (directories are skipped).
+//  - Decompression uses fflate's streaming `Unzip` decoder; when the cumulative size budget
+//    is exceeded we throw inside the data handler, which propagates out of `push()` and aborts
+//    the decode early. This stops a "zip bomb" (a tiny highly-compressed archive that expands
+//    to gigabytes) from being fully materialized in memory before the limit check.
 
-import { unzipSync } from 'fflate';
+import { Unzip, UnzipInflate, UnzipPassThrough } from 'fflate';
 
-const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100 MB uncompressed cap
+const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100 MB uncompressed cap (all files)
+const MAX_ENTRY_SIZE = 50 * 1024 * 1024; // 50 MB cap per single file
 const MAX_FILES = 500;
 const MAX_PATH_LEN = 512;
 // Control chars, backslash already normalized. Also block '#' and '?' which are meaningful
@@ -37,23 +42,26 @@ function assertSafePath(raw: string, normalized: string): void {
   if (DISALLOWED.test(normalized)) throw new Error(`Invalid ZIP path: ${raw}`);
 }
 
-// Parse a .zip buffer into a flat list of { path, content }. Throws on malformed input.
+// A custom error we throw inside the streaming data handler to abort mid-decode. fflate's
+// synchronous Unzip.push() propagates handler exceptions, so this halts further decompression
+// instead of buffering the whole bomb.
+class ZipLimitError extends Error {}
+
+// Parse a .zip buffer into a flat list of { path, content }. Throws on malformed input or when
+// the archive would exceed the memory budget. Streamed so a zip bomb is aborted early.
 export function unzip(buf: Buffer): UnzipEntry[] {
-  let extracted: Record<string, Uint8Array>;
-  try {
-    extracted = unzipSync(new Uint8Array(buf));
-  } catch (e) {
-    throw new Error(`Invalid ZIP: ${(e as Error).message}`, { cause: e });
-  }
-
-  const entries = Object.keys(extracted);
-  if (entries.length > MAX_FILES) throw new Error(`ZIP has too many entries (max ${MAX_FILES})`);
-
   const out: UnzipEntry[] = [];
   let totalSize = 0;
+  let fileCount = 0;
+  let aborted = false;
 
-  for (const rawPath of entries) {
-    if (rawPath.endsWith('/') || rawPath.endsWith('\\')) continue; // directory entry
+  const unzipper = new Unzip();
+  unzipper.register(UnzipInflate);
+  unzipper.register(UnzipPassThrough);
+  unzipper.onfile = (file) => {
+    if (aborted) return;
+    const rawPath = file.name;
+    if (rawPath.endsWith('/') || rawPath.endsWith('\\')) return; // directory entry
 
     // Normalize backslashes and strip any leading "./" (but NOT a bare leading slash).
     let p = rawPath.replace(/\\/g, '/');
@@ -63,11 +71,38 @@ export function unzip(buf: Buffer): UnzipEntry[] {
     // leading "./" strip could otherwise hide), then the normalized path.
     assertSafePath(rawPath, p);
 
-    totalSize += extracted[rawPath].byteLength;
-    if (totalSize > MAX_TOTAL_SIZE) throw new Error('ZIP uncompressed size exceeds 100 MB limit');
+    fileCount += 1;
+    if (fileCount > MAX_FILES) {
+      aborted = true;
+      throw new ZipLimitError(`ZIP has too many entries (max ${MAX_FILES})`);
+    }
 
-    out.push({ path: p, content: Buffer.from(extracted[rawPath]) });
+    const chunks: Uint8Array[] = [];
+    let entrySize = 0;
+    file.ondata = (_err, chunk, final) => {
+      if (aborted) return;
+      entrySize += chunk.length;
+      if (entrySize > MAX_ENTRY_SIZE) {
+        aborted = true;
+        throw new ZipLimitError(`ZIP file is too large (max ${MAX_ENTRY_SIZE / (1024 * 1024)} MB per file)`);
+      }
+      totalSize += chunk.length;
+      if (totalSize > MAX_TOTAL_SIZE) {
+        aborted = true;
+        throw new ZipLimitError('ZIP uncompressed size exceeds 100 MB limit');
+      }
+      chunks.push(chunk);
+      if (final) {
+        out.push({ path: p, content: Buffer.concat(chunks) });
+      }
+    };
+  };
+
+  try {
+    unzipper.push(new Uint8Array(buf), true);
+  } catch (e) {
+    if (e instanceof ZipLimitError) throw e;
+    throw new Error(`Invalid ZIP: ${(e as Error).message}`, { cause: e });
   }
-
   return out;
 }

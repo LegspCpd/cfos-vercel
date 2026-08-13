@@ -5,6 +5,7 @@ import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { githubRepoFiles, gitlabRepoFiles, assertGithubRepoOwned, assertGitlabRepoOwned } from '@/lib/git-fetch';
 import { writeAudit } from '@/lib/audit';
 import { invalidateCache } from '@/lib/kv-cache';
+import { deployLimiter } from '@/lib/rate-limit';
 
 // POST /api/pages/repo/stream — deploy a GitHub/GitLab repository and stream real-time
 // logs over SSE. Body: { provider: "github"|"gitlab", repo, ref?, buildCommand?,
@@ -15,6 +16,11 @@ export async function POST(req: Request) {
   if (!token) return new Response('Not authenticated', { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return new Response('Invalid session', { status: 401 });
+
+  // Rate-limit deploys (per user) before any repo download.
+  if (deployLimiter.tryCall(session.userId) === 0) {
+    return new Response('Too many deploys. Please wait a minute and try again.', { status: 429 });
+  }
 
   let body: {
     provider?: string;

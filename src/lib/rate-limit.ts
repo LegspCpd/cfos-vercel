@@ -43,3 +43,8 @@ export class RateLimiter {
 export const emailSendLimiter = new RateLimiter(60_000, 5); // 5 sends / email / minute
 export const emailConfirmLimiter = new RateLimiter(15 * 60_000, 8); // 8 confirm tries / email / 15 min
 export const loginLimiter = new RateLimiter(60_000, 15); // 15 login attempts / key / minute
+// Deploy is a heavy operation (calls the Cloudflare API, decompresses archives). Cap it so a
+// logged-in user can't spin deploys to exhaust the CF API quota / CPU. Keyed per-user.
+export const deployLimiter = new RateLimiter(60_000, 10); // 10 deploys / user / minute
+// Ticket submissions email every admin, so cap them to prevent email-bombing the inbox.
+export const ticketLimiter = new RateLimiter(60 * 60_000, 5); // 5 tickets / user / hour

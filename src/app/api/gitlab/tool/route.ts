@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { decryptSecret } from '@/lib/credentials';
 import { writeAudit } from '@/lib/audit';
+import { assertGitlabRepoOwned } from '@/lib/git-fetch';
 
 const BASE_URL = (process.env.GITLAB_BASE_URL || 'https://gitlab.com').replace(/\/+$/, '');
 
@@ -52,6 +53,14 @@ export async function POST(req: Request) {
     const title = String(body.title ?? '');
     if (!project || !title) {
       return NextResponse.json({ error: 'project and title are required' }, { status: 400 });
+    }
+    // Ownership check: only create issues in projects belonging to the user's own connected
+    // account. Without this a caller could create issues in arbitrary projects the token can
+    // see — a write-scoped IDOR / cross-project write.
+    try {
+      await assertGitlabRepoOwned(session.userId, project);
+    } catch {
+      return NextResponse.json({ error: 'You can only create issues in your own repositories.' }, { status: 403 });
     }
     // Gatekeeper side-effect approval: write tools only run when write access is granted.
     if (conn.writeAccess !== 'readwrite') {

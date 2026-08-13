@@ -15,7 +15,17 @@ export async function GET(req: Request) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const settings = await getSiteSettings();
-  return NextResponse.json({ settings });
+  // Never return the CAPTCHA secret keys in plaintext (even to admins) — they're set via POST
+  // and only stored; the UI just needs to know whether each is configured.
+  return NextResponse.json({
+    settings: {
+      ...settings,
+      turnstileSecretConfigured: Boolean(settings.turnstileSecretKey),
+      recaptchaSecretConfigured: Boolean(settings.recaptchaSecretKey),
+      turnstileSecretKey: '',
+      recaptchaSecretKey: '',
+    },
+  });
 }
 
 // POST /api/admin/settings — update site settings (admin only).

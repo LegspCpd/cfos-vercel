@@ -6,6 +6,7 @@ import { verifyCaptcha, type CaptchaProvider } from '@/lib/captcha';
 import { sendEmail } from '@/lib/email';
 import { siteUrl } from '@/lib/site';
 import { writeAudit } from '@/lib/audit';
+import { ticketLimiter } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const TICKET_TYPES = ['feedback', 'emailChange', 'appeal', 'other'] as const;
@@ -59,6 +60,11 @@ export async function POST(req: Request) {
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     const session = await verifySessionToken(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+    // Rate-limit ticket submissions (each emails every admin) to prevent inbox spam.
+    if (ticketLimiter.tryCall(session.userId) === 0) {
+      return NextResponse.json({ error: 'Too many tickets. Please try again later.' }, { status: 429 });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

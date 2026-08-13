@@ -5,6 +5,7 @@ import { runDeploy, sanitizeProjectName } from '@/lib/deploy-run';
 import { unzip } from '@/lib/unzip';
 import { writeAudit } from '@/lib/audit';
 import { invalidateCache } from '@/lib/kv-cache';
+import { deployLimiter } from '@/lib/rate-limit';
 
 // POST /api/deploy/upload/stream — deploy an uploaded ZIP of static files and stream
 // real-time build logs over SSE. Body is multipart/form-data with fields:
@@ -22,6 +23,11 @@ export async function POST(req: Request) {
   if (!token) return new Response('Not authenticated', { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return new Response('Invalid session', { status: 401 });
+
+  // Rate-limit deploys (per user) before doing any heavy work.
+  if (deployLimiter.tryCall(session.userId) === 0) {
+    return new Response('Too many deploys. Please wait a minute and try again.', { status: 429 });
+  }
 
   let form: FormData;
   try {

@@ -55,13 +55,14 @@ export async function GET(req: Request) {
     return redirectWithError(`Microsoft 登录失败：${desc}`, req, '1001');
   }
 
-  // CSRF: prefer exact state match, but DON'T hard-fail on mismatch. This is a
-  // confidential client (we hold client_secret), so token exchange is protected by the
-  // secret even if the state cookie was dropped by the browser (common under strict
-  // third-party-cookie blocking, e.g. some Android/OEM browsers). We still pass the
-  // PKCE verifier when available; otherwise we fall back to client-secret-only exchange.
+  // CSRF: when BOTH the returned state and the stored cookie are present but they differ, this
+  // is a clear CSRF / state-mismatch — reject. Only when the state cookie is MISSING (e.g. the
+  // browser dropped it under strict third-party-cookie blocking) do we allow continuing, since
+  // we can't compare; the token exchange is still protected by the confidential client_secret
+  // + PKCE, and the returned account must match an unbound identity before any session is issued.
   if (state && storedState && state !== storedState) {
-    console.error('microsoft oauth state mismatch (continuing)', { urlState: state, cookieState: storedState });
+    console.error('microsoft oauth state mismatch (rejecting)', { urlState: state, cookieState: storedState });
+    return redirectWithError('登录状态校验失败，请重试', req, '1001');
   }
 
   try {

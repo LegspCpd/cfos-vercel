@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isUserAdmin } from '@/lib/admin';
 import { z } from 'zod';
+import { encryptSecret, decryptSecret } from '@/lib/credentials';
 
 async function authAdmin(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -21,15 +22,19 @@ export async function GET(req: Request) {
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const providers = await prisma.aiProvider.findMany({ orderBy: { createdAt: 'asc' } });
   return NextResponse.json({
-    providers: providers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      baseUrl: p.baseUrl,
-      model: p.model,
-      isEnabled: p.isEnabled,
-      // Mask the key: show only last 4 chars.
-      apiKeyMasked: p.apiKey ? `••••${p.apiKey.slice(-4)}` : '',
-    })),
+    providers: providers.map((p) => {
+      // apiKey is stored encrypted; decrypt (tolerating legacy plaintext) to build a masked hint.
+      const plain = decryptSecret(p.apiKey) ?? p.apiKey;
+      return {
+        id: p.id,
+        name: p.name,
+        baseUrl: p.baseUrl,
+        model: p.model,
+        isEnabled: p.isEnabled,
+        // Mask the key: show only last 4 chars (never return the full key).
+        apiKeyMasked: plain ? `••••${plain.slice(-4)}` : '',
+      };
+    }),
   });
 }
 
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
     data: {
       name: body.name,
       baseUrl: body.baseUrl,
-      apiKey: body.apiKey,
+      apiKey: encryptSecret(body.apiKey),
       model: body.model,
       isEnabled: body.isEnabled ?? true,
     },

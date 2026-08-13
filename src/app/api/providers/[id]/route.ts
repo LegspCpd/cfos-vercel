@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isUserAdmin } from '@/lib/admin';
 import { z } from 'zod';
+import { encryptSecret } from '@/lib/credentials';
 
 async function authAdmin(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -29,9 +30,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = patchSchema.parse(await req.json());
+  // Encrypt apiKey before persisting (same as POST).
+  const data: Record<string, unknown> = { ...body };
+  if (typeof body.apiKey === 'string') data.apiKey = encryptSecret(body.apiKey);
   await prisma.aiProvider.updateMany({
     where: { id: params.id },
-    data: body,
+    data,
   });
   return NextResponse.json({ ok: true });
 }

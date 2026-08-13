@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { prisma } from './db';
+import { decryptSecret } from './credentials';
 
 export interface ChatMessageIn {
   role: 'system' | 'user' | 'assistant';
@@ -37,7 +38,8 @@ export async function listProviders(): Promise<AiProviderConfig[]> {
     id: p.id,
     name: p.name,
     baseUrl: p.baseUrl,
-    apiKey: p.apiKey,
+    // apiKey is stored encrypted; decrypt (tolerating legacy plaintext rows).
+    apiKey: decryptSecret(p.apiKey) ?? p.apiKey,
     model: p.model,
   }));
   const env = envFallbackProvider();

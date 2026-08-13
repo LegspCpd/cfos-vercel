@@ -4,6 +4,7 @@ import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
 import { encryptSecret } from '@/lib/credentials';
+import { verifyOAuthState } from '@/lib/oauth-state';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -30,8 +31,12 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
-  const storedState = req.headers.get('cookie')?.match(/google_oauth_state=([^;]+)/)?.[1];
-  if (!state || !storedState || state !== storedState) {
+  // Validate the SIGNED state (HMAC with AUTH_SECRET) — does NOT depend on a cookie, so it
+  // works under third-party-cookie blocking (the old cookie-only check failed there with
+  // "Invalid OAuth state" and even logged the user out). A legit connect/delete/login carries
+  // a valid signed state; anything else (CSRF, forged) is rejected.
+  const verified = state ? verifyOAuthState(state) : { ok: false, kind: 'connect' as const, userId: '' };
+  if (!state || !verified.ok) {
     return redirectWithError('Invalid OAuth state. Please try again.', req);
   }
   if (error || !code) {
@@ -68,10 +73,11 @@ export async function GET(req: Request) {
       return redirectWithError('Failed to fetch Google profile.', req);
     }
 
-    // 2.5 "Connect" flow: state = "connect:<userId>:<nonce>". Link the Google identity to
-    // the currently-logged-in user instead of creating/logging into a new session.
-    if (state.startsWith('connect:')) {
-      const targetUserId = state.split(':')[1];
+    // 2.5 "Connect" flow (verified.kind === 'connect'). Link the Google identity to the
+    // currently-logged-in user (verified.userId from the signed state) instead of
+    // creating/logging into a new session.
+    if (verified.kind === 'connect') {
+      const targetUserId = verified.userId;
       const targetUser = targetUserId
         ? await prisma.user.findUnique({ where: { id: targetUserId } })
         : null;
@@ -118,8 +124,8 @@ export async function GET(req: Request) {
     }
 
     // DELETE flow (no-email accounts): re-authenticate via Google to confirm deletion.
-    if (state.startsWith('delete:')) {
-      const targetUserId = state.split(':')[1];
+    if (verified.kind === 'delete') {
+      const targetUserId = verified.userId;
       const targetUser = targetUserId
         ? await prisma.user.findUnique({ where: { id: targetUserId } })
         : null;

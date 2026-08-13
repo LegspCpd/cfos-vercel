@@ -88,6 +88,23 @@ Yes. Use Neon point-in-time restore (PITR) to roll the database back to before t
 **Q: Do backups affect application stability?**
 **No.** Neon backups, branches, and read replicas all happen platform-side. They don't use primary read/write and don't go through app code. The app always connects to a single `DATABASE_URL` and behaves exactly as usual.
 
+## Extra redundancy: D1 snapshot + R2 dump (optional)
+
+Neon's platform backups are the primary safety net. As an **additional** cross-provider
+redundancy layer, you can enable the Cloudflare **D1** mirror (see
+[Environment Variables](/en/docs/env#cloudflare-d1-secondary-backup-optional)):
+
+- **Neon → D1 snapshot** (`/api/cron/d1-backup`, daily): copies the most important Neon data
+  (user accounts id/username/email/isAdmin, site settings, AI providers) into D1's
+  `neon_backup` table. **Sensitive fields (password hashes, encrypted tokens) are excluded** —
+  this is a recovery reference, not a full clone.
+- **D1 → R2 dump** (same cron): dumps each D1 database to a `.sqlite` file under R2's
+  `backups/d1/`.
+
+Both run under `CRON_SECRET` protection and are **best-effort** — a D1/R2 failure is logged and
+skipped, never breaking the app. This is optional; Neon's own backups remain the authoritative
+restore path.
+
 ## Key points
 
 1. **Backup = Neon platform capability**, zero app changes, zero risk

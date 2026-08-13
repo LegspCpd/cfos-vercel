@@ -148,6 +148,45 @@ export async function d1Set(key: string, value: string, ttlSeconds?: number): Pr
   }
 }
 
+// Write an arbitrary JSON snapshot into a D1 table (used by the Neon→D1 backup). The row is
+// keyed by `rowKey`, and `value` is stored as JSON text with an expiry of 0 (never expires).
+export async function d1WriteTable(table: string, rowKey: string, value: string): Promise<void> {
+  if (!isD1Enabled()) return;
+  // Defense-in-depth: the table name is interpolated into SQL, so it MUST be a plain
+  // identifier (current callers pass a compile-time constant). Reject anything else so a
+  // future caller can never inject SQL via `table`.
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) return;
+  try {
+    const c = cfg();
+    if (!c) return;
+    // Create the table if missing (safe, idempotent) then upsert the snapshot row.
+    const createSql = `CREATE TABLE IF NOT EXISTS ${table} (k TEXT PRIMARY KEY, v TEXT, exp INTEGER)`;
+    const upsertSql = `INSERT INTO ${table} (k, v, exp) VALUES (?, ?, 0) ON CONFLICT(k) DO UPDATE SET v = excluded.v`;
+    await Promise.all(
+      c.dbs.map((db) =>
+        (async () => {
+          const create = await fetch(`${API}/accounts/${c.account}/d1/database/${db}/query`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sql: createSql, params: [] }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          }).catch(() => undefined);
+          if (create && create.ok) {
+            await fetch(`${API}/accounts/${c.account}/d1/database/${db}/query`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sql: upsertSql, params: [rowKey, value] }),
+              signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            }).catch(() => undefined);
+          }
+        })(),
+      ),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 // Delete a mirrored value from D1.
 export async function d1Delete(key: string): Promise<void> {
   if (!isD1Enabled()) return;

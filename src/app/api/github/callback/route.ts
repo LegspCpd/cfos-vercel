@@ -33,8 +33,10 @@ export async function GET(req: Request) {
     return redirect('/connections?error=Connect+flow+expected');
   }
 
-  // userId is embedded in state: "connect:<userId>:<nonce>"
-  const userId = state.split(':')[1];
+  // userId comes from the signed payload when available (preferred — avoids depending on the
+  // raw state format); fall back to parsing the legacy plaintext "connect:<userId>:<nonce>"
+  // cookie state only when we matched via the cookie.
+  const userId = signed.userId || state.split(':')[1];
   if (!userId) return redirect('/connections?error=Invalid+state');
 
   try {

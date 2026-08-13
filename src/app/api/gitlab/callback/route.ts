@@ -52,7 +52,8 @@ export async function GET(req: Request) {
     const gitlabId = typeof info.id === 'number' ? info.id : -1;
     const username = (info.username || 'unknown').toLowerCase();
 
-    const userId = state.split(':')[1];
+    // Prefer the signed payload's userId; fall back to parsing the legacy cookie state.
+    const userId = signed.userId || state.split(':')[1];
     const targetUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
     if (!targetUser) return redirectError('用户不存在');
 

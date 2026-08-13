@@ -53,6 +53,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
+        {/* appleWebApp.capable emits the (deprecated) apple-mobile-web-app-capable meta; the
+            standard mobile-web-app-capable silences the browser warning and keeps PWA install
+            behavior consistent across Chrome/Android too. */}
+        <meta name="mobile-web-app-capable" content="yes" />
         {/* Apply the persisted theme before paint so every page (including /docs, which is
             outside the app shell) matches the theme the user chose on the home page — no
             flash of the wrong theme when navigating between the app and the docs. */}

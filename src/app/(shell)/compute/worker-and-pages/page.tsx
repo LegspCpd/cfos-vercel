@@ -69,12 +69,12 @@ export default function WorkerAndPagesPage() {
 
       {/* Panels — both stay mounted so switching tabs keeps their loaded state (no refetch on
           every switch). The inactive one is hidden via CSS, not unmounted. */}
-      <div className="pt-4">
+      <div className="pt-2">
         <div className={`animate-fade-in ${tab === 'worker' ? '' : 'hidden'}`} aria-hidden={tab !== 'worker'}>
-          <WorkersPanel />
+          <WorkersPanel embedded />
         </div>
         <div className={`animate-fade-in ${tab === 'pages' ? '' : 'hidden'}`} aria-hidden={tab !== 'pages'}>
-          <PagesPanel />
+          <PagesPanel embedded />
         </div>
       </div>
     </div>

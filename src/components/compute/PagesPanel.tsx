@@ -63,8 +63,10 @@ async function copyText(u: string) {
 // a "New project" button. Clicking it opens a modal with the two "how do you want to deploy?"
 // cards (import a Git repository / drag and drop files). Picking one continues to the matching
 // flow. Reused by both the standalone /pages page and the combined /compute/worker-and-pages
-// tabs page.
-export function PagesPanel() {
+// tabs page. When `embedded` is true (combined page) the panel's own header is hidden because the
+// combined page already shows the "Worker 和 Pages" title and the active tab label — so Workers
+// and Pages read as ONE product, not two stacked pages.
+export function PagesPanel({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const { t } = useI18n();
   const [available, setAvailable] = useState(false);
@@ -170,18 +172,22 @@ export function PagesPanel() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className={`mx-auto max-w-7xl ${embedded ? 'pb-6' : 'px-4 py-6 sm:px-6'}`}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Left column */}
         <div>
-          {/* Header */}
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-bold">
-                <Rocket className="h-6 w-6 text-primary" /> {t('pg.title')}
-              </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">{t('pg.subtitle')}</p>
-            </div>
+          {/* Header — the combined page shows its own "Worker 和 Pages" title + the active tab
+              label, so in embedded mode we drop the duplicate title/subtitle and keep only the
+              "New project" action. */}
+          <div className={`flex flex-wrap items-center justify-between gap-3 ${embedded ? 'mb-4' : 'mb-6'}`}>
+            {!embedded && (
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-bold">
+                  <Rocket className="h-6 w-6 text-primary" /> {t('pg.title')}
+                </h1>
+                <p className="mt-0.5 text-sm text-muted-foreground">{t('pg.subtitle')}</p>
+              </div>
+            )}
             {available && (
               <button
                 onClick={() => setShowNew(true)}

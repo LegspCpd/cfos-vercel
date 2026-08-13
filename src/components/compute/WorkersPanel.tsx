@@ -33,8 +33,11 @@ interface WorkerRow {
 }
 
 // The Workers deploy panel (Compute → Workers 和 Pages → Workers). Reused by both the standalone
-// /compute/worker page and the combined /compute/worker-and-pages tabs page.
-export function WorkersPanel() {
+// /compute/worker page and the combined /compute/worker-and-pages tabs page. When `embedded` is
+// true (combined page) the panel's own header is hidden because the combined page already shows
+// the "Worker 和 Pages" title and the active tab label — so Workers and Pages read as ONE product,
+// not two stacked pages.
+export function WorkersPanel({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -135,7 +138,7 @@ export function WorkersPanel() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <div className={embedded ? 'pb-6' : 'mx-auto max-w-5xl px-4 py-6 sm:px-6'}>
         <div className="mb-6 h-5 w-48 animate-pulse rounded bg-secondary" />
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
@@ -148,7 +151,7 @@ export function WorkersPanel() {
 
   if (!configured) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-16 text-center">
+      <div className={embedded ? 'py-10 text-center' : 'mx-auto max-w-3xl px-6 py-16 text-center'}>
         <Code2 className="mx-auto h-10 w-10 text-muted-foreground" />
         <p className="mt-3 text-muted-foreground">
           {t('wk.notConfiguredMsg') || 'Worker is not configured. Set WORKER_API_TOKEN and WORKER_ACCOUNT_ID.'}
@@ -158,13 +161,16 @@ export function WorkersPanel() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Code2 className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold">{t('wk.title') || 'Workers'}</h1>
-        </div>
+    <div className={`mx-auto ${embedded ? 'pb-6' : 'max-w-5xl px-4 py-6 sm:px-6'}`}>
+      {/* Header — the combined page shows its own "Worker 和 Pages" title + the active tab label,
+          so in embedded mode we drop the duplicate title and keep only the "New worker" action. */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${embedded ? 'mb-4' : 'mb-6'}`}>
+        {!embedded && (
+          <div className="flex items-center gap-2">
+            <Code2 className="h-5 w-5 text-primary" />
+            <h1 className="text-xl font-bold">{t('wk.title') || 'Workers'}</h1>
+          </div>
+        )}
         <button
           onClick={() => {
             setShowDeploy(true);

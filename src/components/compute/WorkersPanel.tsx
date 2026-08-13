@@ -122,12 +122,15 @@ export function WorkersPanel() {
     setDeleting(true);
     try {
       await api.deleteWorker(id);
-      await load();
     } catch {
-      /* ignore */
-    } finally {
       setDeleting(false);
+      return;
     }
+    // Optimistic UI: drop the row immediately so the user can delete the next worker right
+    // away; the background refresh reconciles with the authoritative list.
+    setWorkers((prev) => prev.filter((w) => w.id !== id));
+    setDeleting(false);
+    void load();
   }
 
   if (loading) {
@@ -188,7 +191,11 @@ export function WorkersPanel() {
             <div className="text-right">Actions</div>
           </div>
           {workers.map((w, idx) => (
-            <div key={w.id} className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 ${idx > 0 ? 'border-t' : ''}`}>
+            <div
+              key={w.id}
+              style={{ animationDelay: `${Math.min(idx * 35, 280)}ms` }}
+              className={`reveal-row flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 ${idx > 0 ? 'border-t' : ''}`}
+            >
               <div className="min-w-0 sm:flex-1">
                 <div className="flex items-center gap-1.5">
                   <Code2 className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -243,7 +250,7 @@ export function WorkersPanel() {
       {/* Deploy modal */}
       {showDeploy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !deploying && setShowDeploy(false)}>
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="animate-sheet-in flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-semibold">{t('wk.newWorker') || 'New worker'}</h3>
               <button onClick={() => setShowDeploy(false)} disabled={deploying} className="rounded p-1 hover:bg-secondary">

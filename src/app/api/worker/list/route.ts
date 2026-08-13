@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { listWorkers, workerEnabled } from '@/lib/cf-worker';
+import { listWorkers } from '@/lib/cf-worker';
+import { cachedJson } from '@/lib/kv-cache';
 
 // GET /api/worker/list — the current user's Worker deployments (newest first), merged with the
 // live Workers scripts on the account (so renamed/deleted scripts are reflected).
@@ -17,10 +18,14 @@ export async function GET(req: Request) {
     take: 100,
   });
 
-  // Live script set from CF (account-level) — merge to reflect real state.
+  // Live script set from CF (account-level, not per-user) — merge to reflect real state. It's
+  // cached in KV (mirrored to D1) for a short window because it paginates the account's Workers
+  // scripts; repeat loads are instant instead of re-enumerating every script each time.
   let liveNames = new Set<string>();
   try {
-    const workers = await listWorkers();
+    const workers = await cachedJson('workers', 'scripts', () => listWorkers(), {
+      ttlSeconds: Number(process.env.KV_WORKERS_TTL) || 15,
+    });
     liveNames = new Set(workers.map((w) => w.name));
   } catch {
     /* fall back to DB snapshot */

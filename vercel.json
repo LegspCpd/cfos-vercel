@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/d1-backup",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/cache-warm",
+      "schedule": "0 * * * *"
     }
   ]
 }

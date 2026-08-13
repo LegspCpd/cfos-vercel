@@ -150,17 +150,23 @@ export function PagesPanel() {
 
   async function confirmDelete() {
     if (!deleteTarget || deleteInput !== (deleteTarget.projectName || deleteTarget.pagesProject) || deleting) return;
+    const target = deleteTarget;
     setDeleting(true);
     try {
-      await api.deleteDeployment(deleteTarget.id);
-      setDeleteTarget(null);
-      setDeleteInput('');
-      await load();
+      await api.deleteDeployment(target.id);
     } catch {
-      /* ignore */
-    } finally {
+      // Network/server failure — leave the modal open so the user can retry.
       setDeleting(false);
+      return;
     }
+    // Optimistic UI: close the modal and drop the row immediately so the user can delete the
+    // next project without waiting on a full list refresh. The background refresh reconciles
+    // with the authoritative list (also drops the cached CF project list on the server).
+    setDeleteTarget(null);
+    setDeleteInput('');
+    setDeployments((prev) => prev.filter((d) => d.id !== target.id));
+    setDeleting(false);
+    void load();
   }
 
   return (
@@ -229,7 +235,8 @@ export function PagesPanel() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') router.push(`/pages/${d.id}`);
                   }}
-                  className={`group flex cursor-pointer flex-col gap-2 px-4 py-3 transition-colors hover:bg-secondary/50 sm:flex-row sm:items-center sm:gap-3 ${
+                  style={{ animationDelay: `${Math.min(idx * 35, 280)}ms` }}
+                  className={`reveal-row group flex cursor-pointer flex-col gap-2 px-4 py-3 transition-colors hover:bg-secondary/50 sm:flex-row sm:items-center sm:gap-3 ${
                     idx > 0 ? 'border-t' : ''
                   }`}
                 >
@@ -596,7 +603,7 @@ export function PagesPanel() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDeleteTarget(null)}>
           <div
-            className="w-full max-w-md rounded-xl border bg-card p-6 shadow-xl"
+            className="animate-sheet-in w-full max-w-md rounded-xl border bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="flex items-center gap-2 text-lg font-bold">

@@ -220,6 +220,36 @@ export async function invalidateCache(group: string, id: string): Promise<void> 
   await kvDelete(buildKey(group, id));
 }
 
+// Force-reload a cache group's value and write it back to every store (KV + D1 mirror),
+// bypassing the TTL. Used by the /api/cron/cache-warm job to keep slow, account-scoped
+// upstream data (e.g. the Cloudflare project/script lists) pre-warmed in the cache so a user's
+// page load almost always hits the cache instead of the upstream. Errors are swallowed — a
+// failed warm just leaves the previous cached value in place.
+export async function warmCache<T>(
+  group: string,
+  id: string,
+  loader: () => MaybePromise<T>,
+  opts?: { ttlSeconds?: number },
+): Promise<void> {
+  try {
+    const value = await loader();
+    await kvSet(buildKey(group, id), JSON.stringify(value), opts?.ttlSeconds);
+  } catch {
+    // keep the existing cached value on failure
+  }
+}
+
+// Raw KV/memory get+set for storing small bookkeeping values (e.g. the cache-warm job's last
+// run timestamp). Unlike cachedJson these don't JSON-parse or single-flight; they just read and
+// write the raw string with an optional TTL. Used by the cron/cache-warm endpoint.
+export async function cacheGetRaw(key: string): Promise<string | null> {
+  return kvGet(buildKey('meta', key));
+}
+
+export async function cacheSetRaw(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  await kvSet(buildKey('meta', key), value, ttlSeconds);
+}
+
 export function isKvConfigured(): boolean {
   return kvConfigured();
 }

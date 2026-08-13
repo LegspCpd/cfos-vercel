@@ -77,19 +77,29 @@ export async function DELETE(req: Request, { params }: Ctx) {
 
   const rec = await prisma.deployment.findFirst({
     where: { id: params.id, userId: session.userId },
+    select: { id: true, pagesProject: true },
   });
   if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Best-effort delete the remote Pages project; the DB record is removed regardless.
-  try {
-    if (rec.pagesProject) {
-      await deletePagesProject(rec.pagesProject);
-    }
-  } catch {
-    // ignore — remote project may linger; DB deletion is authoritative
-  }
-
+  // Delete the DB record FIRST and return immediately — the remote CF deletion and cache
+  // invalidation are slow (they hit Cloudflare / every KV store), so they run in the
+  // background. The user shouldn't have to wait on them to delete their next project.
   await prisma.deployment.delete({ where: { id: rec.id } });
+
+  // Fire-and-forget the slow parts so the response returns in one round-trip.
+  void (async () => {
+    try {
+      if (rec.pagesProject) {
+        // Best-effort delete the remote Pages project; failure leaves the remote project
+        // lingering but the DB deletion above is authoritative for this app.
+        await deletePagesProject(rec.pagesProject);
+      }
+    } catch {
+      // ignore
+    }
+    // Drop the cached CF project list so the deleted project disappears on the next load.
+    await invalidateCache('pages', 'projects').catch(() => {});
+  })();
 
   await writeAudit({
     userId: session.userId,
@@ -97,8 +107,6 @@ export async function DELETE(req: Request, { params }: Ctx) {
     action: 'pages.delete',
     detail: `Deleted Pages project "${rec.pagesProject}"`,
   }).catch(() => {});
-  // Drop the cached CF project list so the deleted project disappears immediately.
-  await invalidateCache('pages', 'projects');
 
   return NextResponse.json({ ok: true });
 }

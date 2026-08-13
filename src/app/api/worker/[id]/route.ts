@@ -14,12 +14,17 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   const rec = await prisma.workerDeployment.findFirst({
     where: { id: params.id, userId: session.userId },
+    select: { id: true, workerName: true },
   });
   if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Best-effort delete the CF script, then the DB row.
-  await deleteWorker(rec.workerName);
+  // Delete the DB record first and return immediately; the remote CF script deletion is slow
+  // (up to 30s timeout), so run it in the background. The user shouldn't have to wait on it
+  // to delete their next worker.
   await prisma.workerDeployment.delete({ where: { id: rec.id } });
+
+  // Fire-and-forget the remote CF script deletion so the response returns in one round-trip.
+  void deleteWorker(rec.workerName).catch(() => {});
 
   await writeAudit({
     userId: session.userId,

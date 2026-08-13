@@ -29,7 +29,6 @@ import {
   Rocket,
   Calculator,
   ChevronDown,
-  Code2,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -47,38 +46,28 @@ interface NavItem {
   match?: string;
 }
 
-interface NavSubGroup {
-  labelKey: string;
-  children: NavItem[];
-}
-
 interface NavGroup {
-  group: true;
-  labelKey: string;
+  labelKey: string; // the collapsible parent, e.g. "计算"
   icon: typeof Home;
-  subGroups: NavSubGroup[];
+  children: NavItem[]; // the expanded sub-items
 }
 
 type NavEntry = NavItem | NavGroup;
 
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return 'children' in entry;
+}
+
+// The nav. "计算" (Compute) is a collapsible parent: clicking it (or its caret) expands a
+// single child, "Worker 和 Pages", which opens the combined worker-and-pages page (Workers and
+// Pages are ONE product entry whose page switches between them internally via tabs).
 const NAV: NavEntry[] = [
   { href: '/', labelKey: 'nav.home', icon: Home, match: '/workspaces' },
   { href: '/workspaces', labelKey: 'nav.workspaces', icon: LayoutGrid },
   {
-    group: true,
     labelKey: 'nav.compute',
     icon: Calculator,
-    // Cloudflare groups the two product sub-resources ("Workers 和 Pages") as ONE entry under
-    // Compute, with the actual resource links (Workers / Pages) underneath.
-    subGroups: [
-      {
-        labelKey: 'nav.workersAndPages',
-        children: [
-          { href: '/compute/worker-and-pages?tab=worker', labelKey: 'nav.worker', icon: Code2 },
-          { href: '/compute/worker-and-pages?tab=pages', labelKey: 'nav.pages', icon: Rocket },
-        ],
-      },
-    ],
+    children: [{ href: '/compute/worker-and-pages', labelKey: 'nav.workersAndPages', icon: Rocket }],
   },
   { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
   { href: '/connections', labelKey: 'nav.connections', icon: Plug },
@@ -174,19 +163,19 @@ export default function AppShell({
     router.replace('/login');
   }
 
-  // Render the nav, supporting collapsible groups (e.g. "Compute" → "Workers 和 Pages" →
-  // Workers / Pages). `onNavigate` (if given) runs when a link is clicked (used by the mobile
-  // drawer to close itself).
+  // Render the nav, supporting collapsible groups (e.g. "计算" → "Worker 和 Pages"). Clicking a
+  // group's row (or its caret) toggles it. `onNavigate` (if given) runs when a child link is
+  // clicked (used by the mobile drawer to close itself).
   function renderNav(onNavigate?: () => void) {
     return NAV.map((entry) => {
-      if ('group' in entry) {
-        const allChildren = entry.subGroups.flatMap((sg) => sg.children);
-        const active = allChildren.some((c) => isActive(c));
+      if (isGroup(entry)) {
+        const active = entry.children.some((c) => isActive(c));
         const open = openGroup === entry.labelKey || active;
         return (
           <div key={entry.labelKey}>
             <button
               onClick={() => setOpenGroup(open ? null : entry.labelKey)}
+              aria-expanded={open}
               className={clsx(
                 'mb-0.5 flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
                 active ? 'text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
@@ -198,32 +187,25 @@ export default function AppShell({
             </button>
             {open && (
               <div className="mb-1 ml-3 border-l pl-2">
-                {entry.subGroups.map((sg) => (
-                  <div key={sg.labelKey} className="mb-1">
-                    <div className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
-                      {t(sg.labelKey)}
-                    </div>
-                    {sg.children.map((child) => {
-                      const childActive = isActive(child);
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={onNavigate}
-                          className={clsx(
-                            'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                            childActive
-                              ? 'bg-secondary font-medium text-foreground'
-                              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                          )}
-                        >
-                          <child.icon className={clsx('h-4 w-4', childActive && 'text-primary')} />
-                          {t(child.labelKey)}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))}
+                {entry.children.map((child) => {
+                  const childActive = isActive(child);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={onNavigate}
+                      className={clsx(
+                        'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                        childActive
+                          ? 'bg-secondary font-medium text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                      )}
+                    >
+                      <child.icon className={clsx('h-4 w-4', childActive && 'text-primary')} />
+                      {t(child.labelKey)}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

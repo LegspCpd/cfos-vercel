@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Code2, Rocket } from 'lucide-react';
 import { useI18n } from '@/lib/client/i18n';
-import { WorkersPanel } from '../worker/page';
-import { PagesPanel } from '../../pages/page';
+import { WorkersPanel } from '@/components/compute/WorkersPanel';
+import { PagesPanel } from '@/components/compute/PagesPanel';
 
 // The "Workers 和 Pages" product page: Workers and Pages are ONE entry, with two tabs here
 // (mirroring Cloudflare's combined product). `?tab=worker|pages` selects the initial tab

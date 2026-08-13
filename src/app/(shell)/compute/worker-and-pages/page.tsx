@@ -19,6 +19,19 @@ export default function WorkerAndPagesPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<'worker' | 'pages'>(initialTabFromUrl);
 
+  // Switching a tab updates the URL (?tab=...) without a reload, so a refresh/bookmark keeps
+  // the active tab.
+  function switchTab(next: 'worker' | 'pages') {
+    setTab(next);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', next);
+      window.history.replaceState(null, '', url.toString());
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Combined product header */}
@@ -30,7 +43,7 @@ export default function WorkerAndPagesPage() {
       <div className="border-b px-4 sm:px-6">
         <div className="flex gap-6">
           <button
-            onClick={() => setTab('worker')}
+            onClick={() => switchTab('worker')}
             className={`flex items-center gap-1.5 border-b-2 pb-2 text-sm font-medium transition ${
               tab === 'worker'
                 ? 'border-primary text-foreground'
@@ -41,7 +54,7 @@ export default function WorkerAndPagesPage() {
             {t('nav.worker')}
           </button>
           <button
-            onClick={() => setTab('pages')}
+            onClick={() => switchTab('pages')}
             className={`flex items-center gap-1.5 border-b-2 pb-2 text-sm font-medium transition ${
               tab === 'pages'
                 ? 'border-primary text-foreground'
@@ -54,8 +67,16 @@ export default function WorkerAndPagesPage() {
         </div>
       </div>
 
-      {/* Panel */}
-      <div className="pt-4">{tab === 'worker' ? <WorkersPanel /> : <PagesPanel />}</div>
+      {/* Panels — both stay mounted so switching tabs keeps their loaded state (no refetch on
+          every switch). The inactive one is hidden via CSS, not unmounted. */}
+      <div className="pt-4">
+        <div className={tab === 'worker' ? '' : 'hidden'} aria-hidden={tab !== 'worker'}>
+          <WorkersPanel />
+        </div>
+        <div className={tab === 'pages' ? '' : 'hidden'} aria-hidden={tab !== 'pages'}>
+          <PagesPanel />
+        </div>
+      </div>
     </div>
   );
 }

@@ -62,7 +62,7 @@ async function copyText(u: string) {
 // The Pages dashboard (/pages). Shows the deployed project list and a "New project" button.
 // Clicking the button opens a modal with the two "how do you want to deploy?" cards (import a
 // Git repository / drag and drop files). Picking one continues to the matching flow.
-export default function PagesPage() {
+export function PagesPanel() {
   const router = useRouter();
   const { t } = useI18n();
   const [available, setAvailable] = useState(false);
@@ -655,3 +655,5 @@ export default function PagesPage() {
     </div>
   );
 }
+
+export default PagesPanel;

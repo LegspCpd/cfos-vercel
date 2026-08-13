@@ -32,7 +32,7 @@ interface WorkerRow {
   createdAt: string;
 }
 
-export default function WorkerPage() {
+export function WorkersPanel() {
   const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -310,3 +310,5 @@ export default function WorkerPage() {
     </div>
   );
 }
+
+export default WorkersPanel;

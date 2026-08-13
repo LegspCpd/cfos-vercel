@@ -74,8 +74,8 @@ const NAV: NavEntry[] = [
       {
         labelKey: 'nav.workersAndPages',
         children: [
-          { href: '/compute/worker', labelKey: 'nav.worker', icon: Code2 },
-          { href: '/pages', labelKey: 'nav.pages', icon: Rocket },
+          { href: '/compute/worker-and-pages?tab=worker', labelKey: 'nav.worker', icon: Code2 },
+          { href: '/compute/worker-and-pages?tab=pages', labelKey: 'nav.pages', icon: Rocket },
         ],
       },
     ],

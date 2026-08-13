@@ -96,7 +96,11 @@ export default function ConnectionsPage() {
   function connect(provider: string) {
     setBusyKey(provider);
     const token = encodeURIComponent(getToken() || '');
-    window.location.href = `/api/${provider}/connect?token=${token}`;
+    // Google uses the /api/auth/google flow (redirect_uri /api/auth/google/callback, which is
+    // the URI registered in Google Cloud Console). The legacy /api/google/connect redirects to
+    // /api/google/callback, which isn't registered -> redirect_uri_mismatch.
+    const base = provider === 'google' ? '/api/auth/google/connect' : `/api/${provider}/connect`;
+    window.location.href = `${base}?token=${token}`;
   }
 
   async function disconnect(provider: 'github' | 'google' | 'gitlab') {

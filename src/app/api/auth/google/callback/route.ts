@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/auth';
 import { maybeBootstrapAdmin, promoteEnvAdmins } from '@/lib/admin';
 import { siteBaseUrl, siteUrl } from '@/lib/site';
+import { encryptSecret } from '@/lib/credentials';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -83,7 +84,34 @@ export async function GET(req: Request) {
       }
 
       await prisma.user.update({ where: { id: targetUser.id }, data: { googleId: info.sub } });
-      const res = NextResponse.redirect(`${siteBaseUrl()}/profile?googleLinked=1`);
+
+      // Persist the Google access/refresh tokens as a GoogleConnection so the Connections panel
+      // (which lists connected accounts) has the token for later use, matching the legacy
+      // /api/google/callback behavior. The refresh token is long-lived, so encrypt at rest.
+      const access = tokenJson.access_token;
+      const refresh = (tokenJson as { refresh_token?: string }).refresh_token;
+      const encAccess = access ? encryptSecret(access) : null;
+      const encRefresh = refresh ? encryptSecret(refresh) : null;
+      if (encAccess) {
+        await prisma.googleConnection.upsert({
+          where: { googleSub: info.sub },
+          update: {
+            userId: targetUser.id,
+            accessToken: encAccess,
+            refreshToken: encRefresh,
+            googleEmail: (info.email || '').toLowerCase() || 'unknown',
+          },
+          create: {
+            userId: targetUser.id,
+            googleSub: info.sub,
+            googleEmail: (info.email || '').toLowerCase() || 'unknown',
+            accessToken: encAccess,
+            refreshToken: encRefresh,
+          },
+        });
+      }
+
+      const res = NextResponse.redirect(`${siteBaseUrl()}/connections?connected=1`);
       res.cookies.delete('oauth_from');
       res.cookies.delete('google_oauth_state');
       return res;

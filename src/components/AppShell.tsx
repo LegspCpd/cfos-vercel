@@ -47,11 +47,16 @@ interface NavItem {
   match?: string;
 }
 
+interface NavSubGroup {
+  labelKey: string;
+  children: NavItem[];
+}
+
 interface NavGroup {
   group: true;
   labelKey: string;
   icon: typeof Home;
-  children: NavItem[];
+  subGroups: NavSubGroup[];
 }
 
 type NavEntry = NavItem | NavGroup;
@@ -63,9 +68,16 @@ const NAV: NavEntry[] = [
     group: true,
     labelKey: 'nav.compute',
     icon: Calculator,
-    children: [
-      { href: '/compute/worker', labelKey: 'nav.worker', icon: Code2 },
-      { href: '/pages', labelKey: 'nav.pages', icon: Rocket },
+    // Cloudflare groups the two product sub-resources ("Workers 和 Pages") as ONE entry under
+    // Compute, with the actual resource links (Workers / Pages) underneath.
+    subGroups: [
+      {
+        labelKey: 'nav.workersAndPages',
+        children: [
+          { href: '/compute/worker', labelKey: 'nav.worker', icon: Code2 },
+          { href: '/pages', labelKey: 'nav.pages', icon: Rocket },
+        ],
+      },
     ],
   },
   { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
@@ -162,12 +174,14 @@ export default function AppShell({
     router.replace('/login');
   }
 
-  // Render the nav, supporting collapsible groups (e.g. "Compute" → Worker + Pages). `onNavigate`
-  // (if given) runs when a link is clicked (used by the mobile drawer to close itself).
+  // Render the nav, supporting collapsible groups (e.g. "Compute" → "Workers 和 Pages" →
+  // Workers / Pages). `onNavigate` (if given) runs when a link is clicked (used by the mobile
+  // drawer to close itself).
   function renderNav(onNavigate?: () => void) {
     return NAV.map((entry) => {
       if ('group' in entry) {
-        const active = entry.children.some((c) => isActive(c));
+        const allChildren = entry.subGroups.flatMap((sg) => sg.children);
+        const active = allChildren.some((c) => isActive(c));
         const open = openGroup === entry.labelKey || active;
         return (
           <div key={entry.labelKey}>
@@ -183,26 +197,33 @@ export default function AppShell({
               <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} />
             </button>
             {open && (
-              <div className="mb-0.5 ml-3 border-l pl-2">
-                {entry.children.map((child) => {
-                  const childActive = isActive(child);
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      onClick={onNavigate}
-                      className={clsx(
-                        'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                        childActive
-                          ? 'bg-secondary font-medium text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                      )}
-                    >
-                      <child.icon className={clsx('h-4 w-4', childActive && 'text-primary')} />
-                      {t(child.labelKey)}
-                    </Link>
-                  );
-                })}
+              <div className="mb-1 ml-3 border-l pl-2">
+                {entry.subGroups.map((sg) => (
+                  <div key={sg.labelKey} className="mb-1">
+                    <div className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                      {t(sg.labelKey)}
+                    </div>
+                    {sg.children.map((child) => {
+                      const childActive = isActive(child);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onNavigate}
+                          className={clsx(
+                            'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                            childActive
+                              ? 'bg-secondary font-medium text-foreground'
+                              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                          )}
+                        >
+                          <child.icon className={clsx('h-4 w-4', childActive && 'text-primary')} />
+                          {t(child.labelKey)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

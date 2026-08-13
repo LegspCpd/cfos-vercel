@@ -483,6 +483,27 @@ export const api = {
     },
   ) => request<{ host: unknown }>(`/api/ssh-hosts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteSshHost: (id: string) => request<{ ok: boolean }>(`/api/ssh-hosts/${id}`, { method: 'DELETE' }),
+  // Worker (Compute) deployments.
+  listWorkers: () =>
+    request<{
+      workers: {
+        id: string;
+        workerName: string;
+        projectName: string | null;
+        status: string;
+        error: string | null;
+        log: string | null;
+        url: string;
+        live: boolean;
+        createdAt: string;
+      }[];
+    }>('/api/worker/list'),
+  deployWorker: (data: { workerName?: string; projectName?: string; code: string }) =>
+    request<{ ok: boolean; deploymentId?: string | null; workerName?: string; url?: string; error?: string; log?: string }>(
+      '/api/worker/deploy',
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
+  deleteWorker: (id: string) => request<{ ok: boolean }>(`/api/worker/${id}`, { method: 'DELETE' }),
   testSshHost: (id: string, creds?: { password?: string; privateKey?: string; passphrase?: string }) =>
     request<{ ok: boolean; message?: string; error?: string }>(`/api/ssh-hosts/${id}/test`, {
       method: 'POST',

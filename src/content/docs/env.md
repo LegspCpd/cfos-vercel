@@ -142,6 +142,16 @@
 | `VERIFY_CODE_TTL_MINUTES` | 邮箱验证码有效分钟数，默认 `10`。 |
 | `CRON_SECRET` | 定时清理任务（cron）的访问密钥。 |
 
+### Cloudflare Workers（计算 → Worker）部署（可选）
+
+侧边栏「**计算**」下的 **Worker** 入口用于把 JS 脚本部署为 Cloudflare Worker。**独立于 Pages**，用 `WORKER_` 开头的变量（大写），不与 Pages 的 `PAGES_*` 重合。配了 `WORKER_API_TOKEN` + `WORKER_ACCOUNT_ID` 后 Worker 功能才可用。
+
+| 变量 | 说明 |
+|---|---|
+| `WORKER_API_TOKEN` | Cloudflare API Token，需有该账户 **Workers Scripts → Edit** 权限。 |
+| `WORKER_ACCOUNT_ID` | Cloudflare 账户 ID（通常与 `PAGES_ACCOUNT_ID` 相同）。 |
+| `WORKER_SUBDOMAIN` | Worker 的访问子域，默认 `workers.dev`。 |
+
 ### 多库 KV 响应缓存（可选）
 
 用于加速 Pages 部署相关接口（项目列表、Git 仓库枚举等），让重复访问"秒开"。**默认一个 KV 库即可用**，最多可配 5 个（第 2 个起加数字后缀 `_2`…`_5`；写入全量、读取按序回退）。未配置时自动回退到进程内内存缓存，不影响功能。详细使用教程见 [KV 缓存使用指南](/docs/kv)。

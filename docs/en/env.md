@@ -90,6 +90,18 @@ or ZIP uploads to Cloudflare Pages as static sites, and auto-creates short links
 > variables from the **Third-party Sign-in** section (`GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`
 > and/or `GITLAB_CLIENT_ID`/`GITLAB_CLIENT_SECRET`). Those are reused for Pages Git deploys.
 
+### Cloudflare Workers (Compute → Worker) deploy (optional)
+
+The **Compute** → **Worker** nav entry deploys JS scripts as Cloudflare Workers. It is **separate
+from Pages** and uses its own `WORKER_` env vars (uppercase) so it never collides with `PAGES_*`.
+The Worker feature is available once `WORKER_API_TOKEN` and `WORKER_ACCOUNT_ID` are set.
+
+| Variable | Description |
+|---|---|
+| `WORKER_API_TOKEN` | Cloudflare API token (needs **Workers Scripts → Edit** on the account). |
+| `WORKER_ACCOUNT_ID` | Cloudflare account id (usually the same as `PAGES_ACCOUNT_ID`). |
+| `WORKER_SUBDOMAIN` | Worker access subdomain, default `workers.dev`. |
+
 ### Cloudflare KV Response Cache (optional)
 
 Used to make slow cross-service calls (the Cloudflare Pages project list, GitHub/GitLab repo enumeration) feel instant on repeat visits. Everything degrades gracefully when not configured (falls back to a per-instance in-memory cache).

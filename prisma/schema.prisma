@@ -56,6 +56,7 @@ model User {
   tickets    Ticket[]
   sshHosts   SshHost[]
   deployments Deployment[]
+  workerDeployments WorkerDeployment[]
   group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }
 
@@ -199,6 +200,24 @@ model Deployment {
 
   @@index([userId, createdAt])
   @@index([workspaceId])
+}
+
+// A deployment of a Worker script to Cloudflare Workers (the "Compute → Worker" feature).
+model WorkerDeployment {
+  id         String   @id @default(cuid())
+  userId     String
+  workerName String   // the Workers script name (id) on the account
+  projectName String? // user-facing display name (fallback: workerName)
+  code       String?  // the last deployed JS source
+  status     String   @default("deployed") // deployed | failed
+  log        String?
+  error      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 // One file inside a workspace.

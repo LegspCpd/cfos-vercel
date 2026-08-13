@@ -26,9 +26,13 @@ export async function GET() {
       recaptchaEnabled: captcha.recaptchaEnabled,
       recaptchaSiteKey: captcha.recaptchaSiteKey,
     };
-  }, { ttlSeconds: Number(process.env.KV_SITE_TTL) || 30 });
+  }, { ttlSeconds: Number(process.env.KV_SITE_TTL) || 120 });
 
+  // Site branding is extremely low-churn (set by admin, changes rarely). Aggressive edge cache:
+  // Cloudflare serves repeat hits for 5 min at the edge, and stale-while-revalidate keeps it
+  // available during the 10-min revalidation window. This effectively removes the DB from the
+  // hot path on login/home pages — a big part of "instant load".
   const res = NextResponse.json(body);
-  res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+  res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
   return res;
 }

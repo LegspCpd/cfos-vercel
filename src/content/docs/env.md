@@ -186,6 +186,19 @@ KV_NAMESPACE_ID_2=...
 | `KV_SITE_TTL` | 公共 `/api/site` 站点设置缓存秒数，默认 `30`。 |
 | `KV_SSH_HOSTS_TTL` | SSH 主机列表缓存秒数（按用户），默认 `10`。 |
 
+### Cloudflare D1 二级备份（可选，默认关闭）
+
+一个冗余存储，用来**镜像 KV 缓存**（也可与 Neon 一起存放重要数据的副本）。开启后，每次 KV 缓存写入都会同步复制到 D1；KV 读不到时会回退到 D1。**默认关闭**——设置 `D1_ENABLED=true` 才启用。
+
+| 变量 | 说明 |
+|---|---|
+| `D1_ENABLED` | 设为 `true`/`1` 开启 D1 镜像；不设则关闭。 |
+| `D1-api-key` | Cloudflare API Token（需有该数据库的 **Workers D1 读/写** 权限）。 |
+| `D1-access` | Cloudflare 账户 ID（通常与 `PAGES_ACCOUNT_ID` 相同）。 |
+| `D1-SQL-1` … `D1-SQL-5` | 最多 **5 个** D1 数据库 ID。配置 **超过 5 个会报错**，要求删掉一个。 |
+
+> 镜像表（`cache_store`）会在首次使用时自动创建。所有 D1 操作都是尽力而为：D1 故障不会影响请求，只是跳过镜像/回退。
+
 ### 多数据库（可选）
 
 | 变量 | 说明 |

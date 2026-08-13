@@ -19,6 +19,11 @@
 // every reader finds the value regardless of which store it hits. If NO KV env is configured
 // we fall back to a bounded per-instance in-memory Map. All KV errors are swallowed — a cache
 // miss/failure never breaks a request.
+//
+// D1 mirror (optional, OFF by default): when D1_ENABLED, every KV write is also mirrored to D1
+// and a KV miss falls back to D1 (a redundant secondary store). D1 ops are best-effort.
+
+import { d1Get, d1Set, d1Delete } from './d1';
 
 const API = 'https://api.cloudflare.com/client/v4';
 const PREFIX = process.env.KV_PREFIX || 'cfos';
@@ -126,29 +131,33 @@ async function kvGet(key: string): Promise<string | null> {
       continue;
     }
   }
-  return null;
+  // KV miss → try the D1 mirror (secondary backup).
+  return await d1Get(key);
 }
 
 async function kvSet(key: string, value: string, ttlSeconds?: number): Promise<void> {
   const seconds = Math.max(1, ttlSeconds ?? DEFAULT_TTL());
   if (!kvConfigured()) {
     memSet(key, value, seconds * 1000);
-    return;
+  } else {
+    // Write to EVERY configured store in parallel so any reader finds the value.
+    await Promise.all(
+      stores().map((s) =>
+        fetch(
+          `${API}/accounts/${s.accountId}/storage/kv/namespaces/${s.namespaceId}/values/${encodeURIComponent(key)}?expiration_ttl=${seconds}`,
+          {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${s.token}`, 'Content-Type': 'text/plain' },
+            body: value,
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          },
+        ).catch(() => undefined),
+      ),
+    );
   }
-  // Write to EVERY configured store in parallel so any reader finds the value.
-  await Promise.all(
-    stores().map((s) =>
-      fetch(
-        `${API}/accounts/${s.accountId}/storage/kv/namespaces/${s.namespaceId}/values/${encodeURIComponent(key)}?expiration_ttl=${seconds}`,
-        {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${s.token}`, 'Content-Type': 'text/plain' },
-          body: value,
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        },
-      ).catch(() => undefined),
-    ),
-  );
+  // Mirror to D1 (secondary backup). Best-effort and non-blocking — the write already landed
+  // in KV/memory; a slow D1 must not hold up the response.
+  void d1Set(key, value, seconds);
 }
 
 // Delete a cached value from every store (used to invalidate stale data after a deploy).
@@ -165,6 +174,8 @@ async function kvDelete(key: string): Promise<void> {
       ).catch(() => undefined),
     ),
   );
+  // Delete the D1 mirror too.
+  await d1Delete(key);
 }
 
 export async function cachedJson<T>(

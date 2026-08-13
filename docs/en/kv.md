@@ -91,3 +91,15 @@ KV caching is applied to:
 
 All cache keys include `KV_PREFIX` and (where relevant) the user id, so multiple instances and
 users never read each other's data.
+
+## 6. D1 secondary backup (optional)
+
+You can mirror the KV cache into Cloudflare **D1** as a redundant store (see
+[Environment Variables](/en/docs/env#cloudflare-d1-secondary-backup-optional)). When enabled:
+
+- every KV cache write is **also copied to D1** (best-effort, non-blocking);
+- a KV miss **falls back to D1** before the upstream loader runs.
+
+Set `D1_ENABLED=true` and configure up to 5 D1 database ids (`D1-SQL-1` … `D1-SQL-5`).
+Configuring more than 5 raises an error. The mirror table (`cache_store`) is created
+automatically on first use.

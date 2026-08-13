@@ -134,6 +134,22 @@ Shared tuning vars (one set, applies to all stores):
 | `KV_SITE_TTL` | TTL (seconds) for the public `/api/site` settings, default `30`. |
 | `KV_SSH_HOSTS_TTL` | TTL (seconds) for the per-user SSH host list, default `10`. |
 
+### Cloudflare D1 Secondary Backup (optional, OFF by default)
+
+A redundant store that **mirrors the KV cache** (and can hold copies of important data alongside
+Neon). When enabled, every KV cache write is also copied to D1, and a KV miss falls back to D1.
+Default OFF — set `D1_ENABLED=true` to turn it on.
+
+| Variable | Description |
+|---|---|
+| `D1_ENABLED` | Set to `true`/`1` to enable the D1 mirror. Omit to keep it off. |
+| `D1-api-key` | Cloudflare API token (needs **Workers D1 read/write** on the database). |
+| `D1-access` | Cloudflare account id (usually the same as `PAGES_ACCOUNT_ID`). |
+| `D1-SQL-1` … `D1-SQL-5` | Up to **5** D1 database ids. Configuring **more than 5** raises an error asking you to remove one. |
+
+> The mirror table (`cache_store`) is created automatically on first use. All D1 operations are
+> best-effort: a D1 failure never breaks a request — it just means the mirror/fallback is skipped.
+
 ### Cloudflare Access (full-site gate)
 
 | Variable | Description |

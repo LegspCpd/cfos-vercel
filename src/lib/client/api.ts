@@ -774,6 +774,31 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ files }),
     }),
+  deleteFile: (id: string, path: string) =>
+    request<{ ok: boolean }>(`/api/workspaces/${id}/files?path=${encodeURIComponent(path)}`, {
+      method: 'DELETE',
+    }),
+  listActivity: (params?: { action?: string; limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set('action', params.action);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return request<{
+      logs: Array<{
+        id: string;
+        userId: string;
+        username: string;
+        action: string;
+        targetId: string | null;
+        detail: string | null;
+        ip: string | null;
+        tokens: number | null;
+        createdAt: string;
+      }>;
+      total: number;
+    }>(`/api/activity${suffix}`);
+  },
   runAgent: (id: string, prompt: string) =>
     request<{ message: string; files: { path: string; content: string; isEntry: boolean }[] }>(
       `/api/workspaces/${id}/agent`,

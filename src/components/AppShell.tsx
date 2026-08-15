@@ -29,6 +29,8 @@ import {
   Rocket,
   Calculator,
   ChevronDown,
+  Cpu,
+  Activity as ActivityIcon,
 } from 'lucide-react';
 import { useTheme, type Theme } from '@/lib/client/theme';
 import { clearToken, getToken } from '@/lib/client/auth';
@@ -71,6 +73,7 @@ const NAV: NavEntry[] = [
   },
   { href: '/shares', labelKey: 'nav.shares', icon: Share2 },
   { href: '/connections', labelKey: 'nav.connections', icon: Plug },
+  { href: '/providers', labelKey: 'nav.providers', icon: Cpu },
   { href: '/remote', labelKey: 'nav.remote', icon: Server },
   { href: '/context', labelKey: 'nav.context', icon: BookOpen },
   { href: '/docs', labelKey: 'nav.docs', icon: BookMarked },
@@ -78,6 +81,7 @@ const NAV: NavEntry[] = [
   { href: '/blueprints', labelKey: 'nav.blueprints', icon: Boxes },
   { href: '/explore', labelKey: 'nav.explore', icon: Compass },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/activity', labelKey: 'nav.activity', icon: ActivityIcon },
 ];
 
 export default function AppShell({

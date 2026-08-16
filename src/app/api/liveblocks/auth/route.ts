@@ -59,6 +59,9 @@ export async function POST(req: Request) {
   });
 
   // Build the ID token payload. Liveblocks expects { userId, userInfo, groupIds }.
+  // SECURITY: include iat + exp (15 minutes) so a leaked token cannot be replayed
+  // forever to join rooms as this user.
+  const nowSec = Math.floor(Date.now() / 1000);
   const payload = {
     userId: session.userId,
     userInfo: {
@@ -67,6 +70,8 @@ export async function POST(req: Request) {
       avatar: user?.avatarUrl || '',
     },
     groupIds: [],
+    iat: nowSec,
+    exp: nowSec + 15 * 60,
   };
 
   // Sign with HS256 using the Liveblocks secret key.

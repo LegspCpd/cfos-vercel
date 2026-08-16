@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCron, cronMatches, describeCron } from '@/lib/scheduled-tasks';
+import { parseCron, cronMatches, describeCron, nextMatchAfter } from '@/lib/scheduled-tasks';
 
 describe('scheduled-tasks', () => {
   describe('parseCron', () => {
@@ -82,6 +82,43 @@ describe('scheduled-tasks', () => {
 
     it('returns the raw expression when invalid', () => {
       expect(describeCron('garbage')).toBe('garbage');
+    });
+  });
+
+  describe('nextMatchAfter', () => {
+    it('returns the next matching moment strictly after the given time', () => {
+      const s = parseCron('30 14 * * *')!;
+      const from = new Date(2026, 7, 16, 9, 0);
+      const next = nextMatchAfter(s, from)!;
+      expect(next.getFullYear()).toBe(2026);
+      expect(next.getMonth()).toBe(7);
+      expect(next.getDate()).toBe(16);
+      expect(next.getHours()).toBe(14);
+      expect(next.getMinutes()).toBe(30);
+    });
+
+    it('rolls to the next day when today already passed', () => {
+      const s = parseCron('30 9 * * *')!;
+      const from = new Date(2026, 7, 16, 14, 0);
+      const next = nextMatchAfter(s, from)!;
+      expect(next.getDate()).toBe(17);
+      expect(next.getHours()).toBe(9);
+      expect(next.getMinutes()).toBe(30);
+    });
+
+    it('handles hourly schedules (daily sweep still catches them)', () => {
+      const s = parseCron('0 * * * *')!;
+      const from = new Date(2026, 7, 16, 3, 10);
+      const next = nextMatchAfter(s, from)!;
+      expect(next.getHours()).toBe(4);
+      expect(next.getMinutes()).toBe(0);
+    });
+
+    it('returns null for a schedule that will not match within 24h', () => {
+      // Leap-day-only schedule (Feb 29) scanned from a non-leap year mid-year.
+      const s = parseCron('0 0 29 2 *')!;
+      const from = new Date(2026, 7, 16, 0, 0); // 2026 is not a leap year
+      expect(nextMatchAfter(s, from)).toBeNull();
     });
   });
 });

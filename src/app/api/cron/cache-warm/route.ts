@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { warmCache, cacheGetRaw, cacheSetRaw } from '@/lib/kv-cache';
 import { listPagesProjects } from '@/lib/cf-pages';
 import { listWorkers } from '@/lib/cf-worker';
+import { safeEqual } from '@/lib/safe-equal';
 
 // GET /api/cron/cache-warm — pre-warm the account-scoped KV caches (mirrored to D1) so page
 // loads hit the cache instead of Cloudflare's slow list APIs.
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
   const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
-  if (header !== secret) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!safeEqual(header ?? '', secret)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Interval in minutes (default 60 = hourly). Fractional values are allowed (e.g. 0.5 = 30s).
   const intervalMin = Math.max(0, Number(process.env.CACHE_WARM_INTERVAL_MINUTES) || 60);

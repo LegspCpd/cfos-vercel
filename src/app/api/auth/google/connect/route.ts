@@ -44,5 +44,11 @@ export async function GET(req: Request) {
     path: '/',
     maxAge: 600,
   });
+  // When the caller authenticated via the Authorization header (fetch from the SPA),
+  // return the authorize URL as JSON instead of a 302 — the browser then navigates to
+  // it. This keeps the session JWT out of the URL query string (and out of logs).
+  if (req.headers.get('authorization')?.startsWith('Bearer ')) {
+    return NextResponse.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+  }
   return res;
 }

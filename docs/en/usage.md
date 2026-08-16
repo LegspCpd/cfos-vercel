@@ -129,7 +129,7 @@ Admins can create **scheduled tasks** in the Admin panel:
 
 - Set the schedule with a **cron expression** (e.g. `0 */6 * * *` = every 6 hours)
 - Tasks can run an **AI instruction** (against a workspace) or an **HTTP callback** (POST to a URL)
-- Vercel Cron triggers a check every minute (`/api/cron/tasks`, requires `CRON_SECRET`; due tasks run within that minute, never twice in the same minute)
+- Vercel Cron triggers the sweep once a day (`/api/cron/daily`, requires `CRON_SECRET`). The sweep runs **every task that came due since its last run** — so a daily sweep still fires hourly tasks that were due in between, never twice for the same moment. (Vercel's free Hobby plan only allows daily cron jobs; on Pro you can point `vercel.json` at a more frequent schedule and the same endpoint handles it.)
 - Each run is logged (success/failure + output summary); tasks can be enabled/disabled/deleted anytime
 
 ## Ticket management (/admin/tickets)

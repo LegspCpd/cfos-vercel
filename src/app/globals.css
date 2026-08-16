@@ -51,12 +51,32 @@
   body {
     @apply bg-background text-foreground antialiased;
     /* Custom site-wide background (set by SiteBackground when the BEIJIN env var is
-       configured). Falls back to the plain background color when unset. */
-    background-image: var(--site-bg-url, none);
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+       configured). Falls back to a subtle modern flat grid + soft glow. */
+    background-image:
+      var(--site-bg-url, none),
+      radial-gradient(ellipse 70% 45% at 50% -10%, hsl(var(--primary) / 0.09), transparent 70%),
+      radial-gradient(ellipse 50% 35% at 88% 112%, hsl(var(--primary) / 0.05), transparent 70%),
+      linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: cover, cover, cover, 36px 36px, 36px 36px;
+    background-position: center, center, center, center, center;
+    background-attachment: fixed, fixed, fixed, fixed, fixed;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+  }
+
+  /* On small screens the grid is too dense and the fixed attachment can jank on
+     scroll; soften it and let it scroll with the page. */
+  @media (max-width: 768px) {
+    body {
+      background-image:
+        var(--site-bg-url, none),
+        radial-gradient(ellipse 70% 45% at 50% -10%, hsl(var(--primary) / 0.07), transparent 70%),
+        radial-gradient(ellipse 50% 35% at 88% 112%, hsl(var(--primary) / 0.04), transparent 70%),
+        linear-gradient(to right, hsl(var(--border) / 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, hsl(var(--border) / 0.22) 1px, transparent 1px);
+      background-size: cover, cover, cover, 44px 44px, 44px 44px;
+      background-attachment: scroll, scroll, scroll, scroll, scroll;
+    }
   }
 }
 

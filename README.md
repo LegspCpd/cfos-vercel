@@ -58,7 +58,7 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **User management** `/admin/users` — create/delete users, change passwords/emails, move between groups
 - **AI usage quotas** — per-user and per-group **daily AI call limits** (user quota overrides group); hitting the limit returns 429 and resets at midnight
 - **Operation log** `/admin/audit` — audit trail of sign-ins (with IP), agent runs, and AI calls (with token usage); **export the current filter as CSV/JSON** (BOM-prefixed) for archiving
-- **Scheduled tasks** — admin-defined cron jobs (AI instruction against a workspace, or HTTP callback) checked every minute via Vercel Cron (`/api/cron/tasks`, guarded by `CRON_SECRET`), with per-run logs
+- **Scheduled tasks** — admin-defined cron jobs (AI instruction against a workspace, or HTTP callback) swept once a day via Vercel Cron (`/api/cron/daily`, guarded by `CRON_SECRET`); the sweep runs every task that came due since its last run, so hourly schedules still fire on the free plan, with per-run logs
 - **Ticket management** `/admin/tickets` — review and handle user tickets
 - **Analytics** `/analytics` — personal stats (workspaces, files, today's sign-in IPs, AI token usage); admins additionally see a site-wide daily summary with login-IP distribution
 - **Site customization** — brand favicon/logo, optional full-site background image (env-configured), human verification (Turnstile + reCAPTCHA), registration toggle

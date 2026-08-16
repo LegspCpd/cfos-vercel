@@ -40,7 +40,11 @@ function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
-  const token = searchParams.get('token');
+  // The session JWT arrives in the URL FRAGMENT (#token=...) — never in a query
+  // string — so it is not sent to the server and never lands in access logs.
+  const token = typeof window !== 'undefined' ? new URL(window.location.href).hash.slice(1) : '';
+  const tokenParam = token ? new URLSearchParams(token).get('token') : searchParams.get('token');
+  const sessionToken = tokenParam;
 
   const [site, setSite] = useState<PublicSite | null>(null);
   const [error, setError] = useState('');
@@ -54,11 +58,11 @@ function VerifyContent() {
   }, []);
 
   function finish() {
-    if (!token) {
+    if (!sessionToken) {
       setError('Invalid verification link.');
       return;
     }
-    setToken(token);
+    setToken(sessionToken);
     // OAuth-created accounts must complete their profile (username + password) first.
     api
       .me()
@@ -90,7 +94,7 @@ function VerifyContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [captcha]);
 
-  if (!token) {
+  if (!sessionToken) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -125,7 +129,7 @@ function VerifyContent() {
                 recaptchaEnabled: site!.recaptchaEnabled,
                 recaptchaSiteKey: site!.recaptchaSiteKey,
               }}
-              onVerify={(provider, token) => setCaptcha({ provider, token })}
+              onVerify={(provider, captchaToken) => setCaptcha({ provider, token: captchaToken })}
             />
           ) : (
             <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">

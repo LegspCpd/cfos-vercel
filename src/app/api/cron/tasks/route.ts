@@ -1,21 +1,24 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cronMatches, parseCron } from '@/lib/scheduled-tasks';
+import { nextMatchAfter, parseCron } from '@/lib/scheduled-tasks';
 import { runAgent } from '@/lib/agent';
 import { writeAudit } from '@/lib/audit';
 import { getSiteSettings } from '@/lib/settings';
+import { assertSafeFetchUrl } from '@/lib/ssrf';
+import { safeEqual } from '@/lib/safe-equal';
 
-// GET /api/cron/tasks — run every scheduled task that is due right now.
-// Protected by CRON_SECRET (same as the other cron endpoints). Triggered hourly by
-// vercel.json; each run executes tasks whose cron expression matches the current
-// minute and that haven't run in this minute yet.
+// GET /api/cron/tasks — run every scheduled task that is due.
+// Protected by CRON_SECRET (same as the other cron endpoints). Triggered by
+// vercel.json (daily on the free plan, more often on Pro). Each invocation runs every
+// task that has at least one matching moment between its last run and now — so a daily
+// sweep still fires hourly tasks that came due since the previous sweep.
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
   }
   const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
-  if (header !== secret) {
+  if (!safeEqual(header ?? '', secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -40,12 +43,28 @@ export async function GET(req: Request) {
       results.push({ id: task.id, name: task.name, status: 'failed', error: 'Invalid cron expression' });
       continue;
     }
-    if (!cronMatches(schedule, now)) continue;
-    // Already ran this minute?
+    // Window match: fire when at least one matching moment lies between the last run
+    // (or the top of the day for a never-run task) and now. Handles daily sweeps.
+    const since = task.lastRunAt ?? new Date(now);
+    since.setHours(0, 0, 0, 0);
+    const next = nextMatchAfter(schedule, since);
+    if (!next || next > now) continue;
+    // Already ran after the matched moment in this sweep?
     if (task.lastRunAt && task.lastRunAt >= minuteStart) continue;
 
     try {
       if (task.action === 'webhook' && task.url) {
+        // SSRF guard at fetch time: re-resolve the host and reject private/reserved
+        // addresses (closes the DNS-rebinding window after creation-time validation).
+        const ssrfErr = await assertSafeFetchUrl(task.url);
+        if (ssrfErr) {
+          await prisma.scheduledTask.update({
+            where: { id: task.id },
+            data: { lastRunAt: now, lastStatus: 'failed', lastError: `Webhook URL rejected: ${ssrfErr}` },
+          });
+          results.push({ id: task.id, name: task.name, status: 'failed', error: ssrfErr });
+          continue;
+        }
         const res = await fetch(task.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

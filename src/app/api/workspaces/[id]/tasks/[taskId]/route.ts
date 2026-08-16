@@ -42,11 +42,18 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (body.url !== undefined) data.url = body.url;
   if (body.enabled !== undefined) data.enabled = body.enabled;
 
-  const task = await prisma.scheduledTask.update({
-    where: { id: params.taskId },
+  // SECURITY: scope the update to THIS workspace (id + taskId). Without the
+  // workspaceId condition, a write collaborator of workspace A who learns a task id
+  // from workspace B could modify B's task (cross-workspace IDOR).
+  const task = await prisma.scheduledTask.updateMany({
+    where: { id: params.taskId, workspaceId: params.id },
     data,
   });
-  return NextResponse.json({ task });
+  if (task.count === 0) {
+    return NextResponse.json({ error: 'Task not found in this workspace' }, { status: 404 });
+  }
+  const updated = await prisma.scheduledTask.findUnique({ where: { id: params.taskId } });
+  return NextResponse.json({ task: updated });
 }
 
 // DELETE /api/workspaces/:id/tasks/:taskId — delete a scheduled task.
@@ -57,6 +64,13 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  await prisma.scheduledTask.delete({ where: { id: params.taskId } });
+  // SECURITY: scope the delete to THIS workspace (id + taskId) — same cross-workspace
+  // IDOR protection as PATCH.
+  const task = await prisma.scheduledTask.deleteMany({
+    where: { id: params.taskId, workspaceId: params.id },
+  });
+  if (task.count === 0) {
+    return NextResponse.json({ error: 'Task not found in this workspace' }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { backupNeonToD1, dumpD1ToD1 } from '@/lib/d1-backup';
 import { isD1Enabled } from '@/lib/d1';
+import { safeEqual } from '@/lib/safe-equal';
 
 // GET /api/cron/d1-backup — two scheduled jobs:
 //   1. Copy the most important Neon (Prisma) data into D1 as a secondary snapshot.
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
   const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
-  if (header !== secret) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!safeEqual(header ?? '', secret)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   if (!isD1Enabled()) {
     return NextResponse.json({ ok: true, skipped: 'D1 disabled (set D1_ENABLED=true)' });

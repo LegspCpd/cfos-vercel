@@ -57,7 +57,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-16">
       <div className="reveal-row mb-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="bg-gradient-to-br from-primary via-primary/80 to-foreground/90 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
           {t('home.title')}
         </h1>
         <p className="mt-2 text-muted-foreground">
@@ -71,7 +71,7 @@ export default function HomePage() {
           e.preventDefault();
           startWorkspace(prompt);
         }}
-        className="reveal-row mt-6 flex w-full max-w-xl items-end gap-2"
+        className="reveal-row mt-6 flex w-full max-w-xl items-center gap-2"
         style={{ animationDelay: '60ms' }}
       >
         <div className="relative flex-1">

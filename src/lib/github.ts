@@ -184,6 +184,18 @@ export async function githubCreateIssue(
     return 'Permission denied: this connection is read-only. Enable write access in Connections (Gatekeeper) first.';
   }
   try {
+    // SECURITY: only repos belonging to the user's own connected account may be
+    // written. Without this ownership check a caller (or a misdirected agent) could
+    // create issues in ANY repo the token can reach — including org repos the user
+    // merely collaborates on and never authorized this app to touch. Mirrors
+    // githubReadFile's check (and GitLab's assertGitlabRepoOwned).
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repoFullName)) {
+      return 'Error: invalid repository name (expected "owner/repo").';
+    }
+    const owned = (await ghFetch(userId, '/user/repos?per_page=100&sort=updated')) as { full_name: string }[];
+    if (!Array.isArray(owned) || !owned.some((r) => r.full_name === repoFullName)) {
+      return 'Error: you can only create issues in your own connected repositories.';
+    }
     const token = await getGitHubToken(userId);
     if (!token) throw new Error('GitHub is not connected.');
     const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(repoFullName)}/issues`, {

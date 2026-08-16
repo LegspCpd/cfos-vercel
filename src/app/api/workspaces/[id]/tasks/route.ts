@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { workspaceAccess } from '@/lib/collaboration';
 import { parseCron } from '@/lib/scheduled-tasks';
+import { validateFetchUrl } from '@/lib/ssrf';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
@@ -52,6 +53,13 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   if (body.action === 'webhook' && !body.url) {
     return NextResponse.json({ error: 'Webhook tasks require a URL' }, { status: 400 });
+  }
+  if (body.action === 'webhook' && body.url) {
+    // SSRF guard: webhook URLs are fetched by the cron worker with server identity.
+    const ssrfErr = validateFetchUrl(body.url);
+    if (ssrfErr) {
+      return NextResponse.json({ error: `Webhook URL rejected: ${ssrfErr}` }, { status: 400 });
+    }
   }
   const task = await prisma.scheduledTask.create({
     data: {

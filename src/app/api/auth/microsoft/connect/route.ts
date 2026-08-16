@@ -51,5 +51,13 @@ export async function GET(req: Request) {
   );
   res.cookies.set('microsoft_oauth_state', state, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
   res.cookies.set('microsoft_verifier', verifier, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
+  // When the caller authenticated via the Authorization header (fetch from the SPA),
+  // return the authorize URL as JSON instead of a 302 — the browser then navigates to
+  // it. This keeps the session JWT out of the URL query string (and out of logs).
+  if (req.headers.get('authorization')?.startsWith('Bearer ')) {
+    return NextResponse.json({
+      url: `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`,
+    });
+  }
   return res;
 }

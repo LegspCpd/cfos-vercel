@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Plus, X, Loader2, Trash2, UserPlus } from 'lucide-react';
+import { Users, X, Loader2, Trash2, UserPlus } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 import { clsx } from 'clsx';
@@ -78,7 +78,7 @@ export default function CollaboratorsPanel({ workspaceId }: { workspaceId: strin
         title={t('collab.title')}
       >
         <Users className="h-3.5 w-3.5" />
-        {t('collab.title')}
+        <span className="hidden sm:inline">{t('collab.title')}</span>
         {collaborators.length > 0 && (
           <span className="rounded-full bg-primary/10 px-1.5 text-[10px] text-primary">{collaborators.length}</span>
         )}

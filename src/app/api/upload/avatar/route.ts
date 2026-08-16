@@ -79,6 +79,17 @@ export async function POST(req: Request) {
   if (!imageUrl) {
     return NextResponse.json({ error: 'Image host returned an unexpected response' }, { status: 502 });
   }
+  // SECURITY: only accept http(s) URLs from the image host — never javascript: or
+  // other schemes that could execute when rendered in an <img src> / CSS context.
+  let parsed: URL;
+  try {
+    parsed = new URL(imageUrl);
+  } catch {
+    return NextResponse.json({ error: 'Image host returned an invalid URL' }, { status: 502 });
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return NextResponse.json({ error: 'Image host returned an invalid URL' }, { status: 502 });
+  }
 
   // Persist the avatar URL on the user.
   await prisma.user.update({ where: { id: session.userId }, data: { avatarUrl: imageUrl } });

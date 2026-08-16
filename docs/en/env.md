@@ -159,7 +159,7 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | `D1_ACCESS` | Cloudflare account id (usually the same as `PAGES_ACCOUNT_ID`). |
 | `D1_SQL_1` … `D1_SQL_5` | Up to **5** D1 database ids. Configuring **more than 5** raises an error asking you to remove one. |
 | `D1_BACKUP_RETENTION` | How many recent snapshots/dumps to keep (default `30`). |
-| `CRON_SECRET` | Required to run `/api/cron/d1-backup` (shared with `/api/cron/cleanup`). |
+| `CRON_SECRET` | Required to run the cron endpoints (`/api/cron/daily` — the single daily sweep that bundles cleanup, cache-warm, scheduled tasks and the D1 backup). |
 
 > The mirror table (`cache_store`) is created automatically on first use. All D1 operations are
 > best-effort: a D1 failure never breaks a request — it just means the mirror/fallback is skipped.
@@ -195,7 +195,8 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | `IMGHOST_TOKEN` | Image host API token (e.g. `imgbed_xxx`). |
 | `IMGHOST_FOLDER` | Upload folder, default `photos/avatars`. |
 | `VERIFY_CODE_TTL_MINUTES` | Email verification-code lifetime in minutes, default `10`. |
-| `CRON_SECRET` | Access key for the cleanup cron task. |
+| `CRON_SECRET` | Access key for the cron endpoints (`/api/cron/daily` and friends). |
+| `CACHE_WARM_INTERVAL_MINUTES` | How often the daily cron re-warms the KV cache (default `60`). The daily sweep skips warming when the last warm was more recent than this interval. |
 | `SSH_SESSION_TTL_MINUTES` | SSH persistent-session inactivity timeout in minutes, default `30`. |
 | `LIVEBLOCKS_SECRET_KEY` | Liveblocks **Secret key** (`sk_dev_...`); when set, the workspace code editor enables **multi-user realtime collaboration**. When unset, the editor stays purely offline (see [Realtime Collaboration](/en/docs/realtime)). |
 

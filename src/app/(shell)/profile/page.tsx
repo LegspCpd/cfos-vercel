@@ -200,19 +200,32 @@ export default function ProfilePage() {
   }
 
   function connectGithub() {
-    window.location.href = `/api/github/connect?token=${encodeURIComponent(getToken() || '')}`;
+    startConnect('/api/github/connect');
   }
 
   function connectGitlab() {
-    window.location.href = `/api/gitlab/connect?token=${encodeURIComponent(getToken() || '')}`;
+    startConnect('/api/gitlab/connect');
   }
 
   function connectGoogle() {
-    window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(getToken() || '')}`;
+    startConnect('/api/auth/google/connect');
   }
 
   function connectMicrosoft() {
-    window.location.href = `/api/auth/microsoft/connect?token=${encodeURIComponent(getToken() || '')}`;
+    startConnect('/api/auth/microsoft/connect');
+  }
+
+  // SECURITY: authenticate via the Authorization header (fetch) instead of putting
+  // the session JWT in the URL query string, where it would land in access logs.
+  function startConnect(base: string) {
+    const token = getToken() || '';
+    fetch(base, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Failed to start OAuth');
+        const data = await r.json();
+        if (data.url) window.location.href = data.url;
+      })
+      .catch((e) => setError((e as Error).message));
   }
 
   // Countdown for the "resend code" button.
@@ -427,7 +440,6 @@ export default function ProfilePage() {
     // No email bound → the user must re-authenticate via one of their OAuth providers.
     if (!me || !me.email) {
       if (!me) return;
-      const token = encodeURIComponent(getToken() || '');
       // Use the first connected OAuth provider to confirm identity.
       const provider = me.microsoftConnected
         ? 'auth/microsoft'
@@ -442,7 +454,16 @@ export default function ProfilePage() {
       }
       // Redirect to the provider's OAuth connect flow with purpose=delete; the callback
       // verifies identity and returns to /profile?deleteOauth=1.
-      window.location.href = `/api/${provider}/connect?purpose=delete&token=${token}`;
+      // SECURITY: authenticate via the Authorization header (fetch) instead of putting
+      // the session JWT in the URL query string, where it would land in access logs.
+      const token = getToken() || '';
+      fetch(`/api/${provider}/connect?purpose=delete`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(async (r) => {
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Failed to start OAuth');
+          const data = await r.json();
+          if (data.url) window.location.href = data.url;
+        })
+        .catch((e) => setMessage((e as Error).message));
       return;
     }
     setDelError('');

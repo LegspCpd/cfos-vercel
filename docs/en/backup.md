@@ -94,15 +94,15 @@ Neon's platform backups are the primary safety net. As an **additional** cross-p
 redundancy layer, you can enable the Cloudflare **D1** mirror (see
 [Environment Variables](/en/docs/env#cloudflare-d1-secondary-backup-optional)):
 
-- **Neon → D1 snapshot** (`/api/cron/d1-backup`, daily): copies the most important Neon data
+- **Neon → D1 snapshot** (part of the daily `/api/cron/daily` sweep): copies the most important Neon data
   (user accounts id/username/email/isAdmin, site settings, AI providers) into D1's
   `neon_backup` table. **Sensitive fields (password hashes, encrypted tokens) are excluded** —
   this is a recovery reference, not a full clone.
-- **D1 → D1 dump** (same cron): dumps each D1 database and stores the `.sqlite` backup **inside
+- **D1 → D1 dump** (same sweep): dumps each D1 database and stores the `.sqlite` backup **inside
   D1** (`d1_dumps` table). Backups are NOT written to R2 — R2 is reserved for file sharing.
 
 **Retention**: both `neon_backup` and `d1_dumps` keep only the newest `D1_BACKUP_RETENTION`
-entries (default 30), so D1 doesn't grow without bound. The cron runs under `CRON_SECRET`
+entries (default 30), so D1 doesn't grow without bound. The sweep runs under `CRON_SECRET`
 protection and is **best-effort** — a D1 failure is logged and skipped, never breaking the app.
 This is optional; Neon's own backups remain the authoritative restore path.
 

@@ -63,6 +63,9 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
       router.replace('/login');
       return;
     }
+    // On small screens the chat panel is a floating overlay; start it collapsed
+    // so the preview/editor gets the full width.
+    if (window.innerWidth < 1024) setShowChat(false);
     load();
     api
       .listFormats()
@@ -166,7 +169,9 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
                 return <Icon className="h-3.5 w-3.5" />;
               })()
             )}
-            {formats.find((f) => f.id === formatId)?.output.noun ?? t('ws.formatNone')}
+            <span className="hidden sm:inline">
+              {formats.find((f) => f.id === formatId)?.output.noun ?? t('ws.formatNone')}
+            </span>
             <ChevronDown className="h-3 w-3" />
           </button>
           {formatMenuOpen && (
@@ -232,10 +237,10 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
       </header>
 
       {/* Body: left chat + right panel */}
-      <div className="flex min-h-0 flex-1">
-        {/* Left: AI chat */}
+      <div className="relative flex min-h-0 flex-1">
+        {/* Left: AI chat — floating overlay on small screens, static column on lg+ */}
         {showChat && (
-          <aside className="w-80 shrink-0 border-r bg-card lg:w-96">
+          <aside className="absolute inset-y-0 left-0 z-30 w-80 border-r bg-card shadow-xl lg:static lg:z-auto lg:w-96 lg:shrink-0 lg:shadow-none">
             <ChatPanel workspaceId={params.id} onAgentResult={handleFilesSaved} readOnly={access === 'read'} />
           </aside>
         )}

@@ -190,7 +190,10 @@ export async function GET(req: Request) {
 }
 
 function redirectWithToken(token: string, req: Request): Response {
-  const res = NextResponse.redirect(siteUrl(`/verify?token=${encodeURIComponent(token)}`));
+  // SECURITY: the session JWT is passed in the URL FRAGMENT (#token=...), never in a
+  // query string — fragments are not sent to the server, so the token never lands in
+  // Vercel access logs, proxy logs, or browser history.
+  const res = NextResponse.redirect(siteUrl(`/verify#token=${encodeURIComponent(token)}`));
   res.cookies.delete('oauth_from');
   res.cookies.delete('microsoft_verifier');
   return res;

@@ -39,8 +39,6 @@ export async function GET(req: Request) {
         },
       });
       if (!user) return null;
-      const isAdmin = await isUserAdmin(user.id);
-      const permissions = resolvePermissions(user);
       const githubLogins = user.githubConnections.map((c) => c.githubLogin);
       const gitlabLogins = user.gitlabConnections.map((c) => c.gitlabUsername);
       return {
@@ -48,8 +46,6 @@ export async function GET(req: Request) {
         username: user.username,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl ?? '',
-        isAdmin,
-        permissions,
         groupId: user.groupId,
         groupName: user.group?.name ?? null,
         email: user.email ?? '',
@@ -69,5 +65,15 @@ export async function GET(req: Request) {
   );
 
   if (!body) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  return NextResponse.json(body);
+  // SECURITY: isAdmin / permissions are authorization state and must NEVER be served
+  // from the KV cache — a stale cache could keep granting (or denying) rights after a
+  // role change. Recompute them fresh on every request.
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: { group: { select: { permissions: true, name: true } } },
+  });
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  const isAdmin = await isUserAdmin(user.id);
+  const permissions = resolvePermissions(user);
+  return NextResponse.json({ ...body, isAdmin, permissions });
 }

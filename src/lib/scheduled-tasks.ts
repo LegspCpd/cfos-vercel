@@ -84,3 +84,26 @@ export function cronMatches(schedule: TaskSchedule, date: Date): boolean {
 export function describeCron(expr: string): string {
   return expr.trim();
 }
+
+// Find the next moment AFTER `from` at which the schedule matches, scanning minute by
+// minute. Returns null when there is no match within the next 24h window (never for
+// valid `*`-heavy schedules, but guards against pathological expressions).
+//
+// Why window matching: on Vercel's free (Hobby) plan cron jobs run at most once per
+// day, so the old "matches the current minute?" check would never fire for e.g. an
+// hourly task. This helper lets the daily sweep run every task that became due since
+// its last run, no matter when the sweep happens to land.
+export function nextMatchAfter(schedule: TaskSchedule, from: Date): Date | null {
+  const cursor = new Date(from);
+  cursor.setSeconds(0, 0);
+  cursor.setMilliseconds(0);
+  // The expression may match at `from` itself (inclusive); start one minute later.
+  cursor.setMinutes(cursor.getMinutes() + 1);
+  const limit = cursor.getTime() + 24 * 60 * 60 * 1000; // scan at most 24h from `from`
+  for (let i = 0; i < 24 * 60; i++) {
+    if (cursor.getTime() > limit) return null;
+    if (cronMatches(schedule, cursor)) return new Date(cursor);
+    cursor.setMinutes(cursor.getMinutes() + 1);
+  }
+  return null;
+}

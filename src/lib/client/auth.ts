@@ -8,7 +8,10 @@ const TOKEN_KEY = 'cfos_token';
 // at path=/ so it's available on every route.
 function setCookie(value: string) {
   if (typeof document === 'undefined') return;
-  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`;
+  // `Secure` when served over https (Vercel production). Local dev (http://localhost)
+  // must skip it or the cookie is never stored.
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax${secure}`;
 }
 
 function getCookie(): string | null {

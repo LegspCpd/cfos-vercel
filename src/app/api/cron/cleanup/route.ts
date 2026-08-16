@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { r2Delete, isR2Configured } from '@/lib/r2';
 import { getColdStatus } from '@/lib/cold-migrate';
+import { safeEqual } from '@/lib/safe-equal';
 
 // GET /api/cron/cleanup — delete all expired shared files from R2 + DB.
 // Protected by a CRON_SECRET env var. Triggered by vercel.json cron config.
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
   }
   const header = req.headers.get('authorization')?.replace(/^Bearer /, '');
-  if (header !== secret) {
+  if (!safeEqual(header ?? '', secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

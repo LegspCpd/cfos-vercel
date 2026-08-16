@@ -61,8 +61,10 @@ export function mimeForPath(path: string): string {
 }
 
 // Escape a string for embedding inside a <script> tag.
+// Covers both `</script>` and the `</script/` variant (some parsers treat the
+// trailing slash as part of the closing tag).
 function escapeScript(s: string): string {
-  return s.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
+  return s.replace(/<\/script\/?/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 }
 
 // Escape for embedding inside a <style> tag.

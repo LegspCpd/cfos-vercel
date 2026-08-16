@@ -95,12 +95,23 @@ export default function ConnectionsPage() {
 
   function connect(provider: string) {
     setBusyKey(provider);
-    const token = encodeURIComponent(getToken() || '');
+    // SECURITY: authenticate via the Authorization header (fetch) instead of putting
+    // the session JWT in the URL query string, where it would land in access logs.
+    const token = getToken() || '';
     // Google uses the /api/auth/google flow (redirect_uri /api/auth/google/callback, which is
     // the URI registered in Google Cloud Console). The legacy /api/google/connect redirects to
     // /api/google/callback, which isn't registered -> redirect_uri_mismatch.
     const base = provider === 'google' ? '/api/auth/google/connect' : `/api/${provider}/connect`;
-    window.location.href = `${base}?token=${token}`;
+    fetch(base, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Failed to start OAuth');
+        const data = await r.json();
+        if (data.url) window.location.href = data.url;
+      })
+      .catch((e) => {
+        setBusyKey(null);
+        setMessage(`${t('conn.fail')}：${(e as Error).message}`);
+      });
   }
 
   async function disconnect(provider: 'github' | 'google' | 'gitlab') {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FilePlus, Trash2, Save, Loader2, File, FileCode, Users } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import MonacoEditor from '@monaco-editor/react';
 import { api, type WorkspaceFile } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 import { clsx } from 'clsx';
@@ -234,7 +234,7 @@ export default function CodePanel({ workspaceId, files, onSaved, readOnly = fals
   }
 
   // Sorted file list for the tree.
-  const sortedFiles = useMemo(() => [...localFiles].sort((a, b) => a.path.localeCompare(b.path)), [localFiles]);
+  const sortedFiles = useMemo(() => [...localFiles].toSorted((a, b) => a.path.localeCompare(b.path)), [localFiles]);
 
   return (
     <div className="flex h-full">
@@ -342,7 +342,7 @@ export default function CodePanel({ workspaceId, files, onSaved, readOnly = fals
         {/* Monaco */}
         <div className="min-h-0 flex-1">
           {activeFile ? (
-            <Editor
+            <MonacoEditor
               height="100%"
               path={activeFile.path}
               language={langForPath(activeFile.path)}

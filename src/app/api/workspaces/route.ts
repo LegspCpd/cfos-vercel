@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { getFormat, seedFilesForFormat, DEFAULT_ENTRY_FILE } from '@/lib/formats';
+import { cachedJson, invalidateCache } from '@/lib/kv-cache';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
@@ -17,29 +18,40 @@ function forbidden(): NextResponse {
 }
 
 // GET /api/workspaces — list current user's workspaces (owned + shared with them).
+// Cached per-user for a few seconds: the shell and command palette call this on every
+// mount, and workspace mutations (create/rename/delete) invalidate the cache, so repeat
+// loads are instant instead of hitting Postgres twice per page.
 export async function GET(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const [owned, shared] = await Promise.all([
-    prisma.workspace.findMany({
-      where: { ownerId: session.userId },
-      orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { files: true } } },
-    }),
-    prisma.workspace.findMany({
-      where: { collaborators: { some: { userId: session.userId } } },
-      orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { files: true } } },
-    }),
-  ]);
-  // Owned workspaces first, then shared ones (deduped by id).
-  const seen = new Set<string>();
-  const workspaces = [...owned, ...shared].filter((w) => {
-    if (seen.has(w.id)) return false;
-    seen.add(w.id);
-    return true;
-  });
-  return NextResponse.json({ workspaces });
+  const body = await cachedJson(
+    'workspaces',
+    session.userId,
+    async () => {
+      const [owned, shared] = await Promise.all([
+        prisma.workspace.findMany({
+          where: { ownerId: session.userId },
+          orderBy: { updatedAt: 'desc' },
+          include: { _count: { select: { files: true } } },
+        }),
+        prisma.workspace.findMany({
+          where: { collaborators: { some: { userId: session.userId } } },
+          orderBy: { updatedAt: 'desc' },
+          include: { _count: { select: { files: true } } },
+        }),
+      ]);
+      // Owned workspaces first, then shared ones (deduped by id).
+      const seen = new Set<string>();
+      const workspaces = [...owned, ...shared].filter((w) => {
+        if (seen.has(w.id)) return false;
+        seen.add(w.id);
+        return true;
+      });
+      return { workspaces };
+    },
+    { ttlSeconds: Number(process.env.KV_WORKSPACES_TTL) || 5 },
+  );
+  return NextResponse.json(body);
 }
 
 const createSchema = z.object({
@@ -96,5 +108,7 @@ export async function POST(req: Request) {
     targetId: workspace.id,
     detail: `Created workspace "${workspace.title}"${formatId ? ` from format ${formatId}` : ''}`,
   });
+  // Drop the cached workspace list so the new workspace shows up immediately.
+  await invalidateCache('workspaces', session.userId).catch(() => {});
   return NextResponse.json({ workspace }, { status: 201 });
 }

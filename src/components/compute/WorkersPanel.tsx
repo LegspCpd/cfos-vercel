@@ -59,7 +59,10 @@ export function WorkersPanel({ embedded = false }: { embedded?: boolean }) {
     try {
       const r = await api.listWorkers();
       setWorkers(r.workers);
-      setConfigured(true);
+      // The server reports whether the feature is configured (WORKER_API_TOKEN +
+      // WORKER_ACCOUNT_ID set). When it isn't, show the "not configured" state instead of
+      // a misleading empty list.
+      setConfigured(r.configured);
     } catch (e) {
       // 400 "not configured" → feature off.
       const err = (e as { message?: string }).message || '';

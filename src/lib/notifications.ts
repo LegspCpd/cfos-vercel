@@ -8,6 +8,7 @@
 
 import { prisma } from './db';
 import { sendEmail, resendConfigured } from './email';
+import { invalidateCache } from './kv-cache';
 
 // The event types that can produce a notification. Keep in sync with the frontend's
 // notification bell and the profile email-preference toggles.
@@ -67,6 +68,8 @@ export async function notify(params: {
   await prisma.notification.create({
     data: { userId, type, title, body, href },
   });
+  // Drop the cached notification list so the bell picks up the new item immediately.
+  await invalidateCache('notifications', userId).catch(() => {});
 
   // Email is best-effort and only when the user opted in for this type.
   try {

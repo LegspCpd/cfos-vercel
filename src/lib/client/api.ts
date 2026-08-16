@@ -486,6 +486,7 @@ export const api = {
   // Worker (Compute) deployments.
   listWorkers: () =>
     request<{
+      configured: boolean;
       workers: {
         id: string;
         workerName: string;
@@ -1044,6 +1045,17 @@ export const api = {
     }),
   listWorkspaces: () =>
     request<{ workspaces: WorkspaceSummary[] }>('/api/workspaces'),
+  // Full-site search for the command palette: static feature index + user workspaces/docs.
+  search: (q: string) =>
+    request<{
+      results: {
+        type: string;
+        href: string;
+        labelKey: string | null;
+        label: string | null;
+        score: number;
+      }[];
+    }>(`/api/search?q=${encodeURIComponent(q)}`),
   createWorkspace: (title: string) =>
     request<{ workspace: WorkspaceDetail }>('/api/workspaces', {
       method: 'POST',

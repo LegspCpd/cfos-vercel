@@ -393,7 +393,7 @@ export function PagesPanel({ embedded = false }: { embedded?: boolean }) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        d.pagesUrl && window.open(d.pagesUrl, '_blank');
+                        if (d.pagesUrl) window.open(d.pagesUrl, '_blank');
                       }}
                       disabled={!d.pagesUrl}
                       className="flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] hover:bg-secondary disabled:opacity-40"

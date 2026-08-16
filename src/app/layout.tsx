@@ -4,6 +4,7 @@ import { I18nProvider } from '@/lib/client/i18n';
 import PwaRegister from '@/components/PwaRegister';
 import SiteBackground from '@/components/SiteBackground';
 import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/settings';
+import { siteBaseUrl } from '@/lib/site';
 
 // Default icon = the project logo (public/app-icon.png, copied from the repo-root logo).
 const DEFAULT_ICON = '/app-icon.png';
@@ -22,6 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
     (process.env.SITE_IMG_URL ? '/site-icon.png' : '') ||
     DEFAULT_ICON;
   return {
+    // metadataBase makes relative URLs in metadata (and sitemap/robots) absolute.
+    metadataBase: new URL(siteBaseUrl()),
     title: {
       default: siteName || 'Cloudflare OS',
       template: `%s · ${siteName || 'Cloudflare OS'}`,
@@ -39,6 +42,13 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: 'black-translucent',
     },
     formatDetection: { telephone: false },
+    // Bing-supported robots directives: allow indexing + large image previews.
+    robots: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   };
 }
 

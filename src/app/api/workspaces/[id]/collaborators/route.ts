@@ -5,7 +5,6 @@ import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isCollabRole, listWorkspaceCollaborators } from '@/lib/collaboration';
 import { notify } from '@/lib/notifications';
-import { siteUrl } from '@/lib/site';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');

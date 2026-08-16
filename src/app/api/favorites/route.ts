@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { cachedJson, invalidateCache } from '@/lib/kv-cache';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -11,15 +12,24 @@ async function authUser(req: Request) {
 }
 
 // GET /api/favorites — list the current user's favorited workspace ids.
+// Cached per-user for a few seconds; POST (favorite/unfavorite) invalidates it.
 export async function GET(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const favorites = await prisma.favorite.findMany({
-    where: { userId: session.userId },
-    orderBy: { createdAt: 'desc' },
-    select: { workspaceId: true, createdAt: true },
-  });
-  return NextResponse.json({ favorites });
+  const body = await cachedJson(
+    'favorites',
+    session.userId,
+    async () => {
+      const favorites = await prisma.favorite.findMany({
+        where: { userId: session.userId },
+        orderBy: { createdAt: 'desc' },
+        select: { workspaceId: true, createdAt: true },
+      });
+      return { favorites };
+    },
+    { ttlSeconds: Number(process.env.KV_FAVORITES_TTL) || 5 },
+  );
+  return NextResponse.json(body);
 }
 
 // POST /api/favorites — favorite (or unfavorite) a workspace. Body: { workspaceId, favorite: boolean }
@@ -58,6 +68,8 @@ export async function POST(req: Request) {
     action: favorite ? 'favorite.add' : 'favorite.remove',
     targetId: workspaceId,
   });
+  // Drop the cached favorites list so the star state updates immediately.
+  await invalidateCache('favorites', session.userId).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

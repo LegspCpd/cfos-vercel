@@ -7,7 +7,6 @@ import { Share2, Copy, Download, Upload, Store, X, Loader2 } from 'lucide-react'
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
-import { formatIcon } from '@/components/FormatBadge';
 
 interface GadgetArchive {
   format: 'cfos-gadget';

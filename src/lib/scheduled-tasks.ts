@@ -46,7 +46,7 @@ function parseField(field: string, min: number, max: number): number[] {
       if (Number.isFinite(n) && n >= min && n <= max) push(n);
     }
   }
-  return out.sort((a, b) => a - b);
+  return out.toSorted((a, b) => a - b);
 }
 
 // Parse a 5-field cron expression. Returns null when invalid.

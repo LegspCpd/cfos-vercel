@@ -63,9 +63,20 @@ const DEFAULTS: Record<string, string> = {
   [SETTING_PAGES_ACCOUNT_SHOW]: 'false',
 };
 
+// Short-lived in-memory cache for settings reads. `getSetting` is called on every page
+// render (generateMetadata reads favicon + site name), and settings change rarely (admin
+// panel). A 30s TTL keeps the DB off the hot path while staying fresh enough that an
+// admin edit shows up quickly. `setSetting` clears the entry immediately.
+const SETTING_CACHE_TTL_MS = 30_000;
+const settingCache = new Map<string, { value: string; exp: number }>();
+
 export async function getSetting(key: string): Promise<string> {
+  const hit = settingCache.get(key);
+  if (hit && hit.exp > Date.now()) return hit.value;
   const row = await prisma.appSetting.findUnique({ where: { key } });
-  return row?.value ?? DEFAULTS[key] ?? '';
+  const value = row?.value ?? DEFAULTS[key] ?? '';
+  settingCache.set(key, { value, exp: Date.now() + SETTING_CACHE_TTL_MS });
+  return value;
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
@@ -74,6 +85,8 @@ export async function setSetting(key: string, value: string): Promise<void> {
     update: { value },
     create: { key, value },
   });
+  // Drop the cached entry so the next read reflects the new value immediately.
+  settingCache.delete(key);
 }
 
 // ALLOW_SIGNUPS environment variable (values: "enabled" | "disabled") takes precedence

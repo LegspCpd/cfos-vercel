@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { verifySessionToken } from '@/lib/auth';
 import { isUserAdmin } from '@/lib/admin';
 import { writeAudit } from '@/lib/audit';
+import { invalidateCache } from '@/lib/kv-cache';
 import { z } from 'zod';
 
 const patchSchema = z.object({
@@ -40,6 +41,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       action: 'ticket.handle',
       detail: `Handled ticket ${params.id} (status=${body.status ?? ticket.status})`,
     });
+
+    // Drop the cached ticket list so the user sees the reply/status immediately.
+    await invalidateCache('tickets', ticket.userId).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -7,6 +7,7 @@ import { sendEmail } from '@/lib/email';
 import { siteUrl } from '@/lib/site';
 import { writeAudit } from '@/lib/audit';
 import { ticketLimiter } from '@/lib/rate-limit';
+import { cachedJson, invalidateCache } from '@/lib/kv-cache';
 import { z } from 'zod';
 
 const TICKET_TYPES = ['feedback', 'emailChange', 'appeal', 'other'] as const;
@@ -26,29 +27,38 @@ function clientIp(req: Request): string | null {
 }
 
 // GET /api/tickets — list the current user's own tickets.
+// Cached per-user for a few seconds; POST (new ticket) and admin replies invalidate it.
 export async function GET(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-  const tickets = await prisma.ticket.findMany({
-    where: { userId: session.userId },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      content: true,
-      ip: true,
-      status: true,
-      reply: true,
-      createdAt: true,
-      updatedAt: true,
-      user: { select: { username: true, displayName: true, email: true } },
+  const body = await cachedJson(
+    'tickets',
+    session.userId,
+    async () => {
+      const tickets = await prisma.ticket.findMany({
+        where: { userId: session.userId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          content: true,
+          ip: true,
+          status: true,
+          reply: true,
+          createdAt: true,
+          updatedAt: true,
+          user: { select: { username: true, displayName: true, email: true } },
+        },
+      });
+      return { tickets };
     },
-  });
-  return NextResponse.json({ tickets });
+    { ttlSeconds: Number(process.env.KV_TICKETS_TTL) || 5 },
+  );
+  return NextResponse.json(body);
 }
 
 // POST /api/tickets — submit a support ticket (feedback / email-change appeal / other).
@@ -121,6 +131,9 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error('ticket email notify error', e);
     }
+
+    // Drop the cached ticket list so the new ticket shows up immediately.
+    await invalidateCache('tickets', user.id).catch(() => {});
 
     return NextResponse.json({ ticket: { id: ticket.id } }, { status: 201 });
   } catch (e) {

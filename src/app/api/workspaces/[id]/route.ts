@@ -6,6 +6,7 @@ import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { signPreviewUrl } from '@/lib/preview-url';
 import { getFormat, seedFilesForFormat, resolveWorkspaceOutput } from '@/lib/formats';
 import { workspaceAccess } from '@/lib/collaboration';
+import { invalidateCache } from '@/lib/kv-cache';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -71,6 +72,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
       where: { id: params.id },
       data: { title: body.title },
     });
+    // Drop the cached workspace list so the rename shows up immediately.
+    await invalidateCache('workspaces', session.userId).catch(() => {});
     return NextResponse.json({ ok: true });
   }
 
@@ -156,5 +159,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
     targetId: params.id,
     detail: `Deleted workspace "${target?.title ?? params.id}"`,
   });
+  // Drop the cached workspace list so the deleted workspace disappears immediately.
+  await invalidateCache('workspaces', session.userId).catch(() => {});
   return NextResponse.json({ ok: true });
 }

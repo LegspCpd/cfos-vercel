@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createSession, getSession, deleteSession, fmtSessionAge } from '@/lib/ssh-session';
+import { createSession, getSession, deleteSession } from '@/lib/ssh-session';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');

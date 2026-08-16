@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FilePlus, Trash2, Save, Loader2, File, FileCode, Users } from 'lucide-react';
 import MonacoEditor from '@monaco-editor/react';
+import '@/lib/client/monaco';
 import { api, type WorkspaceFile } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 import { clsx } from 'clsx';

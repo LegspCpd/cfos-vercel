@@ -48,5 +48,8 @@ public/apple-touch-icon.png
 # build-time vendored Waline assets (see scripts/fetch-waline.mjs)
 public/vendor/
 
+# build-time vendored Monaco editor assets (see scripts/vendor-monaco.mjs)
+public/monaco/
+
 # generated secondary Prisma client (see schema-secondary.prisma; built on install)
 src/generated/

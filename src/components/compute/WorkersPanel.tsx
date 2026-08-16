@@ -19,6 +19,7 @@ import {
 import { api } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
+import WorkerCodeEditor from '@/components/compute/WorkerCodeEditor';
 
 interface WorkerRow {
   id: string;
@@ -289,14 +290,7 @@ export function WorkersPanel({ embedded = false }: { embedded?: boolean }) {
               </div>
               <label className="block text-xs text-muted-foreground">
                 {t('wk.code') || 'Worker code (JS)'}
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  rows={10}
-                  spellCheck={false}
-                  placeholder={'export default {\n  async fetch(request) {\n    return new Response("Hello from Cloudflare OS!");\n  },\n};'}
-                  className="mt-1 w-full rounded-md border bg-background p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                <WorkerCodeEditor value={code} onChange={setCode} />
               </label>
               {log.length > 0 && (
                 <div className="max-h-40 overflow-y-auto rounded-md bg-black p-3 font-mono text-xs text-green-400">

@@ -65,6 +65,10 @@ KV_NAMESPACE_ID_2=...
 | `KV_ANALYTICS_TTL` | `/api/analytics`（按用户）缓存（秒） | `30` |
 | `KV_SITE_TTL` | 公共 `/api/site` 设置缓存（秒） | `30` |
 | `KV_SSH_HOSTS_TTL` | SSH 主机列表缓存（秒，按用户） | `10` |
+| `KV_NOTIFICATIONS_TTL` | 通知列表缓存（秒，按用户） | `5` |
+| `KV_WORKSPACES_TTL` | 工作区列表缓存（秒，按用户） | `5` |
+| `KV_FAVORITES_TTL` | 收藏列表缓存（秒，按用户） | `5` |
+| `KV_TICKETS_TTL` | 工单列表缓存（秒，按用户） | `5` |
 
 > 调大 TTL 更快但数据更"旧"；部署新项目后想立刻看到，可适当调小，或等 TTL 过期自动刷新。
 
@@ -83,6 +87,13 @@ KV 缓存已应用到以下接口：
 - `/api/analytics` —— 统计面板（按用户）→ 缓存 `KV_ANALYTICS_TTL`（`currentIp` 始终实时，不缓存）
 - `/api/site` —— 公共站点设置 → 缓存 `KV_SITE_TTL`（另有边缘缓存）
 - `/api/ssh-hosts` —— SSH 主机列表 → 缓存 `KV_SSH_HOSTS_TTL`（增删改后立即失效）
+- `/api/notifications` —— 通知列表 → 缓存 `KV_NOTIFICATIONS_TTL`（新通知/已读后立即失效）
+- `/api/workspaces` —— 工作区列表 → 缓存 `KV_WORKSPACES_TTL`（创建/重命名/删除后立即失效）
+- `/api/favorites` —— 收藏列表 → 缓存 `KV_FAVORITES_TTL`（收藏/取消后立即失效）
+- `/api/tickets` —— 工单列表 → 缓存 `KV_TICKETS_TTL`（新建/管理员回复后立即失效）
+
+**内存缓存（无需 KV 也生效）**：
+- 站点设置 `getSetting`（站点名、favicon、横幅等）有 **30 秒进程内内存缓存**——每次页面渲染都会读取这些设置，内存缓存让 DB 远离热路径；管理员在后台修改设置后立即清除缓存，马上生效。
 
 **正确性说明**：
 - 每个**用户相关**的缓存键都含用户 ID，互不串数据；`/api/site` 是公共数据，用固定键。

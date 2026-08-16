@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import DocLayout from '@/components/docs/DocLayout';
 import Markdown from '@/components/docs/Markdown';
+import DocSearch from '@/components/docs/DocSearch';
 import { getDocContent } from '@/lib/docs';
 import { DOC_SLUGS } from '@/content/docs/nav';
 
@@ -14,6 +15,7 @@ export default function DocPage({ params }: { params: { slug: string } }) {
   if (!content) notFound();
   return (
     <DocLayout>
+      <DocSearch lang="zh" />
       <Markdown content={content} />
     </DocLayout>
   );

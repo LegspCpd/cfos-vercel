@@ -70,6 +70,14 @@ One set of vars, applies to all stores:
 | `KV_PAGES_PROJECTS_TTL` | Pages project list TTL (seconds) | `15` |
 | `KV_GIT_REPOS_TTL` | Git repo list TTL (seconds, per-user) | `60` |
 | `KV_PAGES_STATS_TTL` | Pages usage panel TTL (seconds) | `8` |
+| `KV_ME_TTL` | `/api/me` (current user profile) TTL (seconds) | `5` |
+| `KV_ANALYTICS_TTL` | `/api/analytics` (per-user) TTL (seconds) | `30` |
+| `KV_SITE_TTL` | Public `/api/site` settings TTL (seconds) | `30` |
+| `KV_SSH_HOSTS_TTL` | SSH host list TTL (seconds, per-user) | `10` |
+| `KV_NOTIFICATIONS_TTL` | Notifications list TTL (seconds, per-user) | `5` |
+| `KV_WORKSPACES_TTL` | Workspaces list TTL (seconds, per-user) | `5` |
+| `KV_FAVORITES_TTL` | Favorites list TTL (seconds, per-user) | `5` |
+| `KV_TICKETS_TTL` | Tickets list TTL (seconds, per-user) | `5` |
 
 > Larger TTL = faster but staler; after deploying a new project you may want a smaller TTL (or
 > just wait for the TTL to expire).
@@ -88,6 +96,19 @@ KV caching is applied to:
 - `/api/deploy/list` — Pages project list (live subdomains, domains) → `KV_PAGES_PROJECTS_TTL`
 - `/api/pages/sources` — GitHub / GitLab repo lists → `KV_GIT_REPOS_TTL`
 - `/api/pages/stats` — Pages usage panel → `KV_PAGES_STATS_TTL`
+- `/api/me` — current user profile / connection state → `KV_ME_TTL`
+- `/api/analytics` — stats panel (per-user) → `KV_ANALYTICS_TTL` (`currentIp` is always live, never cached)
+- `/api/site` — public site settings → `KV_SITE_TTL`
+- `/api/ssh-hosts` — SSH host list → `KV_SSH_HOSTS_TTL` (invalidated immediately on add/edit/delete)
+- `/api/notifications` — notifications list → `KV_NOTIFICATIONS_TTL` (invalidated on new/read)
+- `/api/workspaces` — workspaces list → `KV_WORKSPACES_TTL` (invalidated on create/rename/delete)
+- `/api/favorites` — favorites list → `KV_FAVORITES_TTL` (invalidated on favorite/unfavorite)
+- `/api/tickets` — tickets list → `KV_TICKETS_TTL` (invalidated on new ticket / admin reply)
+
+**In-memory cache (works even without KV)**: site settings reads (`getSetting` — site name,
+favicon, banner, etc.) have a **30-second in-process cache**. Every page render reads these
+settings, so the memory cache keeps the DB off the hot path; an admin edit clears the cache
+immediately.
 
 All cache keys include `KV_PREFIX` and (where relevant) the user id, so multiple instances and
 users never read each other's data.

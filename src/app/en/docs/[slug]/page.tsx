@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import DocLayout from '@/components/docs/DocLayout';
 import Markdown from '@/components/docs/Markdown';
+import DocSearch from '@/components/docs/DocSearch';
 import { getEnDocContent } from '@/lib/docs';
 import { DOC_SLUGS_EN } from '@/content/docs/nav';
 
@@ -14,6 +15,7 @@ export default function EnDocPage({ params }: { params: { slug: string } }) {
   if (!content) notFound();
   return (
     <DocLayout lang="en">
+      <DocSearch lang="en" />
       <Markdown content={content} />
     </DocLayout>
   );

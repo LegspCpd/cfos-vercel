@@ -95,6 +95,17 @@ Next time, just enter **email + password** in the sign-in box (it accepts email 
 - Sidebar bell: collaborator changes, doc review results, ticket replies…
 - **Profile → Notification preferences** lets you choose which events also email you (requires `RESEND_API_KEY` + a bound email)
 
+### Search & Indexing
+
+**Global search (`⌘K` / `Ctrl+K`)**: press `⌘K` (Mac) or `Ctrl+K` (Windows) anywhere to open the search box. Type **part of a feature name or an alias** to find it — e.g. `worker` finds "Worker and Pages", `git` finds "Connections", `kv` finds "KV Cache", `template` finds "Blueprints". Search matches **pages, docs, actions**, plus your own **workspaces** and **context docs**.
+
+**Doc search**: every doc page has a small search box at the top (Bing-style). Type a keyword to fuzzy-search docs in the **current language** — results show highlighted titles and excerpts. **Search is language-scoped**: Chinese docs only search Chinese docs, English docs only search English docs — you never get mixed-language results.
+
+**Search-engine indexing (Bing)**: the site automatically provides:
+- `sitemap.xml` — public pages + all docs, generated automatically
+- `robots.txt` — allows public pages/docs, blocks private paths (workspaces/admin/API), references the sitemap
+- **IndexNow** — set `INDEXNOW_KEY` to serve `/{key}.txt` at the root; a daily cron submits public URLs to Bing for faster indexing (see [Environment Variables](/en/docs/env))
+
 ## Admin panel
 
 Admin sign-in → left sidebar **Admin**:

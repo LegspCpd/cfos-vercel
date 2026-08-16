@@ -199,6 +199,7 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | `CACHE_WARM_INTERVAL_MINUTES` | How often the daily cron re-warms the KV cache (default `60`). The daily sweep skips warming when the last warm was more recent than this interval. |
 | `SSH_SESSION_TTL_MINUTES` | SSH persistent-session inactivity timeout in minutes, default `30`. |
 | `LIVEBLOCKS_SECRET_KEY` | Liveblocks **Secret key** (`sk_dev_...`); when set, the workspace code editor enables **multi-user realtime collaboration**. When unset, the editor stays purely offline (see [Realtime Collaboration](/en/docs/realtime)). |
+| `INDEXNOW_KEY` | Bing **IndexNow** key (generate with `openssl rand -hex 16`). When set, the site serves `/{key}.txt` at the root and a daily cron submits the public URLs to Bing for faster indexing (see [Search & Indexing](/en/docs/usage#search--indexing)). When unset, IndexNow is fully off; `sitemap.xml` / `robots.txt` still work. |
 
 ### Multiple Databases (optional)
 

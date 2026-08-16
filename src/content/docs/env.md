@@ -143,6 +143,7 @@
 | `CRON_SECRET` | 定时清理任务（cron）的访问密钥。 |
 | `SSH_SESSION_TTL_MINUTES` | SSH 持久会话无操作过期分钟数，默认 `30`。 |
 | `LIVEBLOCKS_SECRET_KEY` | Liveblocks **Secret key**（`sk_dev_...`），配置后启用工作区**多人实时协作**；不配置则代码编辑器为纯离线编辑（详见[实时协作](/docs/realtime)）。 |
+| `INDEXNOW_KEY` | Bing **IndexNow** 密钥（`openssl rand -hex 16` 生成）。配置后站点根路径提供 `/{key}.txt`，每日 cron 自动向 Bing 提交公开 URL 加速收录（详见[搜索与索引](/docs/usage#搜索与索引)）。不配置则 IndexNow 完全关闭，不影响 `sitemap.xml` / `robots.txt`。 |
 
 ### Cloudflare Workers（计算 → Worker）部署（可选）
 

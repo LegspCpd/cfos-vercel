@@ -44,10 +44,14 @@ model User {
   // confirm account deletion (valid for a short window). Null for accounts that delete
   // via email code.
   deleteOauthVerifiedAt DateTime?
+  // Per-user AI daily quota override (agent runs + AI calls). null = fall back to the
+  // group's aiDailyLimit; if that is also null there is no limit.
+  aiDailyLimit Int?
 
   workspaces Workspace[]
   chats      Chat[]
   sharedFiles SharedFile[]
+  publishedSites PublishedSite[]
   githubConnections GitHubConnection[]
   googleConnections GoogleConnection[]
   gitlabConnections GitlabConnection[]
@@ -57,6 +61,11 @@ model User {
   sshHosts   SshHost[]
   deployments Deployment[]
   workerDeployments WorkerDeployment[]
+  outputFormats OutputFormat[]
+  collaboratorOn WorkspaceCollaborator[]
+  fileShares FileShare[]
+  notifications Notification[]
+  notificationPref NotificationPref?
   group UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 }
 
@@ -69,6 +78,8 @@ model UserGroup {
   permissions String   @default("[]")
   // Marked as an "admin" group (管理类): members can see management/admin features.
   isAdminGroup Boolean @default(false)
+  // Group-wide AI daily quota (agent runs + AI calls per user per day). null = no limit.
+  aiDailyLimit Int?
   createdAt   DateTime @default(now())
 
   users User[]
@@ -134,12 +145,55 @@ model AiProvider {
   @@unique([name])
 }
 
+// An output format ("blueprint" in Cloudflare OS terms): a named template a workspace can be
+// created from, e.g. "Document", "Presentation", "Spreadsheet". Mirrors the original OS's
+// format-blueprints concept: the deployment ships a bundled set (isBundled), admins curate
+// which are offered (enabled) and how they're presented (noun/plural/icon/agentHint), and
+// users can upload their own templates to the marketplace (status: pending → approved).
+model OutputFormat {
+  id           String   @id // blueprintId, e.g. "format.document"
+  title        String   // display name, e.g. "Document"
+  description  String   @default("")
+  // Grouping key on the Outputs page (e.g. "document"). Generic across formats so an org's
+  // own "Contract" format files alongside the bundled "Document" one.
+  outputId     String
+  noun         String   // singular, e.g. "Doc"
+  plural       String   // plural, e.g. "Docs"
+  // One of the OUTPUT_ICONS vocabulary (fileText/gridNine/presentation/appWindow/...).
+  icon         String   @default("appWindow")
+  // One line telling the agent when to prefer this format, injected into the system prompt.
+  agentHint    String   @default("")
+  // Whether this format is offered in the "New ..." menu and to the agent.
+  enabled      Boolean  @default(true)
+  // Whether this format ships with the deployment (bundled set). Bundled formats can be
+  // disabled but not deleted; an upgrade can replace their contents.
+  isBundled    Boolean  @default(false)
+  // JSON array of template variants: [{ name, description, files: [{path, content, isEntry}] }].
+  // The first variant is the default seed when creating a workspace from this format.
+  templateFiles String  @default("[]")
+  // Marketplace status: "bundled" | "pending" | "approved" | "rejected". User-uploaded
+  // templates start "pending" and become "approved" after an admin reviews them.
+  status       String   @default("bundled")
+  // The user who uploaded this format (null for bundled formats).
+  authorId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([outputId])
+  @@index([status])
+}
+
 // A workspace ("gadget" in Cloudflare OS terms) owned by a user.
 // Holds a collection of files (the app's source code).
 model Workspace {
   id          String   @id @default(cuid())
   ownerId     String
   title       String
+  // The output format this workspace was created from (e.g. "format.document"). Null for
+  // workspaces created from scratch. Mirrors the original OS's BlueprintMetadata.output.
+  formatId    String?
   // Public share token (uuid). When set, the workspace is viewable read-only by anyone
   // at /blueprint/[shareToken] without logging in (mirrors the original OS's public blueprints).
   shareToken  String?  @unique
@@ -151,6 +205,37 @@ model Workspace {
   chats Chat[]
   favorites Favorite[]
   deployments Deployment[]
+  collaborators WorkspaceCollaborator[]
+  scheduledTasks ScheduledTask[]
+  publishedSites PublishedSite[]
+}
+
+// A scheduled task attached to a workspace: runs the agent (or fires a webhook) on a
+// cron schedule. Executed by the /api/cron/tasks endpoint (Vercel cron, CRON_SECRET).
+model ScheduledTask {
+  id          String   @id @default(cuid())
+  workspaceId String
+  // Human-readable name shown in the workspace Tasks panel.
+  name        String
+  // Cron expression (5 fields, e.g. "0 9 * * *"). Parsed by cron-parser.
+  schedule    String
+  // "agent" (run the workspace agent with `prompt`) | "webhook" (POST `payload` to `url`).
+  action      String   @default("agent")
+  // For action=agent: the prompt handed to the agent. For action=webhook: the JSON body.
+  prompt      String?
+  // For action=webhook: the target URL.
+  url         String?
+  enabled     Boolean  @default(true)
+  lastRunAt   DateTime?
+  lastStatus  String?  // "ok" | "failed" | "skipped"
+  lastError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([enabled])
 }
 
 // A user's favorite (starred) workspace, mirroring the original OS's "favorites" rail.
@@ -230,6 +315,7 @@ model WorkspaceFile {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   versions WorkspaceFileVersion[]
+  shares FileShare[]
 
   @@unique([workspaceId, path])
 }
@@ -287,6 +373,30 @@ model SharedFile {
 
   @@index([ownerId])
   @@index([expiresAt])
+}
+
+// A one-click static publish of a workspace: the workspace's files are bundled into a
+// self-contained static site (index.html + assets) and stored in R2 under a public
+// token URL (/p/:token). No Cloudflare account needed — the site is served from R2.
+model PublishedSite {
+  id          String   @id @default(cuid())
+  workspaceId String   @unique
+  ownerId     String
+  // Public token used in the share URL (/p/:token). Random, unguessable.
+  token       String   @unique
+  // R2 object key of the bundled index.html.
+  r2Key       String   @unique
+  title       String
+  // Number of files bundled into the site.
+  fileCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([ownerId])
 }
 
 // A user's OAuth connection to GitHub. Lets the agent call the GitHub API on the user's behalf.
@@ -355,12 +465,90 @@ model ContextDoc {
   title     String
   content   String // full text
   tags      String   @default("") // comma-separated
+  // Visibility: "private" (owner-only, the default) or "public" (published to the
+  // shared library). Mirrors the original OS's Context Library collections.
+  visibility String  @default("private")
+  // Publication status for public docs: "draft" (not submitted) | "pending" (awaiting
+  // admin review) | "approved" (live in the public library) | "rejected" (admin declined).
+  // Private docs keep status "draft" and are unaffected by review.
+  status     String   @default("draft")
+  // When the doc was approved for the public library (null until then).
+  publishedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
+  @@index([visibility, status])
+}
+
+// A collaborator on a workspace: another user granted access to view or edit the
+// workspace's files. Mirrors the original OS's collaborator sharing (workspace-level).
+model WorkspaceCollaborator {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  // "read" (view files + preview) | "write" (edit files + run the agent)
+  role        String   @default("read")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+// A file-level share: a specific file inside a workspace shared with another user.
+// Mirrors the original OS's per-file sharing (file-level, finer than workspace-level).
+model FileShare {
+  id        String   @id @default(cuid())
+  fileId    String
+  userId    String
+  // "read" | "write"
+  role      String   @default("read")
+  createdAt DateTime @default(now())
+
+  file WorkspaceFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+  @@index([userId])
+}
+
+// An in-app notification (bell icon). Created for events like "you were added as a
+// collaborator", "your context doc was approved", "a ticket was answered", etc.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String // recipient
+  // "collab.added" | "collab.removed" | "context.approved" | "context.rejected" |
+  // "ticket.reply" | "share.added" | "system"
+  type      String
+  title     String
+  body      String   @default("")
+  // Optional link the notification navigates to when clicked.
+  href      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// Per-user notification preferences: which event types also send an email (when
+// RESEND_API_KEY is configured). Mirrors the original OS's configurable email digests.
+model NotificationPref {
+  id     String   @id @default(cuid())
+  userId String   @unique
+  // JSON object: { "collab.added": true, "context.approved": true, ... } — which event
+  // types trigger an email in addition to the in-app notification.
+  emailPrefs String   @default("{}")
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Audit trail of meaningful actions (auth, workspace ops, agent runs, AI calls).

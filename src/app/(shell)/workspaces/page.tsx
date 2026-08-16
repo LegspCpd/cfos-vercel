@@ -7,12 +7,19 @@ import { Plus, Trash2, Star } from 'lucide-react';
 import { api, type WorkspaceSummary } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
+import { FormatBadge } from '@/components/FormatBadge';
+
+interface FormatMeta {
+  id: string;
+  output: { noun: string; icon: string };
+}
 
 export default function WorkspacesPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [formats, setFormats] = useState<Map<string, FormatMeta>>(new Map());
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
   const [filter, setFilter] = useState<'all' | 'fav'>('all');
@@ -30,6 +37,14 @@ export default function WorkspacesPage() {
     api
       .listFavorites()
       .then((res) => setFavorites(new Set(res.favorites.map((f) => f.workspaceId))))
+      .catch(() => {});
+    api
+      .listFormats()
+      .then((res) =>
+        setFormats(
+          new Map(res.formats.map((f) => [f.id, { id: f.id, output: f.output }])),
+        ),
+      )
       .catch(() => {});
   }, [router]);
 
@@ -132,6 +147,14 @@ export default function WorkspacesPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {w._count.files} {t('ws.files')} · {new Date(w.updatedAt).toLocaleDateString()}
                 </p>
+                {w.formatId && formats.has(w.formatId) && (
+                  <div className="mt-2">
+                    <FormatBadge
+                      icon={formats.get(w.formatId)!.output.icon}
+                      noun={formats.get(w.formatId)!.output.noun}
+                    />
+                  </div>
+                )}
               </Link>
               <div className="absolute right-2 top-2 flex items-center gap-0.5">
                 <button

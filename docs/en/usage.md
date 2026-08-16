@@ -44,6 +44,8 @@ Next time, just enter **email + password** in the sign-in box (it accepts email 
 - File tree: create / delete / set entry
 - Live preview (iframe)
 - Autosave (with "unsaved" dirty dot, agent-modified marker)
+- **Realtime collaboration**: when multiple collaborators edit the same workspace, content syncs live and the toolbar shows the online count (see [Realtime](/en/docs/realtime))
+- **One-click static publish**: the top **Publish** button bundles the workspace into a static site + public link (see [Static Publish](/en/docs/publish))
 
 ### File history & rollback
 - Every file change is recorded as a version automatically
@@ -71,9 +73,27 @@ Next time, just enter **email + password** in the sign-in box (it accepts email 
 ### External connections
 - Connect GitHub so the agent can read your repos
 
+### SSH remote sessions (persistent)
+- **Remote → SSH hosts**: add/remove/test servers, password or private-key auth; credentials are AES-256-GCM encrypted
+- **Live monitoring**: hostname, OS, cores, uptime, load, memory/disk usage
+- **Command terminal**: run commands with live streaming output
+- **Persistent sessions**: click the **plug button** in the terminal header to open a session — the server **remembers the current directory and environment variables** (`export FOO=bar` lines are parsed), so every later command runs in the same directory/environment; the header shows `Session active · cwd`
+- Sessions expire after 30 minutes of inactivity by default (tune with `SSH_SESSION_TTL_MINUTES`); unplug to close one immediately
+
 ### Context doc library
 - Upload reference docs the agent reads when building
 - Supports create / view / edit / delete
+- Docs can be set **public**: they enter the admin review queue, and once approved they appear in the **public library** and every user's agent references them automatically
+
+### Workspace collaborators
+- Open a workspace → **Collaborators** in the top toolbar (owner only) → enter a username to add
+- Roles: **Read-only** (view + preview, editor locked) or **Editable** (edit files + use the agent)
+- Collaborators see the shared workspace in their own **Workspaces** list
+- Being added/removed triggers an in-app notification (email optional)
+
+### Notifications
+- Sidebar bell: collaborator changes, doc review results, ticket replies…
+- **Profile → Notification preferences** lets you choose which events also email you (requires `RESEND_API_KEY` + a bound email)
 
 ## Admin panel
 
@@ -93,6 +113,24 @@ The sidebar **"Operation Log"** (needs `admin.access`) aggregates all logs:
 - **Sign-ins**: time, user, **IP address** (including failed attempts)
 - **Agent runs**: agent actions on workspaces
 - **AI calls**: every call with **token usage**
+- **Export**: the top-right button downloads the current filter as **CSV / JSON** (with BOM, opens cleanly in Excel) for long-term archiving or importing elsewhere
+
+## AI usage quotas
+
+In **Admin → Users**, admins can set an **AI daily call limit** for a **single user** or an entire **group**:
+
+- Per-user quotas take precedence over group quotas (when a user has none set, their group's applies)
+- Once the day's limit is hit, further AI calls return a **429 quota exceeded** notice; it resets at midnight
+- The Analytics page shows **today's AI calls** on the personal card for self-monitoring
+
+## Scheduled tasks (/admin)
+
+Admins can create **scheduled tasks** in the Admin panel:
+
+- Set the schedule with a **cron expression** (e.g. `0 */6 * * *` = every 6 hours)
+- Tasks can run an **AI instruction** (against a workspace) or an **HTTP callback** (POST to a URL)
+- Vercel Cron triggers a check every minute (`/api/cron/tasks`, requires `CRON_SECRET`; due tasks run within that minute, never twice in the same minute)
+- Each run is logged (success/failure + output summary); tasks can be enabled/disabled/deleted anytime
 
 ## Ticket management (/admin/tickets)
 

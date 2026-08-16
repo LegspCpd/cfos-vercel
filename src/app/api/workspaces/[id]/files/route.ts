@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isSafeFilePath } from '@/lib/path';
+import { workspaceAccess } from '@/lib/collaboration';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -14,6 +15,7 @@ type Ctx = { params: { id: string } };
 
 // PUT /api/workspaces/:id/files — save a batch of file contents.
 // Body: { files: [{ path, content, isEntry? }] }
+// The owner, or a write collaborator, may save files.
 export async function PUT(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -21,12 +23,12 @@ export async function PUT(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'You do not have permission to edit workspaces.' }, { status: 403 });
   }
 
-  // Ownership check
-  const owned = await prisma.workspace.findFirst({
-    where: { id: params.id, ownerId: session.userId },
-    select: { id: true },
-  });
-  if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  // Access check: owner or write collaborator.
+  const access = await workspaceAccess(session.userId, params.id);
+  if (!access) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (access === 'read') {
+    return NextResponse.json({ error: 'You do not have permission to edit this workspace.' }, { status: 403 });
+  }
 
   const { files } = await req.json();
   if (!Array.isArray(files)) {

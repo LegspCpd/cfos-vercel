@@ -600,13 +600,102 @@ export const api = {
     })();
     return { abort: () => controller.abort(), done };
   },
+  // Persistent SSH sessions: open a session, run commands inside it (cwd + env are
+  // restored between commands), and close it. Sessions live in server memory and expire
+  // after an idle timeout (SSH_SESSION_TTL_MINUTES, default 30).
+  openSshSession: (hostId: string) =>
+    request<{
+      session: {
+        id: string;
+        hostId: string;
+        cwd: string | null;
+        env: Record<string, string>;
+        history: string[];
+        createdAt: number;
+        lastActiveAt: number;
+      };
+    }>(`/api/ssh-hosts/${hostId}/session`, { method: 'POST' }),
+  closeSshSession: (hostId: string, sessionId: string) =>
+    request<{ ok: boolean }>(`/api/ssh-hosts/${hostId}/session/${sessionId}`, { method: 'DELETE' }),
+  // Stream a command inside a persistent session over SSE. Same contract as execSshHost.
+  execSshSession: (
+    hostId: string,
+    sessionId: string,
+    command: string,
+    onData: (chunk: { text: string; isError: boolean }) => void,
+  ): { abort: () => void; done: Promise<void> } => {
+    const controller = new AbortController();
+    const done = (async () => {
+      try {
+        const res = await fetch(`/api/ssh-hosts/${hostId}/session/${sessionId}/exec`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ command }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          let message = `Command failed (${res.status})`;
+          try {
+            const body = await res.json();
+            if (body?.error) message = body.error;
+          } catch {
+            /* ignore */
+          }
+          throw new Error(message);
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        const drainFrames = () => {
+          let idx: number;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const frame = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
+            if (!dataLine) continue;
+            let parsed: { type?: string; text?: string };
+            try {
+              parsed = JSON.parse(dataLine.slice(6));
+            } catch {
+              continue;
+            }
+            if (parsed.type === 'data' && parsed.text) onData({ text: parsed.text, isError: false });
+            if (parsed.type === 'error' && parsed.text) onData({ text: parsed.text, isError: true });
+          }
+        };
+        while (true) {
+          const { done: streamDone, value } = await reader.read();
+          if (streamDone) break;
+          buf += decoder.decode(value, { stream: true });
+          drainFrames();
+        }
+        if (buf.trim()) {
+          const dataLine = buf.split('\n').find((l) => l.startsWith('data: '));
+          if (dataLine) {
+            try {
+              const parsed = JSON.parse(dataLine.slice(6));
+              if (parsed.type === 'data' && parsed.text) onData({ text: parsed.text, isError: false });
+              if (parsed.type === 'error' && parsed.text) onData({ text: parsed.text, isError: true });
+            } catch {
+              /* ignore malformed tail */
+            }
+          }
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          onData({ text: (e as Error).message || 'Command failed', isError: true });
+        }
+      }
+    })();
+    return { abort: () => controller.abort(), done };
+  },
   listContext: () =>
     request<{
       docs: { id: string; title: string; tags: string; createdAt: string; updatedAt: string }[];
     }>('/api/context'),
   getContext: (id: string) =>
     request<{ doc: { id: string; title: string; content: string; tags: string } }>(`/api/context/${id}`),
-  createContext: (data: { title: string; content: string; tags?: string }) =>
+  createContext: (data: { title: string; content: string; tags?: string; visibility?: 'private' | 'public' }) =>
     request<{ doc: { id: string } }>('/api/context', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -672,11 +761,210 @@ export const api = {
       recaptchaEnabled: boolean;
       recaptchaSiteKey: string;
     }>('/api/site'),
-  updateContext: (id: string, data: { title?: string; content?: string; tags?: string }) =>
-    request<{ doc: { id: string; title: string; content: string; tags: string } }>(`/api/context/${id}`, {
+  updateContext: (
+    id: string,
+    data: { title?: string; content?: string; tags?: string; visibility?: 'private' | 'public' },
+  ) =>
+    request<{ doc: { id: string; title: string; content: string; tags: string; visibility: string; status: string } }>(
+      `/api/context/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+    ),
+  // --- Context public library (Batch 2) ---
+  listPublicContext: () =>
+    request<{
+      docs: {
+        id: string;
+        title: string;
+        tags: string;
+        publishedAt: string | null;
+        owner: { username: string; displayName: string };
+      }[];
+    }>('/api/context/public'),
+  listPendingContext: () =>
+    request<{
+      docs: {
+        id: string;
+        title: string;
+        tags: string;
+        content: string;
+        createdAt: string;
+        owner: { username: string; displayName: string };
+      }[];
+    }>('/api/context/public', { method: 'POST' }),
+  reviewContext: (id: string, action: 'approve' | 'reject') =>
+    request<{ ok: boolean }>(`/api/context/public/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action }),
+    }),
+  // --- Workspace collaborators (Batch 2) ---
+  listCollaborators: (workspaceId: string) =>
+    request<{
+      collaborators: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/workspaces/${workspaceId}/collaborators`),
+  addCollaborator: (workspaceId: string, data: { username: string; role: 'read' | 'write' }) =>
+    request<{
+      collaborators: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/workspaces/${workspaceId}/collaborators`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCollaborator: (workspaceId: string, data: { userId: string; role: 'read' | 'write' }) =>
+    request<{
+      collaborators: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/workspaces/${workspaceId}/collaborators`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+  removeCollaborator: (workspaceId: string, userId: string) =>
+    request<{
+      collaborators: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/workspaces/${workspaceId}/collaborators`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userId }),
+    }),
+  // --- Scheduled tasks (Batch 3) ---
+  listTasks: (workspaceId: string) =>
+    request<{
+      tasks: {
+        id: string;
+        name: string;
+        schedule: string;
+        action: string;
+        prompt: string | null;
+        url: string | null;
+        enabled: boolean;
+        lastRunAt: string | null;
+        lastStatus: string | null;
+        lastError: string | null;
+      }[];
+    }>(`/api/workspaces/${workspaceId}/tasks`),
+  createTask: (
+    workspaceId: string,
+    data: { name: string; schedule: string; action: 'agent' | 'webhook'; prompt?: string; url?: string; enabled?: boolean },
+  ) =>
+    request<{ task: { id: string; name: string } }>(`/api/workspaces/${workspaceId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateTask: (
+    workspaceId: string,
+    taskId: string,
+    data: { name?: string; schedule?: string; action?: 'agent' | 'webhook'; prompt?: string | null; url?: string | null; enabled?: boolean },
+  ) =>
+    request<{ task: { id: string; name: string } }>(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteTask: (workspaceId: string, taskId: string) =>
+    request<{ ok: boolean }>(`/api/workspaces/${workspaceId}/tasks/${taskId}`, { method: 'DELETE' }),
+  // --- One-click static publish (Batch 3) ---
+  publishWorkspace: (workspaceId: string) =>
+    request<{ id: string; token: string; url: string; title: string; fileCount: number }>(
+      `/api/workspaces/${workspaceId}/publish`,
+      { method: 'POST' },
+    ),
+  getPublishedSite: (workspaceId: string) =>
+    request<{
+      site: {
+        id: string;
+        token: string;
+        url: string;
+        title: string;
+        fileCount: number;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
+    }>(`/api/workspaces/${workspaceId}/publish`),
+  unpublishWorkspace: (workspaceId: string) =>
+    request<{ ok: boolean }>(`/api/workspaces/${workspaceId}/publish`, { method: 'DELETE' }),
+  // --- File-level shares (Batch 2) ---
+  listFileShares: (fileId: string) =>
+    request<{
+      shares: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/files/${fileId}/shares`),
+  addFileShare: (fileId: string, data: { username: string; role: 'read' | 'write' }) =>
+    request<{
+      shares: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/files/${fileId}/shares`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  removeFileShare: (fileId: string, userId: string) =>
+    request<{
+      shares: {
+        id: string;
+        role: string;
+        user: { id: string; username: string; displayName: string; avatarUrl: string | null };
+      }[];
+    }>(`/api/files/${fileId}/shares`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userId }),
+    }),
+  // --- Notifications (Batch 2) ---
+  listNotifications: () =>
+    request<{
+      notifications: {
+        id: string;
+        type: string;
+        title: string;
+        body: string;
+        href: string | null;
+        read: boolean;
+        createdAt: string;
+      }[];
+      unread: number;
+    }>('/api/notifications'),
+  markNotificationsRead: (id?: string) =>
+    request<{ ok: boolean; unread: number }>('/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify(id ? { id } : {}),
+    }),
+  getNotificationPrefs: () =>
+    request<{
+      emailPrefs: Record<string, boolean>;
+      emailConfigured: boolean;
+      types: string[];
+    }>('/api/notifications/prefs'),
+  updateNotificationPrefs: (emailPrefs: Record<string, boolean>) =>
+    request<{ ok: boolean; emailPrefs: Record<string, boolean> }>('/api/notifications/prefs', {
+      method: 'PUT',
+      body: JSON.stringify({ emailPrefs }),
+    }),
+  getUsage: () =>
+    request<{
+      limit: number | null;
+      used: number;
+      remaining: number | null;
+      source: 'user' | 'group' | 'env' | 'none';
+      resetAt: string;
+    }>('/api/usage'),
   adminSetUserRole: (id: string, isAdmin: boolean) =>
     request<{ ok: boolean }>(`/api/admin/users/${id}`, {
       method: 'PATCH',
@@ -695,6 +983,7 @@ export const api = {
         groupId: string | null;
         groupName: string | null;
         groupPermissions: string[];
+        aiDailyLimit: number | null;
         createdAt: string;
         workspaces: number;
       }[];
@@ -704,13 +993,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  adminUpdateUser: (id: string, data: { isAdmin?: boolean; newPassword?: string; email?: string | null; groupId?: string | null }) =>
+  adminUpdateUser: (id: string, data: { isAdmin?: boolean; newPassword?: string; email?: string | null; groupId?: string | null; aiDailyLimit?: number | null }) =>
     request<{ ok: boolean; username: string; isAdmin: boolean; groupId: string | null; groupName: string | null }>(
       `/api/admin/users/${id}`,
       { method: 'PATCH', body: JSON.stringify(data) },
     ),
   adminListGroups: () =>
-    request<{ groups: { id: string; name: string; permissions: string[]; isAdminGroup: boolean; memberCount: number }[] }>(
+    request<{ groups: { id: string; name: string; permissions: string[]; isAdminGroup: boolean; aiDailyLimit: number | null; memberCount: number }[] }>(
       '/api/admin/groups',
     ),
   adminCreateGroup: (data: { name: string; permissions: string[]; isAdminGroup?: boolean }) =>
@@ -718,7 +1007,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  adminUpdateGroup: (id: string, data: { name?: string; permissions?: string[] }) =>
+  adminUpdateGroup: (id: string, data: { name?: string; permissions?: string[]; aiDailyLimit?: number | null }) =>
     request<{ group: { id: string; name: string; permissions: string[] } }>(`/api/admin/groups/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -761,7 +1050,9 @@ export const api = {
       body: JSON.stringify({ title }),
     }),
   getWorkspace: (id: string) =>
-    request<{ workspace: WorkspaceDetail; previewUrl: string }>(`/api/workspaces/${id}`),
+    request<{ workspace: WorkspaceDetail; previewUrl: string; access?: 'owner' | 'write' | 'read' }>(
+      `/api/workspaces/${id}`,
+    ),
   renameWorkspace: (id: string, title: string) =>
     request<{ ok: boolean }>(`/api/workspaces/${id}`, {
       method: 'PATCH',
@@ -800,10 +1091,89 @@ export const api = {
     }>(`/api/activity${suffix}`);
   },
   runAgent: (id: string, prompt: string) =>
-    request<{ message: string; files: { path: string; content: string; isEntry: boolean }[] }>(
+    request<{ message: string; files: { path: string; content: string; isEntry: boolean }[]; toolCalls?: { tool: string; summary: string }[] }>(
       `/api/workspaces/${id}/agent`,
       { method: 'POST', body: JSON.stringify({ prompt }) },
     ),
+  // Output formats: the deployment's standard "New ..." menu.
+  listFormats: () =>
+    request<{
+      formats: {
+        id: string;
+        title: string;
+        description: string;
+        output: { id: string; noun: string; plural: string; icon: string };
+        agentHint: string;
+        variants: { name: string; description?: string }[];
+      }[];
+    }>('/api/formats'),
+  // Create a workspace from an output format (seeds the format's template files).
+  createWorkspaceFromFormat: (title: string, formatId: string) =>
+    request<{ workspace: WorkspaceDetail }>('/api/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({ title, formatId }),
+    }),
+  // Switch a workspace's output format (seeds the format's files, keeps user files).
+  switchWorkspaceFormat: (id: string, formatId: string | null) =>
+    request<{ ok: boolean; formatId: string | null }>(`/api/workspaces/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ formatId }),
+    }),
+  // Submit a user-created format template to the marketplace (starts "pending").
+  uploadFormat: (data: {
+    id: string;
+    title: string;
+    description: string;
+    outputId: string;
+    noun: string;
+    plural: string;
+    icon: string;
+    agentHint?: string;
+    variants: { name: string; description?: string; files: { path: string; content: string; isEntry?: boolean }[] }[];
+  }) =>
+    request<{ ok: boolean; format: unknown }>('/api/formats/upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  // Admin: all formats (including disabled/pending) for the curation panel.
+  adminListFormats: () =>
+    request<{
+      formats: {
+        id: string;
+        title: string;
+        description: string;
+        output: { id: string; noun: string; plural: string; icon: string };
+        agentHint: string;
+        enabled: boolean;
+        isBundled: boolean;
+        status: string;
+        authorId: string | null;
+        variants: { name: string; description?: string; files: { path: string; content: string; isEntry?: boolean }[] }[];
+        createdAt: string;
+        updatedAt: string;
+      }[];
+    }>('/api/admin/formats'),
+  adminUpdateFormat: (
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      outputId?: string;
+      noun?: string;
+      plural?: string;
+      icon?: string;
+      agentHint?: string;
+      enabled?: boolean;
+      status?: 'pending' | 'approved' | 'rejected';
+      variants?: { name: string; description?: string; files: { path: string; content: string; isEntry?: boolean }[] }[];
+    },
+  ) =>
+    request<{ ok: boolean; format: unknown }>(`/api/admin/formats/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  adminDeleteFormat: (id: string) =>
+    request<{ ok: boolean }>(`/api/admin/formats/${id}`, { method: 'DELETE' }),
   listChats: (id: string) =>
     request<{
       chats: {
@@ -842,10 +1212,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ path, versionId }),
     }),
-  importWorkspace: (title: string, files: { path: string; content: string; isEntry: boolean }[]) =>
+  importWorkspace: (
+    title: string,
+    files: { path: string; content: string; isEntry: boolean }[],
+    formatId?: string | null,
+  ) =>
     request<{ workspace: WorkspaceDetail }>('/api/workspaces/import', {
       method: 'POST',
-      body: JSON.stringify({ title, files }),
+      body: JSON.stringify({ title, files, formatId }),
     }),
   createShareToken: (id: string) =>
     request<{ token: string; url: string }>(`/api/workspaces/${id}/share`, { method: 'POST' }),
@@ -873,6 +1247,7 @@ export interface WorkspaceSummary {
   id: string;
   title: string;
   updatedAt: string;
+  formatId: string | null;
   _count: { files: number };
 }
 
@@ -887,7 +1262,10 @@ export interface WorkspaceDetail {
   id: string;
   title: string;
   ownerId: string;
+  formatId: string | null;
   files: WorkspaceFile[];
+  // The caller's access level: 'owner' | 'write' | 'read' (collaborator access).
+  access?: 'owner' | 'write' | 'read';
 }
 
 export interface Ticket {

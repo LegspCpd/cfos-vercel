@@ -8,6 +8,9 @@ import { requireCfAccess } from '@/lib/require-access';
 import { getSiteSettings } from '@/lib/settings';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isSafeFilePath } from '@/lib/path';
+import { getFormat } from '@/lib/formats';
+import { workspaceAccess } from '@/lib/collaboration';
+import { effectiveAiLimit, aiUsageToday } from '@/lib/quota';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -21,6 +24,9 @@ type Ctx = { params: { id: string } };
 // Body: { prompt: string }
 // Runs the code-mode agent against the workspace's current files, applies the
 // generated file changes to Postgres, and returns the new file set + agent message.
+// The agent may call GitHub/GitLab tools (multi-turn loop); write tools are gated
+// on the per-connection writeAccess grant.
+// The owner, or a write collaborator, may run the agent.
 export async function POST(req: Request, { params }: Ctx) {
   if (!(await requireCfAccess(req))) {
     return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
@@ -31,8 +37,14 @@ export async function POST(req: Request, { params }: Ctx) {
     return NextResponse.json({ error: 'You do not have permission to use the AI agent.' }, { status: 403 });
   }
 
-  const workspace = await prisma.workspace.findFirst({
-    where: { id: params.id, ownerId: session.userId },
+  const access = await workspaceAccess(session.userId, params.id);
+  if (!access) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (access === 'read') {
+    return NextResponse.json({ error: 'You do not have permission to edit this workspace.' }, { status: 403 });
+  }
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: params.id },
     include: { files: true },
   });
   if (!workspace) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -49,19 +61,20 @@ export async function POST(req: Request, { params }: Ctx) {
   }
   const providerId = typeof body?.providerId === 'string' ? body.providerId : undefined;
 
-  // Basic per-user quota so a single account can't run the LLM unbounded and rack up
-  // the site owner's AI cost. Default: 100 agent runs / day (configurable via env).
-  const MAX_AGENT_PER_DAY = Number(process.env.AGENT_DAILY_LIMIT) || 100;
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
-  const runsToday = await prisma.auditLog.count({
-    where: { userId: session.userId, action: 'agent.run', createdAt: { gte: dayStart } },
-  });
-  if (runsToday >= MAX_AGENT_PER_DAY) {
-    return NextResponse.json(
-      { error: `Daily agent limit reached (${MAX_AGENT_PER_DAY}/day). Try again tomorrow.` },
-      { status: 429 },
-    );
+  // Per-user AI quota (agent runs + AI calls share the same daily budget). The limit
+  // comes from the user's own override, their group's limit, or the AGENT_DAILY_LIMIT
+  // env fallback (default 100). Hard stop: refuse to run once at/over the limit.
+  const { limit: quotaLimit, source: quotaSource } = await effectiveAiLimit(session.userId);
+  if (quotaLimit != null) {
+    const usedToday = await aiUsageToday(session.userId);
+    if (usedToday >= quotaLimit) {
+      return NextResponse.json(
+        {
+          error: `Daily AI limit reached (${quotaLimit}/day, ${quotaSource}). Try again tomorrow.`,
+        },
+        { status: 429 },
+      );
+    }
   }
 
   const currentFiles: WorkspaceFileDraft[] = workspace.files.map((f) => ({
@@ -69,12 +82,22 @@ export async function POST(req: Request, { params }: Ctx) {
     content: f.content,
   }));
 
-  // Load the user's context documents and attach them so the agent can reference them.
-  const contextDocs = await prisma.contextDoc.findMany({
-    where: { ownerId: session.userId },
-    orderBy: { updatedAt: 'desc' },
-    take: 5,
-  });
+  // Load the user's context documents AND the approved public library, and attach them
+  // so the agent can reference them. Private docs come first (owner-authored, most
+  // relevant); public docs fill the rest of the budget.
+  const [privateDocs, publicDocs] = await Promise.all([
+    prisma.contextDoc.findMany({
+      where: { ownerId: session.userId },
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+    }),
+    prisma.contextDoc.findMany({
+      where: { visibility: 'public', status: 'approved' },
+      orderBy: { publishedAt: 'desc' },
+      take: 5,
+    }),
+  ]);
+  const contextDocs = [...privateDocs, ...publicDocs];
   let finalPrompt = trimmedPrompt;
   if (contextDocs.length > 0) {
     const ctxBlock = contextDocs
@@ -87,6 +110,14 @@ export async function POST(req: Request, { params }: Ctx) {
   const siteSettings = await getSiteSettings();
   const effectiveModel = providerId ? undefined : siteSettings.defaultModel || undefined;
 
+  // The workspace's output-format agent hint (e.g. "prefer for documents..."), so the
+  // agent knows what format this workspace was created as.
+  let formatHint: string | undefined;
+  if (workspace.formatId) {
+    const format = await getFormat(workspace.formatId);
+    if (format?.agentHint) formatHint = format.agentHint;
+  }
+
   let result;
   try {
     result = await runAgent(
@@ -96,6 +127,8 @@ export async function POST(req: Request, { params }: Ctx) {
       providerId,
       effectiveModel,
       siteSettings.agentInstructions || undefined,
+      formatHint,
+      session.userId,
     );
   } catch (e) {
     console.error('agent error', e);
@@ -169,5 +202,6 @@ export async function POST(req: Request, { params }: Ctx) {
   return NextResponse.json({
     message: result.message,
     files: updatedFiles.map((f) => ({ path: f.path, content: f.content, isEntry: f.isEntry })),
+    toolCalls: result.toolCalls ?? [],
   });
 }

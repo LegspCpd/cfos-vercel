@@ -1,5 +1,6 @@
 import { prisma } from './db';
 import { ensureDefaultGroups, DEFAULT_GROUP } from './groups';
+import { resolvePermissions, PERMISSIONS } from './permissions';
 
 // ADMIN_USERNAME may be a single username or a comma-separated list, e.g.
 //   ADMIN_USERNAME="admin,ops"
@@ -15,15 +16,19 @@ function adminUsernameSet(): Set<string> {
 
 // A user is an admin if:
 //  1. Their isAdmin flag is set on the record, OR
-//  2. Their username is in ADMIN_USERNAME (comma-separated env list).
+//  2. Their username is in ADMIN_USERNAME (comma-separated env list), OR
+//  3. Their group grants the admin.access permission (the group-based model).
+// The three paths stay in sync with the frontend's admin gate (which checks the
+// admin.access permission) so a group-granted admin isn't locked out of the API.
 export async function isUserAdmin(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { username: true, isAdmin: true },
+    select: { username: true, isAdmin: true, group: { select: { permissions: true, name: true } } },
   });
   if (!user) return false;
   if (user.isAdmin) return true;
-  return adminUsernameSet().has(user.username.toLowerCase());
+  if (adminUsernameSet().has(user.username.toLowerCase())) return true;
+  return resolvePermissions(user).includes(PERMISSIONS.admin);
 }
 
 // Ensure the default groups exist, then put every admin (isAdmin=true or in ADMIN_USERNAME)

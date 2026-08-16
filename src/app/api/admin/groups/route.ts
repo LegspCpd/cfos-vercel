@@ -36,6 +36,7 @@ export async function GET(req: Request) {
       name: g.name,
       permissions: JSON.parse(g.permissions || '[]'),
       isAdminGroup: g.isAdminGroup,
+      aiDailyLimit: g.aiDailyLimit,
       memberCount: g._count.users,
     })),
   });

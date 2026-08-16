@@ -9,6 +9,8 @@ import {
   Lightbulb,
   CircleHelp,
   ShieldCheck,
+  LayoutTemplate,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -29,6 +31,10 @@ export const DOC_NAV: DocNavItem[] = [
   { slug: 'cf-access', title: 'Cloudflare Access', icon: Shield },
   { slug: 'backup', title: '数据库备份', icon: ShieldCheck },
   { slug: 'cloudflare-deploy', title: 'Pages 部署', icon: Rocket },
+  { slug: 'publish', title: '一键静态发布', icon: Rocket },
+  { slug: 'realtime', title: '实时协作', icon: Users },
+  { slug: 'formats', title: '输出格式', icon: LayoutTemplate },
+  { slug: 'sharing', title: '分享与协作', icon: FolderOpen },
   { slug: 'usage', title: '使用说明', icon: Lightbulb },
   { slug: 'faq', title: '常见问题', icon: CircleHelp },
 ];
@@ -44,6 +50,10 @@ export const DOC_NAV_EN: DocNavItem[] = [
   { slug: 'cf-access', title: 'Cloudflare Access', icon: Shield },
   { slug: 'backup', title: 'Database Backup', icon: ShieldCheck },
   { slug: 'cloudflare-deploy', title: 'Pages Deploy', icon: Rocket },
+  { slug: 'publish', title: 'Static Publish', icon: Rocket },
+  { slug: 'realtime', title: 'Realtime Collaboration', icon: Users },
+  { slug: 'formats', title: 'Output Formats', icon: LayoutTemplate },
+  { slug: 'sharing', title: 'Sharing & Collaboration', icon: FolderOpen },
   { slug: 'usage', title: 'Usage', icon: Lightbulb },
   { slug: 'faq', title: 'FAQ', icon: CircleHelp },
 ];

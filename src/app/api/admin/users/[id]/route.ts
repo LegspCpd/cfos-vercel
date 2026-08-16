@@ -23,6 +23,8 @@ const patchSchema = z.object({
   newPassword: z.string().min(6).max(128).optional(),
   email: z.string().email().optional().nullable(),
   groupId: z.string().optional().nullable(),
+  // Per-user AI daily quota override (null = fall back to group limit).
+  aiDailyLimit: z.number().int().min(0).max(100000).nullable().optional(),
 });
 
 // PATCH /api/admin/users/:id — update isAdmin, password, email, and/or group.
@@ -34,7 +36,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const target = await prisma.user.findUnique({ where: { id: params.id }, select: { username: true, isAdmin: true } });
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const data: { isAdmin?: boolean; passwordHash?: string; email?: string | null; groupId?: string | null } = {};
+  const data: { isAdmin?: boolean; passwordHash?: string; email?: string | null; groupId?: string | null; aiDailyLimit?: number | null } = {};
 
   if (body.isAdmin !== undefined) {
     // Prevent demoting yourself (avoid locking yourself out).
@@ -56,6 +58,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
   if (body.groupId !== undefined) {
     data.groupId = body.groupId;
+  }
+  if (body.aiDailyLimit !== undefined) {
+    data.aiDailyLimit = body.aiDailyLimit;
   }
 
   await prisma.user.update({ where: { id: params.id }, data });

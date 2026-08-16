@@ -141,6 +141,8 @@
 | `IMGHOST_FOLDER` | 上传文件夹，默认 `photos/avatars`。 |
 | `VERIFY_CODE_TTL_MINUTES` | 邮箱验证码有效分钟数，默认 `10`。 |
 | `CRON_SECRET` | 定时清理任务（cron）的访问密钥。 |
+| `SSH_SESSION_TTL_MINUTES` | SSH 持久会话无操作过期分钟数，默认 `30`。 |
+| `LIVEBLOCKS_SECRET_KEY` | Liveblocks **Secret key**（`sk_dev_...`），配置后启用工作区**多人实时协作**；不配置则代码编辑器为纯离线编辑（详见[实时协作](/docs/realtime)）。 |
 
 ### Cloudflare Workers（计算 → Worker）部署（可选）
 

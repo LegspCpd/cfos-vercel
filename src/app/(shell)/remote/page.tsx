@@ -189,6 +189,13 @@ export default function RemotePage() {
   const termAbortRef = useRef<{ abort: () => void } | null>(null);
   const termScrollRef = useRef<HTMLDivElement | null>(null);
 
+  // Persistent-session terminal: a session id per host + its cwd + history. When a
+  // session is open, commands run inside it (cwd/env restored between commands).
+  const [sessionIds, setSessionIds] = useState<Record<string, string>>({});
+  const [sessionCwds, setSessionCwds] = useState<Record<string, string | null>>({});
+  const [sessionOpening, setSessionOpening] = useState<Record<string, boolean>>({});
+  const sessionAbortRef = useRef<{ abort: () => void } | null>(null);
+
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
@@ -294,7 +301,16 @@ export default function RemotePage() {
       if (termOpen === h.id) {
         termAbortRef.current?.abort();
         termAbortRef.current = null;
+        sessionAbortRef.current?.abort();
+        sessionAbortRef.current = null;
         setTermOpen(null);
+      }
+      if (sessionIds[h.id]) {
+        api.closeSshSession(h.id, sessionIds[h.id]).catch(() => {
+          /* best-effort */
+        });
+        setSessionIds((prev) => ({ ...prev, [h.id]: '' }));
+        setSessionCwds((prev) => ({ ...prev, [h.id]: null }));
       }
       await load();
     } catch (e) {
@@ -374,6 +390,8 @@ export default function RemotePage() {
     if (termOpen === h.id) {
       termAbortRef.current?.abort();
       termAbortRef.current = null;
+      sessionAbortRef.current?.abort();
+      sessionAbortRef.current = null;
       setTermRunning(false);
       setTermOpen(null);
       return;
@@ -382,23 +400,56 @@ export default function RemotePage() {
     setTermCommand('');
     setTermOutput([]);
     setTermRunning(false);
+    // Open a persistent session for this host (best-effort; the terminal still works
+    // in one-shot mode if the session API fails).
+    setSessionOpening((prev) => ({ ...prev, [h.id]: true }));
+    api
+      .openSshSession(h.id)
+      .then((res) => {
+        setSessionIds((prev) => ({ ...prev, [h.id]: res.session.id }));
+        setSessionCwds((prev) => ({ ...prev, [h.id]: res.session.cwd }));
+      })
+      .catch(() => {
+        // Session API unavailable — fall back to one-shot commands.
+        setSessionIds((prev) => ({ ...prev, [h.id]: '' }));
+      })
+      .finally(() => {
+        setSessionOpening((prev) => ({ ...prev, [h.id]: false }));
+      });
   }
 
-  // Run a command via SSE streaming and append output live.
+  // Run a command via SSE streaming and append output live. When a persistent session
+  // is open for the host, the command runs inside it (cwd/env restored between runs).
   function runCommand(h: SshHost, cmd?: string) {
     const command = (cmd ?? termCommand).trim();
     if (!command || termRunning) return;
     setTermRunning(true);
     setTermOutput([]);
     setTermCommand(command);
-    const session = api.execSshHost(h.id, command, (chunk) => {
-      setTermOutput((prev) => [...prev, chunk]);
-    });
+    const sessionId = sessionIds[h.id];
+    const session = sessionId
+      ? api.execSshSession(h.id, sessionId, command, (chunk) => {
+          setTermOutput((prev) => [...prev, chunk]);
+        })
+      : api.execSshHost(h.id, command, (chunk) => {
+          setTermOutput((prev) => [...prev, chunk]);
+        });
     termAbortRef.current = session;
     session.done.then(() => {
       setTermRunning(false);
       termAbortRef.current = null;
     });
+  }
+
+  // Close the persistent session for a host (best-effort).
+  function closeSession(h: SshHost) {
+    const sessionId = sessionIds[h.id];
+    if (!sessionId) return;
+    api.closeSshSession(h.id, sessionId).catch(() => {
+      /* best-effort */
+    });
+    setSessionIds((prev) => ({ ...prev, [h.id]: '' }));
+    setSessionCwds((prev) => ({ ...prev, [h.id]: null }));
   }
 
   function authMethodLabel(method: string): string {
@@ -895,14 +946,40 @@ export default function RemotePage() {
                     <span className="flex items-center gap-1.5 font-mono text-xs">
                       <TerminalSquare className="h-3.5 w-3.5" />
                       {h.username}@{h.host}:{h.port} ~ $
+                      {sessionOpening[h.id] ? (
+                        <span className="ml-2 text-[10px] text-green-400/50">
+                          {t('remote.sessionOpening') || 'Opening session...'}
+                        </span>
+                      ) : sessionIds[h.id] ? (
+                        <span className="ml-2 flex items-center gap-1 text-[10px] text-green-400/70">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                          {t('remote.sessionActive') || 'Session active'}
+                          {sessionCwds[h.id] ? ` · ${sessionCwds[h.id]}` : ''}
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-[10px] text-green-400/50">
+                          {t('remote.sessionOneShot') || 'One-shot mode'}
+                        </span>
+                      )}
                     </span>
-                    <button
-                      onClick={() => toggleTerminal(h)}
-                      title={t('remote.closeTerminal') || 'Close terminal'}
-                      className="rounded p-1 text-green-400/70 hover:bg-white/10 hover:text-green-400"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {sessionIds[h.id] && (
+                        <button
+                          onClick={() => closeSession(h)}
+                          title={t('remote.sessionClose') || 'Close session'}
+                          className="rounded p-1 text-green-400/70 hover:bg-white/10 hover:text-green-400"
+                        >
+                          <PlugZap className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => toggleTerminal(h)}
+                        title={t('remote.closeTerminal') || 'Close terminal'}
+                        className="rounded p-1 text-green-400/70 hover:bg-white/10 hover:text-green-400"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div
@@ -981,7 +1058,11 @@ export default function RemotePage() {
                   </div>
 
                   <div className="mt-2 text-[10px] leading-tight text-green-400/50">
-                    {t('remote.terminalHint') || 'Streams output of one command (no vim/top on serverless).'}
+                    {sessionIds[h.id]
+                      ? t('remote.sessionHint') ||
+                        'Persistent session: cwd & env are kept between commands (cd /tmp && pwd stays in /tmp).'
+                      : t('remote.terminalHint') ||
+                        'Streams output of one command (no vim/top on serverless).'}
                   </div>
                 </div>
               )}

@@ -21,6 +21,7 @@ import {
   History,
   Share2,
   Upload,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/client/auth';
@@ -104,6 +105,37 @@ export default function AuditLogView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, actionFilter]);
 
+  // Download the full audit log (respecting the current filters) as CSV or JSON.
+  async function exportLogs(format: 'csv' | 'json') {
+    try {
+      const params = new URLSearchParams();
+      params.set('format', format);
+      params.set('scope', 'all');
+      if (actionFilter) params.set('action', actionFilter);
+      if (userFilter) params.set('user', userFilter);
+      const res = await fetch(`/api/audit/export?${params}`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      a.download = match?.[1] || `audit.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   function formatTime(iso: string): string {
     const d = new Date(iso);
     return d.toLocaleString();
@@ -120,12 +152,28 @@ export default function AuditLogView() {
             {t('admin.auditDesc')} · {t('admin.totalCount')} {total}
           </p>
         </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
-        >
-          <RefreshCw className="h-3.5 w-3.5" /> {t('refresh')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportLogs('csv')}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
+            title="CSV"
+          >
+            <Download className="h-3.5 w-3.5" /> CSV
+          </button>
+          <button
+            onClick={() => exportLogs('json')}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
+            title="JSON"
+          >
+            <Download className="h-3.5 w-3.5" /> JSON
+          </button>
+          <button
+            onClick={load}
+            className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> {t('refresh')}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

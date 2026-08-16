@@ -37,6 +37,7 @@ export async function GET(req: Request) {
       groupId: u.groupId,
       groupName: u.group?.name ?? null,
       groupPermissions: u.group ? JSON.parse(u.group.permissions || '[]') : [],
+      aiDailyLimit: u.aiDailyLimit,
       createdAt: u.createdAt,
       workspaces: u._count.workspaces,
     })),

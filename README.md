@@ -28,20 +28,37 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 ### Workspace & agent
 - Multi-file **Monaco editor** with a file tree, **iframe preview**, and a chat panel (conversations persist automatically)
 - **File history / version rollback** — every change is snapshotted and can be restored
+- **Realtime multi-user collaboration** (Liveblocks) — when several collaborators open the same workspace, edits sync live to every editor with an online-count badge; degrades gracefully to offline editing when unconfigured
+- **One-click static publish** — the workspace toolbar's **Publish** button inlines all files into a single self-contained HTML and returns a public unguessable link (`/p/<token>`), no external deploy needed; republish keeps the link, unpublish 404s it
 - **AI Agent** — build/modify apps from natural language; the agent writes code files directly (supports markdown output and auto-run)
+- **Multi-turn tool loop** — the agent can call external tools (GitHub/GitLab list/read/create-issue) mid-conversation, gated by the per-connection **read-only / read-write** capability (write tools require an explicit grant); tool calls are shown in the chat
 - **Multiple AI providers** — add several LLMs (DeepSeek / OpenAI / local, etc.) dynamically from the admin panel
+
+### Output formats (blueprints)
+- **Output formats** — the deployment's standard "New …" menu (Document / Presentation / Spreadsheet bundled), each with seed files and an agent hint
+- **Start with a format** — one-click creation from the home page; switch a workspace's format anytime from the editor toolbar (existing files are preserved)
+- **Template marketplace** — submit any workspace as a template; admins review it in Admin → Formats and approve it for everyone
+- **Admin curation** — enable/disable formats, edit presentation (noun/plural/icon) and agent hint, review pending submissions
+- **Outputs grouped by kind** — the Outputs page groups workspaces by their format family (Docs / Decks / Sheets / Apps)
+- **Blueprint archives carry the format** — `.gadget.json` export/import preserves the workspace's format association
 
 ### Content & sharing
 - **Outputs** — aggregated list of all workspace apps (grid/list views + search)
 - **Blueprints** — your app list + export/import `.gadget.json` archives + public share links (viewable without login)
 - **Explore** — discover and try ideas
 - **Favorites** — star workspaces and filter by them
+- **Workspace collaborators** — invite users by username with **read-only / editable** roles; read-only collaborators get a locked editor and disabled agent; the owner manages the team from the workspace toolbar
+- **File-level shares** — grant a single file inside a workspace without opening the whole workspace (effective access = max of workspace + file roles)
+- **Public context library** — mark a context doc public → admin review queue (Admin → Formats) → approved docs appear in the public library and every user's agent references them automatically
+- **Notifications** — in-app bell (polls every 30s) for collaborator changes, doc review results, ticket replies; **Profile → Notification preferences** opts event types into email (Resend)
 
 ### Admin & governance
 - **Profiles** — display name, avatar, password
 - **User groups & permissions** — groups fully determine what a user can do (workspace/AI, file sharing, context docs, connections, admin access, user management)
 - **User management** `/admin/users` — create/delete users, change passwords/emails, move between groups
-- **Operation log** `/admin/audit` — audit trail of sign-ins (with IP), agent runs, and AI calls (with token usage)
+- **AI usage quotas** — per-user and per-group **daily AI call limits** (user quota overrides group); hitting the limit returns 429 and resets at midnight
+- **Operation log** `/admin/audit` — audit trail of sign-ins (with IP), agent runs, and AI calls (with token usage); **export the current filter as CSV/JSON** (BOM-prefixed) for archiving
+- **Scheduled tasks** — admin-defined cron jobs (AI instruction against a workspace, or HTTP callback) checked every minute via Vercel Cron (`/api/cron/tasks`, guarded by `CRON_SECRET`), with per-run logs
 - **Ticket management** `/admin/tickets` — review and handle user tickets
 - **Analytics** `/analytics` — personal stats (workspaces, files, today's sign-in IPs, AI token usage); admins additionally see a site-wide daily summary with login-IP distribution
 - **Site customization** — brand favicon/logo, optional full-site background image (env-configured), human verification (Turnstile + reCAPTCHA), registration toggle
@@ -50,6 +67,7 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **SSH host manager** — add/remove/test servers with password or private-key auth; credentials are **AES-256-GCM encrypted** at rest (never plaintext)
 - **Live monitoring** — probe a host to show hostname, OS, cores, uptime, load, memory and disk usage
 - **Command terminal** — run a command and stream its output live over SSE; auto-reconnects (up to 5 attempts) on transient failures and shows a clear timeout message if it gives up
+- **Persistent sessions** — open a session from the terminal header to keep the **working directory and exported env vars** across commands (`cd` + `export` are parsed and restored on every run); sessions expire after `SSH_SESSION_TTL_MINUTES` (default 30) of inactivity
 - Host input accepts `host:port`, plain domains, and IPv6 (`[::1]:22`)
 
 ### Pages deploy (Cloudflare Pages)
@@ -63,10 +81,10 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **Optional multi-database** — offload cold data (audit logs, email verification codes) to up to 4 secondary Neon databases (`MULTI_DB_ENABLED`) to keep the primary small; reads merge across DBs and cold writes safely fall back to the primary on failure
 
 ### Removed (not part of this rewrite)
-- Real-time multi-user collab (Yjs)
 - Per-gadget sandboxed processes (Dynamic Workers) → replaced by browser iframe static preview
 - Gatekeeper external-OAuth integrations (GitHub/Google/Slack, require external service setup). Note: GitHub/GitLab **OAuth is still available** for signing in and for **Pages Git deploys**.
-- Context & Skills (a "coming soon" placeholder in the original)
+
+> Realtime multi-user collaboration is **back** via Liveblocks (see Workspace & agent) — the original Yjs collab is not ported, but the same UX (live edits + presence) is provided by the Liveblocks integration instead.
 
 ## 🧰 Tech Stack
 
@@ -74,6 +92,7 @@ This is a **derivative / secondary-development (二次开发)** of the original 
 - **React 18 + Tailwind CSS + lucide-react**
 - **Prisma + Postgres** (Vercel Postgres or Neon free tier)
 - **Monaco Editor** for code editing
+- **@liveblocks/client** for realtime collaboration
 - **OpenAI SDK** (compatible with any OpenAI endpoint, incl. DeepSeek and local ollama)
 
 ## 🚀 Getting Started
@@ -118,6 +137,8 @@ pnpm dev
 | `PUBLIC_SITE_URL` | Public origin, e.g. `https://os.example.com` | ✅ |
 | `ADMIN_USERNAME` | Admin usernames, comma-separated | Recommended |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `DEFAULT_MODEL` | LLM (or add providers from the admin panel) | Recommended |
+| `LIVEBLOCKS_SECRET_KEY` | Liveblocks secret key — enables realtime collaboration | Optional |
+| `CRON_SECRET` | Guard for `/api/cron/*` endpoints (scheduled tasks, cleanup, backups) | Optional |
 
 See the **[简体中文配置文档](/docs/env)** / **[English configuration docs](/en/docs/env)** for the full list of optional variables (OAuth, email, human verification, branding, comments, etc.).
 
@@ -135,8 +156,9 @@ Configure the callback exactly as below (replace `os.example.com` with your doma
 
 ## 🧭 Documentation
 
-- [简体中文文档](/docs)
-- [English docs](/en/docs)
+- [简体中文文档](/docs) — 从部署到每个功能的完整指南
+- [English docs](/en/docs) — full English guide
+- Key pages: [Deploy](/docs/deploy) · [Environment variables](/docs/env) · [Static publish](/docs/publish) · [Realtime collaboration](/docs/realtime) · [Sharing & collaboration](/docs/sharing) · [KV cache](/docs/kv)
 - [Cloudflare Access setup](docs/CLOUDFLARE_ACCESS_SETUP.md)
 
 ## 🏗 Architecture

@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { getFormat, seedFilesForFormat, DEFAULT_ENTRY_FILE } from '@/lib/formats';
 import { z } from 'zod';
 
 async function authUser(req: Request) {
@@ -15,21 +16,41 @@ function forbidden(): NextResponse {
   return NextResponse.json({ error: 'You do not have permission to create workspaces.' }, { status: 403 });
 }
 
-// GET /api/workspaces — list current user's workspaces.
+// GET /api/workspaces — list current user's workspaces (owned + shared with them).
 export async function GET(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  const workspaces = await prisma.workspace.findMany({
-    where: { ownerId: session.userId },
-    orderBy: { updatedAt: 'desc' },
-    include: { _count: { select: { files: true } } },
+  const [owned, shared] = await Promise.all([
+    prisma.workspace.findMany({
+      where: { ownerId: session.userId },
+      orderBy: { updatedAt: 'desc' },
+      include: { _count: { select: { files: true } } },
+    }),
+    prisma.workspace.findMany({
+      where: { collaborators: { some: { userId: session.userId } } },
+      orderBy: { updatedAt: 'desc' },
+      include: { _count: { select: { files: true } } },
+    }),
+  ]);
+  // Owned workspaces first, then shared ones (deduped by id).
+  const seen = new Set<string>();
+  const workspaces = [...owned, ...shared].filter((w) => {
+    if (seen.has(w.id)) return false;
+    seen.add(w.id);
+    return true;
   });
   return NextResponse.json({ workspaces });
 }
 
-const createSchema = z.object({ title: z.string().min(1).max(200) });
+const createSchema = z.object({
+  title: z.string().min(1).max(200),
+  // Optional output format id (blueprintId, e.g. "format.document"). When set, the
+  // workspace is seeded with the format's template files instead of the default entry.
+  formatId: z.string().optional(),
+});
 
-// POST /api/workspaces — create a new workspace with a default entry file.
+// POST /api/workspaces — create a new workspace with a default entry file, or with
+// the seed files of an output format when formatId is provided.
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -38,17 +59,32 @@ export async function POST(req: Request) {
   }
 
   const body = createSchema.parse(await req.json());
+
+  // Resolve the seed files: from the format when formatId is given, else the default entry.
+  let formatId: string | null = null;
+  let seedFiles: { path: string; content: string; isEntry: boolean }[] = [
+    { path: 'index.html', content: DEFAULT_ENTRY_FILE, isEntry: true },
+  ];
+  if (body.formatId) {
+    const format = await getFormat(body.formatId);
+    if (!format || !format.enabled) {
+      return NextResponse.json({ error: 'Format not found or disabled' }, { status: 400 });
+    }
+    formatId = format.id;
+    seedFiles = seedFilesForFormat(format);
+  }
+
   const workspace = await prisma.workspace.create({
     data: {
       ownerId: session.userId,
       title: body.title,
+      formatId,
       files: {
-        create: {
-          path: 'index.html',
-          content:
-            '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1" />\n  <title>My App</title>\n</head>\n<body>\n  <h1>Hello from Cloudflare OS (Vercel edition)</h1>\n  <p>Edit this workspace and ask the agent to build something.</p>\n</body>\n</html>\n',
-          isEntry: true,
-        },
+        create: seedFiles.map((f) => ({
+          path: f.path,
+          content: f.content,
+          isEntry: f.isEntry,
+        })),
       },
     },
     include: { files: true },
@@ -58,7 +94,7 @@ export async function POST(req: Request) {
     username: session.username,
     action: 'workspace.create',
     targetId: workspace.id,
-    detail: `Created workspace "${workspace.title}"`,
+    detail: `Created workspace "${workspace.title}"${formatId ? ` from format ${formatId}` : ''}`,
   });
   return NextResponse.json({ workspace }, { status: 201 });
 }

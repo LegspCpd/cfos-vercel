@@ -94,6 +94,12 @@ export default function ProfilePage() {
   const [delOauthError, setDelOauthError] = useState('');
   const [delOauthMsg, setDelOauthMsg] = useState('');
 
+  // Notification email preferences
+  const [notifTypes, setNotifTypes] = useState<string[]>([]);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({});
+  const [notifEmailConfigured, setNotifEmailConfigured] = useState(false);
+  const [notifSaving, setNotifSaving] = useState(false);
+
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
@@ -107,6 +113,15 @@ export default function ProfilePage() {
       })
       .catch(() => router.replace('/login'))
       .finally(() => setLoading(false));
+    // Load notification preferences (best-effort).
+    api
+      .getNotificationPrefs()
+      .then((res) => {
+        setNotifTypes(res.types);
+        setNotifPrefs(res.emailPrefs);
+        setNotifEmailConfigured(res.emailConfigured);
+      })
+      .catch(() => {});
 
     // Show a success banner when returning from a Google link.
     const params = new URL(window.location.href).searchParams;
@@ -148,6 +163,20 @@ export default function ProfilePage() {
       setError((e as Error).message);
     } finally {
       setSavingPw(false);
+    }
+  }
+
+  async function saveNotifPrefs() {
+    setError('');
+    setMessage('');
+    setNotifSaving(true);
+    try {
+      await api.updateNotificationPrefs(notifPrefs);
+      setMessage(t('pr.notifSaved'));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setNotifSaving(false);
     }
   }
 
@@ -913,6 +942,45 @@ export default function ProfilePage() {
         <p className="mt-3 text-xs text-muted-foreground">
           {t('pr.tip')}
         </p>
+      </section>
+
+      {/* Notification preferences */}
+      <section className="mt-6 rounded-lg border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold">{t('pr.notifPrefs')}</h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('pr.notifPrefsDesc')}</p>
+
+        {!notifEmailConfigured && (
+          <p className="mb-4 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+            {t('pr.notifEmailUnconfigured')}
+          </p>
+        )}
+        {notifEmailConfigured && !me?.email && (
+          <p className="mb-4 rounded-md bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+            {t('pr.notifNoEmail')}
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {notifTypes.map((type) => (
+            <label key={type} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 hover:bg-secondary">
+              <span className="text-sm">{t(`notif.type.${type}`) || type}</span>
+              <input
+                type="checkbox"
+                checked={!!notifPrefs[type]}
+                onChange={(e) => setNotifPrefs((p) => ({ ...p, [type]: e.target.checked }))}
+                className="h-4 w-4 accent-primary"
+              />
+            </label>
+          ))}
+        </div>
+
+        <button
+          onClick={saveNotifPrefs}
+          disabled={notifSaving}
+          className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          {notifSaving ? t('saving') : t('save')}
+        </button>
       </section>
 
       {/* Delete account */}

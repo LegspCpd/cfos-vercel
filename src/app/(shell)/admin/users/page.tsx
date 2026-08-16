@@ -15,6 +15,7 @@ interface AdminUser {
   isAdmin: boolean;
   groupId: string | null;
   groupName: string | null;
+  aiDailyLimit: number | null;
   workspaces: number;
 }
 
@@ -23,6 +24,7 @@ interface Group {
   name: string;
   permissions: string[];
   isAdminGroup: boolean;
+  aiDailyLimit: number | null;
   memberCount: number;
 }
 
@@ -58,7 +60,9 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newGroupId, setNewGroupId] = useState('');
+  const [newUserLimit, setNewUserLimit] = useState('');
   const [edPerms, setEdPerms] = useState<string[]>([]);
+  const [edGroupLimit, setEdGroupLimit] = useState('');
 
   async function load() {
     try {
@@ -140,15 +144,20 @@ export default function AdminUsersPage() {
     if (!editUser) return;
     setError('');
     try {
-      const data: { newPassword?: string; email?: string | null; groupId?: string | null } = {};
+      const data: { newPassword?: string; email?: string | null; groupId?: string | null; aiDailyLimit?: number | null } = {};
       if (newPassword) data.newPassword = newPassword;
       if (newEmail !== undefined && newEmail !== null) data.email = newEmail || null;
       if (newGroupId !== undefined) data.groupId = newGroupId;
+      if (newUserLimit !== '') {
+        const n = Number(newUserLimit);
+        data.aiDailyLimit = Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+      }
       await api.adminUpdateUser(editUser.id, data);
       setEditUser(null);
       setNewPassword('');
       setNewEmail('');
       setNewGroupId('');
+      setNewUserLimit('');
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -159,7 +168,12 @@ export default function AdminUsersPage() {
     if (!editGroup) return;
     setError('');
     try {
-      await api.adminUpdateGroup(editGroup.id, { permissions: edPerms });
+      const data: { permissions: string[]; aiDailyLimit?: number | null } = { permissions: edPerms };
+      if (edGroupLimit !== '') {
+        const n = Number(edGroupLimit);
+        data.aiDailyLimit = Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+      }
+      await api.adminUpdateGroup(editGroup.id, data);
       setEditGroup(null);
       await load();
     } catch (e) {
@@ -237,10 +251,11 @@ export default function AdminUsersPage() {
                 </p>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {g.permissions.length ? g.permissions.map((p) => PERMS.find((x) => x.code === p)?.label || p).join('、') : t('users.noPerms')}
+                  {g.aiDailyLimit != null && <span className="ml-2 text-violet-500">AI: {g.aiDailyLimit}/天</span>}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => { setEditGroup(g); setEdPerms(g.permissions); }} className="rounded-md border px-2 py-1 text-xs hover:bg-secondary">{t('users.editPerms')}</button>
+                <button onClick={() => { setEditGroup(g); setEdPerms(g.permissions); setEdGroupLimit(g.aiDailyLimit != null ? String(g.aiDailyLimit) : ''); }} className="rounded-md border px-2 py-1 text-xs hover:bg-secondary">{t('users.editPerms')}</button>
                 {g.name !== '__super_admin__' && g.name !== '__default__' && (
                   <button onClick={() => deleteGroup(g.id)} className="rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10">
                     <Trash2 className="h-3 w-3" /> {t('delete')}
@@ -333,6 +348,10 @@ export default function AdminUsersPage() {
                   {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('quota.adminUserLimit')}</label>
+                <input type="number" min={0} className={inputCls} placeholder={t('quota.unlimited')} value={newUserLimit} onChange={(e) => setNewUserLimit(e.target.value)} />
+              </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setEditUser(null)} className="rounded-md border px-3 py-2 text-sm">{t('cancel')}</button>
@@ -355,6 +374,10 @@ export default function AdminUsersPage() {
                   {p.label}
                 </label>
               ))}
+            </div>
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('quota.adminGroupLimit')}</label>
+              <input type="number" min={0} className={inputCls} placeholder={t('quota.unlimited')} value={edGroupLimit} onChange={(e) => setEdGroupLimit(e.target.value)} />
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setEditGroup(null)} className="rounded-md border px-3 py-2 text-sm">{t('cancel')}</button>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Send, Plus, MessageSquare } from 'lucide-react';
+import { Loader2, Send, Plus, MessageSquare, Wrench } from 'lucide-react';
 import { api, type WorkspaceFile } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 import { clsx } from 'clsx';
@@ -10,6 +10,7 @@ interface ChatMsg {
   id: string;
   role: 'user' | 'assistant' | 'tool';
   content: string;
+  toolCalls?: { tool: string; summary: string }[];
 }
 
 interface ChatThread {
@@ -23,12 +24,14 @@ interface ChatThread {
 interface Props {
   workspaceId: string;
   onAgentResult: (files: WorkspaceFile[]) => void;
+  // Read-only mode for read-only collaborators: the input is disabled.
+  readOnly?: boolean;
 }
 
 // The left-side AI chat panel. Lists the workspace's chat threads, lets the user send a prompt
 // to the code agent, and shows the assistant's reply. When the agent returns updated files they
 // are surfaced to the parent via onAgentResult so the Code/App tabs refresh.
-export default function ChatPanel({ workspaceId, onAgentResult }: Props) {
+export default function ChatPanel({ workspaceId, onAgentResult, readOnly = false }: Props) {
   const { t } = useI18n();
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -112,7 +115,12 @@ export default function ChatPanel({ workspaceId, onAgentResult }: Props) {
       onAgentResult(result.files as WorkspaceFile[]);
       // Persist and append the assistant reply.
       await api.appendChatMessage(workspaceId, chatId, 'assistant', result.message);
-      const aiMsg: ChatMsg = { id: `tmp-${Date.now()}-a`, role: 'assistant', content: result.message };
+      const aiMsg: ChatMsg = {
+        id: `tmp-${Date.now()}-a`,
+        role: 'assistant',
+        content: result.message,
+        toolCalls: result.toolCalls ?? [],
+      };
       setThreads((prev) =>
         prev.map((c) => (c.id === chatId ? { ...c, messages: [...c.messages, aiMsg] } : c)),
       );
@@ -190,6 +198,22 @@ export default function ChatPanel({ workspaceId, onAgentResult }: Props) {
                   )}
                 >
                   {m.content}
+                  {m.toolCalls && m.toolCalls.length > 0 && (
+                    <div className="mt-2 space-y-1 border-t border-border/60 pt-2">
+                      {m.toolCalls.map((tc, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-1.5 text-[11px] text-muted-foreground"
+                        >
+                          <Wrench className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span>
+                            <span className="font-mono text-foreground/80">{tc.tool}</span>
+                            {tc.summary ? ` — ${tc.summary}` : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -206,28 +230,34 @@ export default function ChatPanel({ workspaceId, onAgentResult }: Props) {
 
       {/* Input */}
       <div className="shrink-0 border-t p-2">
-        <div className="flex items-end gap-1.5">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            placeholder={t('ws.chatPlaceholder')}
-            rows={2}
-            className="min-h-[40px] flex-1 resize-none rounded-md border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
-          />
-          <button
-            onClick={send}
-            disabled={sending || !input.trim()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
-          >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
-        </div>
+        {readOnly ? (
+          <p className="rounded-md bg-secondary/50 px-2.5 py-2 text-center text-xs text-muted-foreground">
+            {t('ws.readOnlyHint')}
+          </p>
+        ) : (
+          <div className="flex items-end gap-1.5">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              placeholder={t('ws.chatPlaceholder')}
+              rows={2}
+              className="min-h-[40px] flex-1 resize-none rounded-md border bg-background px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+            />
+            <button
+              onClick={send}
+              disabled={sending || !input.trim()}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -20,6 +20,8 @@ type Ctx = { params: { id: string } };
 const patchSchema = z.object({
   name: z.string().min(1).max(50).optional(),
   permissions: z.array(z.string()).optional(),
+  // Group-wide AI daily quota (null = no limit).
+  aiDailyLimit: z.number().int().min(0).max(100000).nullable().optional(),
 });
 
 // PATCH /api/admin/groups/:id — update group name and/or permissions.
@@ -34,12 +36,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
 
   const body = patchSchema.parse(await req.json());
-  const data: { name?: string; permissions?: string } = {};
+  const data: { name?: string; permissions?: string; aiDailyLimit?: number | null } = {};
   if (body.name) data.name = body.name;
   if (body.permissions) {
     const valid = body.permissions.filter((p) => ALL_PERMISSIONS.some((x) => x.code === p)) as PermissionCode[];
     data.permissions = serializePermissions(valid);
   }
+  if (body.aiDailyLimit !== undefined) data.aiDailyLimit = body.aiDailyLimit;
 
   const updated = await prisma.userGroup.update({ where: { id: params.id }, data });
   await writeAudit({ userId: session.userId, username: session.username, action: 'group.update', targetId: params.id, detail: `Updated group ${updated.name}` });

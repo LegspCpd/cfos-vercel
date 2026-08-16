@@ -13,9 +13,11 @@ import {
   MapPin,
   Network,
   Globe,
+  Gauge,
+  Download,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
-import { getToken } from '@/lib/client/auth';
+import { getToken, getAuthHeaders } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
 import { detectMyIps } from '@/lib/client/detect-ip';
 
@@ -40,11 +42,20 @@ interface Analytics {
   currentIpFamily: 'v4' | 'v6' | null;
 }
 
+interface UsageInfo {
+  limit: number | null;
+  used: number;
+  remaining: number | null;
+  source: 'user' | 'group' | 'env' | 'none';
+  resetAt: string;
+}
+
 export default function AnalyticsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Analytics | null>(null);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [browserIps, setBrowserIps] = useState<{ v4: string; v6: string }>({ v4: '', v6: '' });
 
   useEffect(() => {
@@ -61,6 +72,7 @@ export default function AnalyticsPage() {
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
+    api.getUsage().then(setUsage).catch(() => {});
   }, [router]);
 
   if (loading) {
@@ -72,6 +84,32 @@ export default function AnalyticsPage() {
   }
 
   if (!data) return null;
+
+  // Download the caller's own audit rows as CSV or JSON.
+  async function exportMine(format: 'csv' | 'json') {
+    try {
+      const res = await fetch(`/api/audit/export?format=${format}&scope=mine`, {
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      a.download = match?.[1] || `audit-mine.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('export failed', e);
+    }
+  }
 
   const joinedDate = new Date(data.joinedAt).toLocaleDateString();
   const myCards = [
@@ -99,6 +137,52 @@ export default function AnalyticsPage() {
           </div>
         ))}
       </div>
+
+      {/* AI usage quota */}
+      {usage && (
+        <section className="mt-8 rounded-lg border bg-card p-6">
+          <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
+            <Gauge className="h-4 w-4 text-violet-500" /> {t('quota.title')}
+          </h2>
+          <p className="mb-4 text-sm text-muted-foreground">{t('quota.desc')}</p>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-md bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">{t('quota.used')}</p>
+              <p className="mt-1 text-2xl font-bold">{usage.used.toLocaleString()}</p>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">{t('quota.limit')}</p>
+              <p className="mt-1 text-2xl font-bold">
+                {usage.limit == null ? t('quota.unlimited') : usage.limit.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">{t('quota.remaining')}</p>
+              <p className={`mt-1 text-2xl font-bold ${usage.remaining != null && usage.remaining <= 0 ? 'text-red-500' : ''}`}>
+                {usage.remaining == null ? t('quota.unlimited') : usage.remaining.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-md bg-secondary/50 p-4">
+              <p className="text-xs text-muted-foreground">{t('quota.source')}</p>
+              <p className="mt-1 text-2xl font-bold">{t(`quota.source.${usage.source}`)}</p>
+            </div>
+          </div>
+          {usage.limit != null && (
+            <div className="mt-4">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className={`h-full rounded-full ${usage.remaining != null && usage.remaining <= 0 ? 'bg-red-500' : 'bg-violet-500'}`}
+                  style={{ width: `${Math.min(100, Math.round((usage.used / usage.limit) * 100))}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('quota.resetAt')}：{new Date(usage.resetAt).toLocaleString()}
+                {usage.remaining != null && usage.remaining <= 0 && ` · ${t('quota.exhausted')}`}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* My IPs — this visit (IPv4 + IPv6) */}
       <section className="mt-8 rounded-lg border bg-card p-6">
@@ -219,6 +303,28 @@ export default function AnalyticsPage() {
       >
         {t('an.viewAllWorkspaces')} →
       </Link>
+
+      {/* Export my audit log */}
+      <section className="mt-8 rounded-lg border bg-card p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
+          <Download className="h-4 w-4 text-blue-500" /> {t('audit.exportMine')}
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">{t('audit.exportMineHint')}</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => exportMine('csv')}
+            className="rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary"
+          >
+            CSV
+          </button>
+          <button
+            onClick={() => exportMine('json')}
+            className="rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary"
+          >
+            JSON
+          </button>
+        </div>
+      </section>
 
       <p className="mt-10 text-center text-xs text-muted-foreground">{t('an.footer')}</p>
     </div>

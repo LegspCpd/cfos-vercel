@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Send, FileText, CheckSquare, Gamepad2, BarChart3, Timer } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
+import NewFormatRow from '@/components/NewFormatRow';
 
 // Task cards — English prompts for the agent; titles are localized.
 const TASK_PROMPTS = [
@@ -120,6 +121,11 @@ export default function HomePage() {
             </div>
           </button>
         ))}
+      </div>
+
+      {/* Start with a format */}
+      <div className="mt-8" style={{ animationDelay: '320ms' }}>
+        <NewFormatRow />
       </div>
     </div>
   );

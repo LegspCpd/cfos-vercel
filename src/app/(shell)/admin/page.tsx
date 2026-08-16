@@ -11,6 +11,8 @@ import SiteSettingsPanel from '@/components/SiteSettingsPanel';
 import ProvidersManager from '@/components/ProvidersManager';
 import CfAccessStatus from '@/components/CfAccessStatus';
 import SignupToggle from '@/components/SignupToggle';
+import FormatsPanel from '@/components/FormatsPanel';
+import ContextReviewPanel from '@/components/ContextReviewPanel';
 import { useI18n } from '@/lib/client/i18n';
 import { clsx } from 'clsx';
 
@@ -147,32 +149,10 @@ export default function AdminPage() {
         )}
 
         {tab === 'formats' && (
-          <div className="rounded-lg border bg-card p-6">
-            <h3 className="mb-2 font-semibold">{t('ad.formatsTitle')}</h3>
-            <p className="text-sm text-muted-foreground">{t('ad.formatsDesc')}</p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Link
-                href="/blueprints"
-                className="flex items-center justify-between rounded-md border p-4 hover:border-primary/40"
-              >
-                <div>
-                  <p className="text-sm font-medium">{t('ad.blueprints')}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t('ad.blueprintsDesc')}</p>
-                </div>
-                <span className="text-muted-foreground">→</span>
-              </Link>
-              <Link
-                href="/outputs"
-                className="flex items-center justify-between rounded-md border p-4 hover:border-primary/40"
-              >
-                <div>
-                  <p className="text-sm font-medium">{t('ad.outputs')}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t('ad.outputsDesc')}</p>
-                </div>
-                <span className="text-muted-foreground">→</span>
-              </Link>
-            </div>
-          </div>
+          <>
+            <FormatsPanel />
+            <ContextReviewPanel />
+          </>
         )}
 
         {tab === 'access' && (

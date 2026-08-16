@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isSafeFilePath } from '@/lib/path';
+import { getFormat } from '@/lib/formats';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -12,7 +13,7 @@ async function authUser(req: Request) {
 }
 
 // POST /api/workspaces/import — create a workspace from an exported blueprint archive.
-// Body: { title: string, files: [{ path, content, isEntry? }] }
+// Body: { title: string, files: [{ path, content, isEntry? }], formatId?: string|null }
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -20,9 +21,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You do not have permission to create workspaces.' }, { status: 403 });
   }
 
-  const { title, files } = await req.json();
+  const { title, files, formatId } = await req.json();
   if (!title || !Array.isArray(files) || files.length === 0) {
     return NextResponse.json({ error: 'title and files[] required' }, { status: 400 });
+  }
+
+  // The archive may carry the output format it was created from. Restore it when the
+  // format still exists and is enabled; otherwise fall back to a generic workspace.
+  let resolvedFormatId: string | null = null;
+  if (formatId) {
+    const format = await getFormat(String(formatId));
+    if (format && format.enabled) resolvedFormatId = format.id;
   }
 
   // Sanitize: limit count, per-file size, and total size to avoid abuse; reject unsafe
@@ -53,6 +62,7 @@ export async function POST(req: Request) {
     data: {
       ownerId: session.userId,
       title: String(title).slice(0, 200),
+      formatId: resolvedFormatId,
       files: {
         create: files.map((f, i) => ({
           path: String(f.path).trim(),

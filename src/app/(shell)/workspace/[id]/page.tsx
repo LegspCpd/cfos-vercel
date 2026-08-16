@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Trash2, Loader2, Code2, AppWindow, Plug, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Trash2, Loader2, Code2, AppWindow, Plug, MessageSquare, ChevronDown, Check } from 'lucide-react';
 import { api, type WorkspaceFile } from '@/lib/client/api';
 import { getToken } from '@/lib/client/auth';
 import { useI18n } from '@/lib/client/i18n';
@@ -12,8 +12,18 @@ import ChatPanel from '@/components/workspace/ChatPanel';
 import CodePanel from '@/components/workspace/CodePanel';
 import AppPanel from '@/components/workspace/AppPanel';
 import ConnectionsPanel from '@/components/workspace/ConnectionsPanel';
+import CollaboratorsPanel from '@/components/workspace/CollaboratorsPanel';
+import ScheduledTasksPanel from '@/components/workspace/ScheduledTasksPanel';
+import PublishPanel from '@/components/workspace/PublishPanel';
+import { formatIcon } from '@/components/FormatBadge';
 
 type RightTab = 'app' | 'code' | 'connections';
+
+interface FormatOffer {
+  id: string;
+  title: string;
+  output: { noun: string; icon: string };
+}
 
 export default function WorkspaceEditorPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -25,6 +35,13 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
   const [tab, setTab] = useState<RightTab>('app');
   const [showChat, setShowChat] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [formatId, setFormatId] = useState<string | null>(null);
+  const [formats, setFormats] = useState<FormatOffer[]>([]);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  // The caller's access level: 'owner' | 'write' | 'read'. Owner sees the collaborator
+  // manager; read-only collaborators get a read-only editor (no save / agent / delete).
+  const [access, setAccess] = useState<'owner' | 'write' | 'read'>('owner');
 
   const load = useCallback(async () => {
     try {
@@ -32,6 +49,8 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
       setTitle(res.workspace.title);
       setFiles(res.workspace.files);
       setPreviewUrl(res.previewUrl);
+      setFormatId(res.workspace.formatId);
+      setAccess(res.access ?? 'owner');
     } catch {
       setNotFound(true);
     } finally {
@@ -45,7 +64,27 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
       return;
     }
     load();
+    api
+      .listFormats()
+      .then((res) => setFormats(res.formats.map((f) => ({ id: f.id, title: f.title, output: f.output }))))
+      .catch(() => {});
   }, [router, load]);
+
+  async function handleSwitchFormat(next: string | null) {
+    if (next === formatId || switching) return;
+    setSwitching(true);
+    setFormatMenuOpen(false);
+    try {
+      const res = await api.switchWorkspaceFormat(params.id, next);
+      setFormatId(res.formatId);
+      // Reload files so the seeded template files show up in the editor.
+      await load();
+    } catch {
+      /* ignore */
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm(t('ws.confirmDelete'))) return;
@@ -110,6 +149,61 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
           }}
           className="min-w-0 flex-1 rounded-md border-none bg-transparent px-2 py-1 text-sm font-semibold outline-none focus:bg-secondary"
         />
+        {/* Output format: badge + switch menu */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setFormatMenuOpen((v) => !v)}
+            disabled={switching}
+            className="flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+            title={t('ws.formatSwitch')}
+          >
+            {switching ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              (() => {
+                const current = formats.find((f) => f.id === formatId);
+                const Icon = formatIcon(current?.output.icon);
+                return <Icon className="h-3.5 w-3.5" />;
+              })()
+            )}
+            {formats.find((f) => f.id === formatId)?.output.noun ?? t('ws.formatNone')}
+            <ChevronDown className="h-3 w-3" />
+          </button>
+          {formatMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setFormatMenuOpen(false)} />
+              <div className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border bg-popover p-1 shadow-lg">
+                <p className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('ws.formatSwitch')}
+                </p>
+                {formats.map((f) => {
+                  const Icon = formatIcon(f.output.icon);
+                  const active = f.id === formatId;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => handleSwitchFormat(f.id)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary"
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="flex-1 truncate">{f.title}</span>
+                      {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                  );
+                })}
+                {formatId && (
+                  <button
+                    onClick={() => handleSwitchFormat(null)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-secondary"
+                  >
+                    <AppWindow className="h-4 w-4" />
+                    <span className="flex-1">{t('ws.formatNone')}</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
         <button
           onClick={() => setShowChat((v) => !v)}
           className={clsx(
@@ -120,13 +214,21 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
         >
           <MessageSquare className="h-3.5 w-3.5" />
         </button>
-        <button
-          onClick={handleDelete}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-600"
-          title={t('delete')}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {/* Collaborator manager — owner only */}
+        {access === 'owner' && (
+          <div className="relative shrink-0">
+            <CollaboratorsPanel workspaceId={params.id} />
+          </div>
+        )}
+        {access !== 'read' && (
+          <button
+            onClick={handleDelete}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-600"
+            title={t('delete')}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </header>
 
       {/* Body: left chat + right panel */}
@@ -134,7 +236,7 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
         {/* Left: AI chat */}
         {showChat && (
           <aside className="w-80 shrink-0 border-r bg-card lg:w-96">
-            <ChatPanel workspaceId={params.id} onAgentResult={handleFilesSaved} />
+            <ChatPanel workspaceId={params.id} onAgentResult={handleFilesSaved} readOnly={access === 'read'} />
           </aside>
         )}
 
@@ -163,9 +265,28 @@ export default function WorkspaceEditorPage({ params }: { params: { id: string }
           <div className="min-h-0 flex-1">
             {tab === 'app' && <AppPanel previewUrl={previewUrl} files={files} />}
             {tab === 'code' && (
-              <CodePanel workspaceId={params.id} files={files} onSaved={handleFilesSaved} />
+              <CodePanel
+                workspaceId={params.id}
+                files={files}
+                onSaved={handleFilesSaved}
+                readOnly={access === 'read'}
+              />
             )}
-            {tab === 'connections' && <ConnectionsPanel workspaceId={params.id} />}
+            {tab === 'connections' && (
+              <div className="h-full overflow-y-auto p-4">
+                <ConnectionsPanel workspaceId={params.id} />
+                {access !== 'read' && (
+                  <>
+                    <div className="mt-4">
+                      <ScheduledTasksPanel workspaceId={params.id} />
+                    </div>
+                    <div className="mt-4">
+                      <PublishPanel workspaceId={params.id} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>

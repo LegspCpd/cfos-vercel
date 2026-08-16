@@ -196,6 +196,8 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | `IMGHOST_FOLDER` | Upload folder, default `photos/avatars`. |
 | `VERIFY_CODE_TTL_MINUTES` | Email verification-code lifetime in minutes, default `10`. |
 | `CRON_SECRET` | Access key for the cleanup cron task. |
+| `SSH_SESSION_TTL_MINUTES` | SSH persistent-session inactivity timeout in minutes, default `30`. |
+| `LIVEBLOCKS_SECRET_KEY` | Liveblocks **Secret key** (`sk_dev_...`); when set, the workspace code editor enables **multi-user realtime collaboration**. When unset, the editor stays purely offline (see [Realtime Collaboration](/en/docs/realtime)). |
 
 ### Multiple Databases (optional)
 

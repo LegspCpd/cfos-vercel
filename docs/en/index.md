@@ -21,18 +21,27 @@ This version is a **secondary development (二次开发) rebuilt for Vercel** us
 - AI Agent: build / modify apps with natural language
 - Live preview (iframe)
 - File history / version rollback (each change is recorded; restore with one click)
+- **Realtime multi-user collaboration** (Liveblocks: sync edits, peer count)
 
 **Share & collaborate**
 - File sharing (Cloudflare R2, expiring links)
+- **One-click static publish** (build the workspace into a static site + public link, no external deploy)
 - Blueprint export / import (`.gadget.json` archive)
 - Public blueprint share links (viewable without logging in)
 - Favorite workspaces (star)
+- **Workspace collaborators** (invite by username, read-only / editable)
+- **File-level shares** (grant one file without opening the whole workspace)
+- **Public context library** (submit a doc → admin review → visible to everyone, agent references it automatically)
+- **In-app + email notifications** (collaborators, review results, ticket replies…)
 
 **Manage & extend**
 - External connections (GitHub)
+- **SSH persistent sessions** (remembers the remote directory & environment across commands)
+- **Scheduled tasks** (cron expressions, auto-run with logs)
 - Context doc library (agent reference)
 - Admin panel (users / settings / AI / audit)
-- Audit log
+- Audit log (exportable as CSV / JSON)
+- **AI usage quotas** (per-user / per-group daily limits, auto-throttled)
 - Multiple AI Providers (DeepSeek / OpenAI / local, etc.)
 
 ## Documentation
@@ -45,6 +54,10 @@ This version is a **secondary development (二次开发) rebuilt for Vercel** us
 - [Cloudflare Access](/en/docs/cf-access) — full SSO gate
 - [Database Backup](/en/docs/backup) — protect data with Neon platform capabilities
 - [Pages Deploy](/en/docs/cloudflare-deploy) — deploy workspaces, GitHub/GitLab repos, or ZIP uploads to Cloudflare Pages + short links
+- [Static Publish](/en/docs/publish) — publish a workspace as a static site + public link
+- [Realtime Collaboration](/en/docs/realtime) — Liveblocks multi-user editing
+- [Output Formats](/en/docs/formats) — document/presentation/spreadsheet templates & marketplace
+- [Sharing & Collaboration](/en/docs/sharing) — collaborators, file shares, public library, notifications
 - [Usage](/en/docs/usage) — how to use the workspace
 - [FAQ](/en/docs/faq) — troubleshooting & tips
 

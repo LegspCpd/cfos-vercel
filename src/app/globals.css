@@ -51,17 +51,31 @@
   body {
     @apply bg-background text-foreground antialiased;
     /* Custom site-wide background (set by SiteBackground when the BEIJIN env var is
-       configured). Falls back to a subtle modern flat grid + soft glow. */
+       configured). Falls back to a modern flat "aurora + blueprint grid" backdrop:
+       two nested grids (fine 24px + coarse 96px) for depth, a soft primary aurora
+       glow top-left and a cool secondary glow bottom-right, plus a faint noise-free
+       vignette. All layers are cheap to paint (no blur filters on the body). */
     background-image:
       var(--site-bg-url, none),
-      radial-gradient(ellipse 70% 45% at 50% -10%, hsl(var(--primary) / 0.09), transparent 70%),
-      radial-gradient(ellipse 50% 35% at 88% 112%, hsl(var(--primary) / 0.05), transparent 70%),
-      linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.35) 1px, transparent 1px);
-    background-size: cover, cover, cover, 36px 36px, 36px 36px;
-    background-position: center, center, center, center, center;
-    background-attachment: fixed, fixed, fixed, fixed, fixed;
-    background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+      radial-gradient(ellipse 65% 45% at 18% -8%, hsl(var(--primary) / 0.12), transparent 65%),
+      radial-gradient(ellipse 55% 40% at 92% 108%, hsl(262 83% 62% / 0.08), transparent 65%),
+      radial-gradient(ellipse 40% 30% at 80% -5%, hsl(190 95% 50% / 0.05), transparent 60%),
+      linear-gradient(to right, hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(to right, hsl(var(--border) / 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.12) 1px, transparent 1px);
+    background-size:
+      cover,
+      cover,
+      cover,
+      cover,
+      24px 24px,
+      24px 24px,
+      96px 96px,
+      96px 96px;
+    background-position: center, center, center, center, center, center, center, center;
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat;
   }
 
   /* On small screens the grid is too dense and the fixed attachment can jank on
@@ -70,12 +84,14 @@
     body {
       background-image:
         var(--site-bg-url, none),
-        radial-gradient(ellipse 70% 45% at 50% -10%, hsl(var(--primary) / 0.07), transparent 70%),
-        radial-gradient(ellipse 50% 35% at 88% 112%, hsl(var(--primary) / 0.04), transparent 70%),
-        linear-gradient(to right, hsl(var(--border) / 0.22) 1px, transparent 1px),
-        linear-gradient(to bottom, hsl(var(--border) / 0.22) 1px, transparent 1px);
-      background-size: cover, cover, cover, 44px 44px, 44px 44px;
-      background-attachment: scroll, scroll, scroll, scroll, scroll;
+        radial-gradient(ellipse 70% 45% at 50% -10%, hsl(var(--primary) / 0.08), transparent 70%),
+        radial-gradient(ellipse 50% 35% at 88% 112%, hsl(262 83% 62% / 0.05), transparent 70%),
+        linear-gradient(to right, hsl(var(--border) / 0.18) 1px, transparent 1px),
+        linear-gradient(to bottom, hsl(var(--border) / 0.18) 1px, transparent 1px),
+        linear-gradient(to right, hsl(var(--border) / 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, hsl(var(--border) / 0.08) 1px, transparent 1px);
+      background-size: cover, cover, cover, 44px 44px, 44px 44px, 88px 88px, 88px 88px;
+      background-attachment: scroll, scroll, scroll, scroll, scroll, scroll, scroll;
     }
   }
 }
@@ -323,4 +339,54 @@ body, .card, button, input, textarea, iframe {
   background: hsl(var(--muted));
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
+}
+
+/* ===== Modern sidebar (frosted glass) ===== */
+/* The desktop sidebar is a translucent card floating over the aurora backdrop:
+   backdrop-blur + a soft gradient tint + a hairline border. The mobile drawer
+   reuses the same surface so both feel consistent. */
+.sidebar-surface {
+  background:
+    linear-gradient(180deg, hsl(var(--card) / 0.72), hsl(var(--card) / 0.55)),
+    hsl(var(--card) / 0.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-right: 1px solid hsl(var(--border) / 0.7);
+}
+
+/* Active nav item: subtle gradient pill + a primary indicator bar on the left. */
+.nav-item-active {
+  position: relative;
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.05));
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+.nav-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 55%;
+  width: 3px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+}
+
+/* Nav item hover: soft tinted pill. */
+.nav-item-hover {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nav-item-hover:hover {
+  background: hsl(var(--secondary) / 0.7);
+  color: hsl(var(--foreground));
+}
+
+/* Brand row: subtle gradient text for the site name. */
+.sidebar-brand {
+  background: linear-gradient(90deg, hsl(var(--foreground)), hsl(var(--primary)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

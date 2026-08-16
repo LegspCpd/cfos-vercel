@@ -182,8 +182,8 @@ export default function AppShell({
               onClick={() => setOpenGroup(open ? null : entry.labelKey)}
               aria-expanded={open}
               className={clsx(
-                'mb-0.5 flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                active ? 'text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                'nav-item-hover mb-0.5 flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+                active ? 'nav-item-active' : 'text-muted-foreground',
               )}
             >
               <entry.icon className={clsx('h-4 w-4', active && 'text-primary')} />
@@ -200,10 +200,8 @@ export default function AppShell({
                       href={child.href}
                       onClick={onNavigate}
                       className={clsx(
-                        'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-                        childActive
-                          ? 'bg-secondary font-medium text-foreground'
-                          : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                        'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+                        childActive ? 'nav-item-active' : 'text-muted-foreground',
                       )}
                     >
                       <child.icon className={clsx('h-4 w-4', childActive && 'text-primary')} />
@@ -223,10 +221,8 @@ export default function AppShell({
           href={entry.href}
           onClick={onNavigate}
           className={clsx(
-            'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-            active
-              ? 'bg-secondary font-medium text-foreground'
-              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+            'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+            active ? 'nav-item-active' : 'text-muted-foreground',
           )}
         >
           <entry.icon className={clsx('h-4 w-4', active && 'text-primary')} />
@@ -245,19 +241,19 @@ export default function AppShell({
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r bg-card md:flex">
+      <aside className="sidebar-surface fixed inset-y-0 left-0 z-30 hidden w-60 flex-col md:flex">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 px-4 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={siteLogo || LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
-          <span className="text-base font-semibold">{siteName || t('app.name')}</span>
+          <span className="sidebar-brand text-base font-semibold">{siteName || t('app.name')}</span>
         </Link>
 
         {/* Search button */}
         <div className="px-3 pb-2">
           <button
             onClick={() => setPaletteOpen(true)}
-            className="flex w-full items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm text-muted-foreground hover:border-primary/40"
+            className="nav-item-hover flex w-full items-center gap-2 rounded-md border bg-background/60 px-3 py-1.5 text-sm text-muted-foreground hover:border-primary/40"
           >
             <Search className="h-3.5 w-3.5" />
             <span className="flex-1 text-left">{t('nav.search')}</span>
@@ -272,13 +268,13 @@ export default function AppShell({
             <Link
               href="/admin"
               className={clsx(
-                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                 pathname.startsWith('/admin') &&
                   !pathname.startsWith('/admin/users') &&
                   !pathname.startsWith('/admin/tickets') &&
                   !pathname.startsWith('/admin/audit')
-                  ? 'bg-secondary font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'nav-item-active'
+                  : 'text-muted-foreground',
               )}
             >
               <ShieldCheck className="h-4 w-4" />
@@ -289,10 +285,10 @@ export default function AppShell({
             <Link
               href="/admin/users"
               className={clsx(
-                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                 pathname.startsWith('/admin/users')
-                  ? 'bg-secondary font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'nav-item-active'
+                  : 'text-muted-foreground',
               )}
             >
               <Users className="h-4 w-4" />
@@ -303,10 +299,10 @@ export default function AppShell({
             <Link
               href="/admin/tickets"
               className={clsx(
-                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                 pathname.startsWith('/admin/tickets')
-                  ? 'bg-secondary font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'nav-item-active'
+                  : 'text-muted-foreground',
               )}
             >
               <Ticket className="h-4 w-4" />
@@ -317,10 +313,10 @@ export default function AppShell({
             <Link
               href="/admin/audit"
               className={clsx(
-                'mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
+                'nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
                 pathname.startsWith('/admin/audit')
-                  ? 'bg-secondary font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'nav-item-active'
+                  : 'text-muted-foreground',
               )}
             >
               <ScrollText className="h-4 w-4" />
@@ -330,18 +326,18 @@ export default function AppShell({
         </nav>
 
         {/* Bottom utility strip */}
-        <div className="border-t px-3 py-2">
-          <div className="mb-2 flex items-center gap-1 rounded-md border p-1">
+        <div className="border-t border-border/60 px-3 py-2">
+          <div className="mb-2 flex items-center gap-1 rounded-md border bg-background/50 p-1">
             {/* Language toggle */}
             <button
               onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
               title="中文 / English"
-              className="flex flex-1 items-center justify-center rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="nav-item-hover flex flex-1 items-center justify-center rounded px-2 py-1 text-xs font-medium text-muted-foreground"
             >
               {lang === 'zh' ? '中 / EN' : 'EN / 中'}
             </button>
           </div>
-          <div className="mb-2 flex items-center gap-1 rounded-md border p-1">
+          <div className="mb-2 flex items-center gap-1 rounded-md border bg-background/50 p-1">
             {themeOptions.map((opt) => (
               <button
                 key={opt.value}
@@ -361,7 +357,7 @@ export default function AppShell({
             <div className="relative min-w-0 flex-1">
               <button
                 onClick={() => setUserMenuOpen((v) => !v)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary"
+                className="nav-item-hover flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm"
               >
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -378,7 +374,7 @@ export default function AppShell({
                   <Link
                     href="/profile"
                     onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 rounded px-3 py-2 text-sm hover:bg-secondary"
+                    className="nav-item-hover flex items-center gap-2 rounded px-3 py-2 text-sm"
                   >
                     {t('nav.settings')}
                   </Link>
@@ -444,13 +440,13 @@ export default function AppShell({
       {/* Mobile drawer */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-card shadow-xl">
-            <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="animate-backdrop-in absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="sidebar-surface animate-drawer-in absolute inset-y-0 left-0 flex w-72 flex-col shadow-xl">
+            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={siteLogo || LOGO_URL} alt="logo" className="h-6 w-6 rounded-md object-cover" />
-                <span className="font-semibold">{siteName || t('app.name')}</span>
+                <span className="sidebar-brand font-semibold">{siteName || t('app.name')}</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="rounded p-1 hover:bg-secondary" aria-label="Close menu">
                 <X className="h-5 w-5" />
@@ -462,7 +458,7 @@ export default function AppShell({
                 <Link
                   href="/admin"
                   onClick={() => setSidebarOpen(false)}
-                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                  className="nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {t('nav.admin')}
@@ -472,7 +468,7 @@ export default function AppShell({
                 <Link
                   href="/admin/users"
                   onClick={() => setSidebarOpen(false)}
-                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                  className="nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
                 >
                   <Users className="h-4 w-4" />
                   {t('nav.users')}
@@ -482,7 +478,7 @@ export default function AppShell({
                 <Link
                   href="/admin/tickets"
                   onClick={() => setSidebarOpen(false)}
-                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                  className="nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
                 >
                   <Ticket className="h-4 w-4" />
                   {t('nav.tickets')}
@@ -492,14 +488,14 @@ export default function AppShell({
                 <Link
                   href="/admin/audit"
                   onClick={() => setSidebarOpen(false)}
-                  className="mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
+                  className="nav-item-hover mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground"
                 >
                   <ScrollText className="h-4 w-4" />
                   {t('nav.audit')}
                 </Link>
               )}
             </nav>
-            <div className="border-t p-3">
+            <div className="border-t border-border/60 p-3">
               <button
                 onClick={logout}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10"

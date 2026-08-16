@@ -250,7 +250,7 @@ export default function BlueprintsPage() {
             <div
               key={w.id}
               style={{ animationDelay: `${i * 35}ms` }}
-              className="reveal-row flex items-center justify-between rounded-lg border bg-card p-4 transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
+              className="reveal-row flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-4 transition-colors duration-200 hover:border-primary/50 hover:shadow-md"
             >
               <Link href={`/workspace/${w.id}`} className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
@@ -261,7 +261,7 @@ export default function BlueprintsPage() {
                   <p className="text-xs text-muted-foreground">{w._count.files} {t('ws.files')}</p>
                 </div>
               </Link>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:shrink-0">
                 <button
                   onClick={() => copyShareLink(w.id)}
                   className="press flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm text-muted-foreground hover:bg-secondary"

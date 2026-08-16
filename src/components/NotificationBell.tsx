@@ -19,7 +19,12 @@ interface Notification {
 // The notification bell in the top bar. Polls /api/notifications every 30s so new
 // events (collaborator added, context approved, ticket answered…) show up without a
 // page refresh. Clicking a notification marks it read and navigates to its href.
-export default function NotificationBell() {
+//
+// `direction` controls where the popup opens: the desktop bell sits at the BOTTOM of
+// the sidebar so its popup must open UPWARD (bottom-full), while the mobile bell sits
+// in the top bar so its popup opens DOWNWARD (top-full). A downward popup at the
+// bottom of the viewport would overflow and be unclickable.
+export default function NotificationBell({ direction = 'down' }: { direction?: 'up' | 'down' }) {
   const { t } = useI18n();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -88,7 +93,14 @@ export default function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border bg-popover shadow-lg">
+          {/* Popup opens UPWARD when the bell is at the bottom of the sidebar, DOWNWARD
+              when it's in the mobile top bar — so it never overflows the viewport. */}
+          <div
+            className={clsx(
+              'absolute right-0 z-50 w-80 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border bg-popover shadow-lg',
+              direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1',
+            )}
+          >
             <div className="flex items-center justify-between border-b px-3 py-2">
               <p className="text-sm font-semibold">{t('notif.title')}</p>
               {unread > 0 && (

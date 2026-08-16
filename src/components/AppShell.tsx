@@ -387,8 +387,8 @@ export default function AppShell({
                 </div>
               )}
             </div>
-            {/* Notification bell — right of the user */}
-            <NotificationBell />
+            {/* Notification bell — right of the user (sidebar bottom → popup opens up) */}
+            <NotificationBell direction="up" />
           </div>
         </div>
       </aside>
@@ -411,8 +411,8 @@ export default function AppShell({
               <span className="text-sm font-semibold">{siteName || t('app.name')}</span>
             </Link>
           </div>
-          {/* Notification bell — also reachable on mobile */}
-          <NotificationBell />
+          {/* Notification bell — also reachable on mobile (top bar → popup opens down) */}
+          <NotificationBell direction="down" />
         </div>
         {banner && (
           <div

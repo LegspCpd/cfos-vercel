@@ -41,10 +41,10 @@ export default function DocLayout({ children, lang = 'zh' }: DocLayoutProps) {
           key={item.slug}
           href={item.slug === 'index' ? base : `${base}/${item.slug}`}
           onClick={() => setMenuOpen(false)}
-          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+          className={`nav-item-hover flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
             isActive(item.slug)
-              ? 'bg-secondary font-medium text-foreground'
-              : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+              ? 'nav-item-active'
+              : 'text-muted-foreground'
           }`}
         >
           <item.icon className="h-4 w-4 shrink-0" />
@@ -68,12 +68,12 @@ export default function DocLayout({ children, lang = 'zh' }: DocLayoutProps) {
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r bg-card p-4 md:block">
+      <aside className="sidebar-surface sticky top-0 hidden h-screen w-64 shrink-0 p-4 md:block">
         <div className="mb-6 flex items-center justify-between px-1">
           <a href={HOME_URL} className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={LOGO_URL} alt="logo" className="h-7 w-7 rounded-md object-cover" />
-            <span className="font-semibold">{docsTitle}</span>
+            <span className="sidebar-brand font-semibold">{docsTitle}</span>
           </a>
           {langSwitch}
         </div>
@@ -83,10 +83,10 @@ export default function DocLayout({ children, lang = 'zh' }: DocLayoutProps) {
       {/* Mobile drawer */}
       {menuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 bg-card p-4 shadow-xl">
+          <div className="animate-backdrop-in absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
+          <div className="sidebar-surface animate-drawer-in absolute inset-y-0 left-0 w-72 p-4 shadow-xl">
             <div className="mb-6 flex items-center justify-between">
-              <span className="font-semibold">{docsTitle}</span>
+              <span className="sidebar-brand font-semibold">{docsTitle}</span>
               <button onClick={() => setMenuOpen(false)} className="rounded p-1 hover:bg-secondary">
                 <X className="h-5 w-5" />
               </button>
@@ -99,7 +99,7 @@ export default function DocLayout({ children, lang = 'zh' }: DocLayoutProps) {
       {/* Content */}
       <main className="min-w-0 flex-1">
         {/* Mobile top bar */}
-        <div className="sticky top-0 z-40 flex items-center gap-2 border-b bg-background/80 px-4 py-2 backdrop-blur md:hidden">
+        <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-border/60 bg-background/80 px-4 py-2 backdrop-blur md:hidden">
           <button onClick={() => setMenuOpen(true)} className="rounded p-1 hover:bg-secondary">
             <Menu className="h-5 w-5" />
           </button>

@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Terminal,
   ExternalLink,
   Github,
   Gitlab,

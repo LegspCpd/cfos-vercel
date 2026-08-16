@@ -125,12 +125,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
-          <div className="h-px flex-1 bg-border" />
-          OR
-          <div className="h-px flex-1 bg-border" />
-        </div>
-
         <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-6 shadow">
           {error && (
             <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>

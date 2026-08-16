@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Check, X, Pencil, Trash2, Eye, EyeOff, Plus } from 'lucide-react';
+import { Loader2, Check, X, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { useI18n } from '@/lib/client/i18n';
 import { formatIcon } from '@/components/FormatBadge';
-import { clsx } from 'clsx';
+
 
 interface AdminFormat {
   id: string;

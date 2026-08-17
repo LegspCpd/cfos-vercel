@@ -9,7 +9,7 @@ const nextConfig = {
   // binaries and fails with "Module parse failed". Treating them as server external packages
   // makes Next require() them at runtime instead of bundling, which is what serverless
   // functions support.
-  serverExternalPackages: ['ssh2', 'cpu-features'],
+  serverComponentsExternalPackages: ['ssh2', 'cpu-features'],
 
   // Belt-and-suspenders: force ssh2 (and its optional native dep cpu-features) to stay
   // external in server bundles too, so webpack never tries to parse their .node binaries.

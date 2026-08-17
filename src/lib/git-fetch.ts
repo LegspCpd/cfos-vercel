@@ -84,11 +84,18 @@ export async function githubRepoFiles(userId: string, repoFullName: string, ref?
 }
 
 // Find the common leading directory prefix shared by all paths (e.g. "repo-main-abc123/").
+// Computed across ALL entries (not just the first) so a zip whose first entry is a nested
+// file still strips the correct root. Returns '' when there's no shared single-segment root.
 function commonRootPrefix(paths: string[]): string {
   if (paths.length === 0) return '';
-  const parts = paths[0].split('/');
-  if (parts.length < 2) return '';
-  return `${parts[0]}/`;
+  const first = paths[0].split('/');
+  if (first.length < 2) return '';
+  const root = `${first[0]}/`;
+  // Every path must share the same first segment; otherwise there is no single root to strip.
+  for (const p of paths) {
+    if (!p.startsWith(root)) return '';
+  }
+  return root;
 }
 
 // List a connected GitHub user's repos (name + default branch) for the picker. Fetches ALL

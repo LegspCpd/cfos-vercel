@@ -79,7 +79,12 @@ export function unzip(buf: Buffer): UnzipEntry[] {
 
     const chunks: Uint8Array[] = [];
     let entrySize = 0;
-    file.ondata = (_err, chunk, final) => {
+    file.ondata = (err, chunk, final) => {
+      // fflate's streaming decoders catch decompression errors (including errors thrown by
+      // this handler) and hand them back here instead of rethrowing — surface them so a
+      // corrupt entry or a size-limit abort fails the whole archive. This check MUST come
+      // before the `aborted` early-return, otherwise the re-delivered error is swallowed.
+      if (err) throw err instanceof Error ? err : new Error(String(err));
       if (aborted) return;
       entrySize += chunk.length;
       if (entrySize > MAX_ENTRY_SIZE) {
@@ -96,6 +101,10 @@ export function unzip(buf: Buffer): UnzipEntry[] {
         out.push({ path: p, content: Buffer.concat(chunks) });
       }
     };
+    // fflate's streaming Unzip only starts decompressing a file when `start()` is
+    // called — `onfile` merely registers it. Without this, `ondata` never fires and
+    // the archive silently yields zero entries.
+    file.start();
   };
 
   try {

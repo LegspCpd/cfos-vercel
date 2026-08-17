@@ -19,6 +19,12 @@ export function middleware(req: NextRequest) {
   const target = process.env.REDIRECT_TO_DOMAIN?.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   if (!target) return NextResponse.next();
 
+  // Never redirect cron/webhook endpoints: Vercel Cron calls them on the deployment's own
+  // host (e.g. *.vercel.app), and a 308 here would break scheduled jobs. The cron routes
+  // are already protected by CRON_SECRET, so they are safe to leave on any host.
+  const { pathname } = req.nextUrl;
+  if (pathname.startsWith('/api/cron/')) return NextResponse.next();
+
   const host = req.headers.get('host') ?? '';
   // Normalize: strip port and lowercase for comparison.
   const hostname = host.split(':')[0].toLowerCase();

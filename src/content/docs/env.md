@@ -136,6 +136,7 @@
 | 变量 | 说明 |
 |---|---|
 | `ALLOW_SIGNUPS` | 注册开关，取值 `enabled` / `disabled`；环境变量优先级高于管理后台开关。 |
+| `REDIRECT_TO_DOMAIN` | 规范域名重定向（可选）。配置后，任何 Host 不是该域名的请求（旧域名、`*.vercel.app` 预览域名等）都会 **308 永久重定向**到该域名，路径与查询参数保持不变；不配置则完全不重定向（本地开发不受影响）。例如 `REDIRECT_TO_DOMAIN=os.legspcpd.top`。 |
 | `IMGHOST_BASE_URL` | 头像图床地址，默认 `https://hub.your-domain.com`。 |
 | `IMGHOST_TOKEN` | 图床 API token（如 `imgbed_xxx`）。 |
 | `IMGHOST_FOLDER` | 上传文件夹，默认 `photos/avatars`。 |

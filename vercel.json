@@ -8,5 +8,29 @@
       "path": "/api/cron/indexnow",
       "schedule": "0 4 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://os.legspcpd.top/$1",
+      "statusCode": 308,
+      "has": [
+        {
+          "type": "host",
+          "value": "cfos-vercel-legspcpds-projects-0b9f984a.vercel.app"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://os.legspcpd.top/$1",
+      "statusCode": 308,
+      "has": [
+        {
+          "type": "host",
+          "value": "cfos-vercel-git-master-legspcpds-projects-0b9f984a.vercel.app"
+        }
+      ]
+    }
   ]
 }

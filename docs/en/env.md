@@ -191,6 +191,7 @@ Default OFF — set `D1_ENABLED=true` to turn it on.
 | Variable | Description |
 |---|---|
 | `ALLOW_SIGNUPS` | Registration toggle; `enabled` / `disabled`. Takes precedence over the admin-panel toggle. |
+| `REDIRECT_TO_DOMAIN` | Canonical-domain redirect (optional). When set, every request whose Host is NOT this domain (old domains, `*.vercel.app` preview domains, etc.) is **308-permanently redirected** to it, preserving the path and query string. When unset, nothing is redirected (local development is unaffected). Example: `REDIRECT_TO_DOMAIN=os.legspcpd.top`. |
 | `IMGHOST_BASE_URL` | Avatar image host base URL, default `https://hub.your-domain.com`. |
 | `IMGHOST_TOKEN` | Image host API token (e.g. `imgbed_xxx`). |
 | `IMGHOST_FOLDER` | Upload folder, default `photos/avatars`. |

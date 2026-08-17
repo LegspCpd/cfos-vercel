@@ -188,7 +188,7 @@ export default function DeploymentDetailPage() {
     return (
       <div className="mx-auto max-w-4xl px-6 py-16 text-center">
         <p className="text-muted-foreground">{t('dd.notFound')}</p>
-        <Link href="/pages" className="mt-4 inline-block text-primary hover:underline">
+        <Link href="/compute/worker-and-pages" className="mt-4 inline-block text-primary hover:underline">
           {t('dd.back')}
         </Link>
       </div>
@@ -204,7 +204,7 @@ export default function DeploymentDetailPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
       {/* Header */}
-      <Link href="/pages" className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/compute/worker-and-pages" className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('dd.back')}
       </Link>
 

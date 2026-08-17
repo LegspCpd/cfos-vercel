@@ -90,7 +90,7 @@ export default function NewProjectPage() {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-muted-foreground">{t('pg.notConfiguredMsg')}</p>
-        <button onClick={() => router.push('/pages')} className="mt-4 text-primary hover:underline">
+        <button onClick={() => router.push('/compute/worker-and-pages')} className="mt-4 text-primary hover:underline">
           {t('dd.back')}
         </button>
       </div>
@@ -110,7 +110,7 @@ export default function NewProjectPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       {/* Back link */}
-      <Link href="/pages" className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/compute/worker-and-pages" className="mb-6 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> {t('pg.backProjects')}
       </Link>
 

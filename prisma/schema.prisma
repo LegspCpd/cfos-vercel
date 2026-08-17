@@ -285,6 +285,7 @@ model Deployment {
 
   @@index([userId, createdAt])
   @@index([workspaceId])
+  @@index([projectName])
 }
 
 // A deployment of a Worker script to Cloudflare Workers (the "Compute → Worker" feature).
@@ -303,6 +304,7 @@ model WorkerDeployment {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([projectName])
 }
 
 // One file inside a workspace.

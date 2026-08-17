@@ -12,7 +12,7 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -27,7 +27,8 @@ const patchSchema = z.object({
 });
 
 // PATCH /api/ssh-hosts/:id — update a host (ownership-checked).
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -104,7 +105,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/ssh-hosts/:id — remove a host (ownership-checked).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap SSH host deletions per user.

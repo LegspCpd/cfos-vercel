@@ -16,7 +16,7 @@ async function authAdmin(req: Request) {
   return session;
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   isAdmin: z.boolean().optional(),
@@ -28,7 +28,8 @@ const patchSchema = z.object({
 });
 
 // PATCH /api/admin/users/:id — update isAdmin, password, email, and/or group.
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -73,7 +74,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/admin/users/:id — delete a user (and their data).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

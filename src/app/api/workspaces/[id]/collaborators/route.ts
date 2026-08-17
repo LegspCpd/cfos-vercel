@@ -13,10 +13,11 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/workspaces/:id/collaborators — list who the workspace is shared with (owner only).
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const workspace = await prisma.workspace.findFirst({
@@ -31,7 +32,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
 // POST /api/workspaces/:id/collaborators — add a collaborator by username.
 // Body: { username: string, role: "read" | "write" }
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
@@ -90,7 +92,8 @@ export async function POST(req: Request, { params }: Ctx) {
 
 // PATCH /api/workspaces/:id/collaborators — change a collaborator's role.
 // Body: { userId: string, role: "read" | "write" }
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap collaborator changes per user.
@@ -117,7 +120,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
 // DELETE /api/workspaces/:id/collaborators — remove a collaborator.
 // Body: { userId: string }
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap collaborator changes per user.

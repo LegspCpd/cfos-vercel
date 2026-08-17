@@ -15,7 +15,7 @@ async function authAdmin(req: Request) {
   return session;
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   name: z.string().min(1).max(64).optional(),
@@ -26,7 +26,8 @@ const patchSchema = z.object({
 });
 
 // PATCH /api/providers/:id — update a provider (name/baseUrl/model/enabled; apiKey optional).
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = patchSchema.parse(await req.json());
@@ -41,7 +42,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/providers/:id
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   await prisma.aiProvider.deleteMany({ where: { id: params.id } });

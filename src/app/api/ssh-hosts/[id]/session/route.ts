@@ -10,13 +10,14 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // POST /api/ssh-hosts/:id/session — open a persistent session for a host.
 // Returns { session: { id, hostId, cwd, env, history, createdAt, lastActiveAt } }.
 // The session lives in server memory; commands are run through
 // POST /api/ssh-hosts/:id/session/:sessionId/exec which restores cwd + env first.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -43,7 +44,8 @@ export async function POST(req: Request, { params }: Ctx) {
 }
 
 // GET /api/ssh-hosts/:id/session — list the current user's live sessions for this host.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -56,7 +58,8 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/ssh-hosts/:id/session/:sessionId — close a session.
-export async function DELETE(req: Request, { params }: Ctx & { params: { sessionId: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string; sessionId: string }> }) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

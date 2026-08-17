@@ -20,13 +20,14 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string; sessionId: string } };
+type Ctx = { params: Promise<{ id: string; sessionId: string }> };
 
 // POST /api/ssh-hosts/:id/session/:sessionId/exec — run a command inside a persistent
 // session. The session's cwd + env are restored before the command runs, and the new cwd
 // is probed afterwards so the next command continues where this one left off.
 // Streams output over SSE, same as the one-shot exec endpoint.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

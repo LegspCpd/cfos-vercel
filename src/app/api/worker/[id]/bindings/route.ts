@@ -13,7 +13,8 @@ import { workerConfigLimiter } from '@/lib/rate-limit';
 
 // GET /api/worker/:id/bindings — the bindings of the user's Worker (ownership-checked).
 // Gated behind the beta flag (WORKER_BINDINGS_ENABLED env or admin setting).
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -35,7 +36,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 // POST /api/worker/:id/bindings — add a binding (KV namespace / D1 database / Queue).
 // Body: { name, type, namespace_id?, database_id?, queue_name? }
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -94,7 +96,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 // DELETE /api/worker/:id/bindings?name=... — remove a binding.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

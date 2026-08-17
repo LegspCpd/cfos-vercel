@@ -7,7 +7,8 @@ import { workerConfigLimiter } from '@/lib/rate-limit';
 // POST /api/worker/:id/tail — open a realtime log tail session for the user's Worker.
 // Returns { id, url } where url is a wss:// endpoint the browser connects to directly.
 // The tail token stays server-side; the URL is short-lived and scoped to this worker.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

@@ -15,7 +15,7 @@ async function authAdmin(req: Request) {
   return session;
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
   name: z.string().min(1).max(50).optional(),
@@ -25,7 +25,8 @@ const patchSchema = z.object({
 });
 
 // PATCH /api/admin/groups/:id — update group name and/or permissions.
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -51,7 +52,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
 // DELETE /api/admin/groups/:id — delete a group (its users become group-less; they'll
 // fall back to default group on next sync).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

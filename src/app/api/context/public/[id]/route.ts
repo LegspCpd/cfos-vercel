@@ -12,11 +12,12 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // PATCH /api/context/public/:id — admin review decision.
 // Body: { action: "approve" | "reject" }
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await isUserAdmin(session.userId))) {

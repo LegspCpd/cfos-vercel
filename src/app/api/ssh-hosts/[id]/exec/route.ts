@@ -10,7 +10,7 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // POST /api/ssh-hosts/:id/exec — run a command on the host and stream its output back as
 // a Server-Sent-Events (SSE) stream.
@@ -25,7 +25,8 @@ type Ctx = { params: { id: string } };
 // Security: the command is executed only on a host the user owns, using credentials the
 // user already controls. It is intentionally NOT sandboxed beyond normal SSH — the user is
 // acting on their own server.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

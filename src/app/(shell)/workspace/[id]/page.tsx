@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Trash2, Loader2, Code2, AppWindow, Plug, MessageSquare, ChevronDown, Check } from 'lucide-react';
@@ -25,7 +25,8 @@ interface FormatOffer {
   output: { noun: string; icon: string };
 }
 
-export default function WorkspaceEditorPage({ params }: { params: { id: string } }) {
+export default function WorkspaceEditorPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);

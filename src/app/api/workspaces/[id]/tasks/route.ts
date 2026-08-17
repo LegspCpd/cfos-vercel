@@ -13,7 +13,7 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const taskSchema = z.object({
   name: z.string().min(1).max(100),
@@ -26,7 +26,8 @@ const taskSchema = z.object({
 
 // GET /api/workspaces/:id/tasks — list the workspace's scheduled tasks.
 // Owner or write collaborator.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const access = await workspaceAccess(session.userId, params.id);
@@ -41,7 +42,8 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 // POST /api/workspaces/:id/tasks — create a scheduled task.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap task creation per user.

@@ -5,7 +5,8 @@ import { getWorkerAnalytics, workerEnabled } from '@/lib/cf-worker';
 
 // GET /api/worker/:id/analytics?since=ISO&until=ISO — request/error/cpu metrics for the
 // user's Worker over a time window (defaults to the last 24h).
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

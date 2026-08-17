@@ -12,11 +12,12 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/share/:id — return the presigned R2 download URL.
 // The actual download hits R2 directly (no Vercel proxy), so traffic bypasses Vercel quota.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -61,7 +62,8 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/share/:id — remove the share (record + R2 object).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {

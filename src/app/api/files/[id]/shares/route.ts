@@ -13,10 +13,11 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/files/:id/shares — list who a file is shared with (owner or write-collab only).
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const file = await prisma.workspaceFile.findUnique({
@@ -34,7 +35,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
 // POST /api/files/:id/shares — share a file with a user.
 // Body: { username: string, role: "read" | "write" }
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
@@ -98,7 +100,8 @@ export async function POST(req: Request, { params }: Ctx) {
 
 // DELETE /api/files/:id/shares — unshare a file.
 // Body: { userId: string }
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap share changes per user.

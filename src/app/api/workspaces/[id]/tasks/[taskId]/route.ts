@@ -12,7 +12,7 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string; taskId: string } };
+type Ctx = { params: Promise<{ id: string; taskId: string }> };
 
 const patchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -24,7 +24,8 @@ const patchSchema = z.object({
 });
 
 // PATCH /api/workspaces/:id/tasks/:taskId — update a scheduled task.
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap task updates per user.
@@ -62,7 +63,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/workspaces/:id/tasks/:taskId — delete a scheduled task.
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap task deletions per user.

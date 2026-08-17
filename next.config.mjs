@@ -9,7 +9,19 @@ const nextConfig = {
   // binaries and fails with "Module parse failed". Treating them as server external packages
   // makes Next require() them at runtime instead of bundling, which is what serverless
   // functions support.
-  serverComponentsExternalPackages: ['ssh2', 'cpu-features'],
+  experimental: {
+    serverComponentsExternalPackages: ['ssh2', 'cpu-features'],
+    // The monorepo root has its own pnpm-lock.yaml; scope output tracing to this
+    // package so Next doesn't scan sibling directories (and Windows system dirs,
+    // which fail with EPERM on local builds).
+    outputFileTracingRoot: process.cwd(),
+  },
+
+  // Windows: Next's file tracer (@vercel/nft) follows the legacy user-profile
+  // JUNCTIONs (e.g. `C:\Users\<user>\Application Data` -> AppData\Roaming) while
+  // scanning node_modules and fails with EPERM. Disable tracing only on Windows;
+  // Vercel/Linux builds keep full tracing.
+  ...(process.platform === 'win32' ? { outputFileTracing: false } : {}),
 
   // Belt-and-suspenders: force ssh2 (and its optional native dep cpu-features) to stay
   // external in server bundles too, so webpack never tries to parse their .node binaries.

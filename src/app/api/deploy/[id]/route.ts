@@ -12,11 +12,12 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/deploy/:id — fetch a single deployment owned by the current user, with the
 // workspace title. Used by the deployment detail page (/workspace/deploy/[id]).
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -72,7 +73,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
 // DELETE /api/deploy/:id — delete a deployment owned by the current user. Removes the local
 // record and best-effort deletes the Cloudflare Pages project (failure here is non-fatal).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
@@ -121,7 +123,8 @@ export async function DELETE(req: Request, { params }: Ctx) {
 // Env vars take effect on the NEXT redeploy (they're injected into files at deploy time), so
 // the detail page offers "save & redeploy" to push the change live. Only valid JSON env is
 // accepted; build command fields are length-bounded to keep the DB clean.
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

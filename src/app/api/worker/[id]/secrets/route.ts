@@ -13,7 +13,8 @@ import { workerConfigLimiter } from '@/lib/rate-limit';
 
 // GET /api/worker/:id/secrets — the secret NAMES of the user's Worker (values are never
 // returned by Cloudflare). Gated behind the beta flag like bindings.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -35,7 +36,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 // POST /api/worker/:id/secrets — add or update a secret. Body: { name, value }.
 // The value is sent to Cloudflare and never stored or returned by us.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -86,7 +88,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 // DELETE /api/worker/:id/secrets?name=... — remove a secret.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

@@ -10,7 +10,8 @@ export function generateStaticParams() {
   return DOC_SLUGS_EN.filter((s) => s !== 'index').map((slug) => ({ slug }));
 }
 
-export default function EnDocPage({ params }: { params: { slug: string } }) {
+export default async function EnDocPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const content = getEnDocContent(params.slug);
   if (!content) notFound();
   return (

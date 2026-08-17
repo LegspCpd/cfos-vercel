@@ -68,7 +68,8 @@ export async function GET(req: Request) {
 
 // PATCH /api/admin/formats/:id — update one format's curation (enabled, presentation,
 // agentHint) or review a marketplace submission (status).
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -115,7 +116,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 // DELETE /api/admin/formats/:id — delete a format. Bundled formats are protected
 // (disable instead); marketplace submissions can be deleted.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await authAdmin(req);
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

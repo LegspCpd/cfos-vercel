@@ -11,7 +11,8 @@ import { writeAudit } from '@/lib/audit';
 import { workerConfigLimiter } from '@/lib/rate-limit';
 
 // GET /api/worker/:id/routes — the routes (custom domains / patterns) of the user's Worker.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -29,7 +30,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // POST /api/worker/:id/routes — add a custom domain route (pattern like "example.com/*").
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -75,7 +77,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 
 // DELETE /api/worker/:id/routes?routeId=... — remove a route.
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

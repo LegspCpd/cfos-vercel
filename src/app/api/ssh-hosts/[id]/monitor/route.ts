@@ -9,7 +9,7 @@ async function auth(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // Parse `uptime` (Linux/Unix style): " 12:34:56 up 3 days,  2:15,  2 users,  load average: 0.08, 0.10, 0.11"
 function parseUptime(s: string) {
@@ -65,7 +65,8 @@ function parseDisk(s: string) {
 
 // GET /api/ssh-hosts/:id/monitor — probe the host and return live system status.
 // Opens a short SSH session, runs several read-only commands, closes. Never persists anything.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

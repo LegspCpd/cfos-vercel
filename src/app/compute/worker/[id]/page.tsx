@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getToken } from '@/lib/client/auth';
 import WorkerIde from '@/components/compute/WorkerIde';
@@ -9,7 +9,8 @@ import WorkerIde from '@/components/compute/WorkerIde';
 // sidebar is hidden — the IDE is a focused, distraction-free editing surface (like
 // Cloudflare's Workers editor). Auth is checked client-side (the (shell) server gate
 // doesn't apply here); the IDE's data calls are all ownership-checked server-side.
-export default function WorkerIdePage({ params }: { params: { id: string } }) {
+export default function WorkerIdePage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
 

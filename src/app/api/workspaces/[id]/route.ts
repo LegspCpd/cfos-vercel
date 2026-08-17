@@ -19,11 +19,12 @@ async function canEditWorkspace(userId: string): Promise<boolean> {
   return userHasPermission(userId, PERMISSIONS.workspace);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/workspaces/:id — full workspace with files.
 // The owner, or any collaborator (read or write), can fetch the workspace.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const workspace = await prisma.workspace.findUnique({
@@ -47,7 +48,8 @@ export async function GET(req: Request, { params }: Ctx) {
 // files are kept; the format's files are added/updated), and records the switch in
 // the audit log so the format history is preserved.
 // The owner, or a write collaborator, may rename; only the owner may switch formats.
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await canEditWorkspace(session.userId))) {
@@ -142,7 +144,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/workspaces/:id — owner only.
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await canEditWorkspace(session.userId))) {

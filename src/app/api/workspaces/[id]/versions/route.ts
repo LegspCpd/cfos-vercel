@@ -10,10 +10,11 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/workspaces/:id/versions?path=... — list file versions for a given path.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const url = new URL(req.url);
@@ -45,7 +46,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
 // POST /api/workspaces/:id/versions — restore a file to a previous version.
 // Body: { path: string, versionId: string }
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap version restores per user.

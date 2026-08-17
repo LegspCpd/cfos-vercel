@@ -13,7 +13,8 @@ import { verifyPreview } from '@/lib/preview-url';
 // relative href/src references in the entry HTML to signed URLs with a `file` query
 // parameter; the same signature authorizes the whole workspace, and `file` selects which
 // file to serve.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const url = new URL(req.url);
   if (!verifyPreview(params.id, url.searchParams.get('sig'), url.searchParams.get('exp'))) {
     return new Response('Forbidden', { status: 403 });

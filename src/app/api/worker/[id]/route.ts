@@ -7,7 +7,8 @@ import { workerConfigLimiter } from '@/lib/rate-limit';
 
 // GET /api/worker/:id — the user's Worker deployment detail (ownership-checked), merged with
 // the live Cloudflare script metadata (routes, handlers, timestamps) when configured.
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
@@ -43,7 +44,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 // DELETE /api/worker/:id — remove the user's Worker deployment (ownership-checked). Also tries
 // to delete the Cloudflare Workers script (best-effort).
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

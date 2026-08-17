@@ -9,10 +9,11 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string; chatId: string } };
+type Ctx = { params: Promise<{ id: string; chatId: string }> };
 
 // POST /api/workspaces/:id/chat/:chatId — append a message (for a future streaming agent chat).
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 

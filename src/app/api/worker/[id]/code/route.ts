@@ -6,7 +6,8 @@ import { getWorkerCode, workerEnabled } from '@/lib/cf-worker';
 // GET /api/worker/:id/code — the live deployed JS source of the user's Worker
 // (ownership-checked). Falls back to the last-deployed code stored in the DB when the
 // CF fetch fails (script deleted / not configured).
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);

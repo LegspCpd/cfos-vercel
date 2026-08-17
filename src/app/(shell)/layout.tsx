@@ -16,7 +16,7 @@ export default async function ShellLayout({ children }: { children: React.ReactN
   let initialPermissions: string[] = [];
   let initialGroup: string | null = null;
 
-  const token = cookies().get(TOKEN_KEY)?.value;
+  const token = (await cookies()).get(TOKEN_KEY)?.value;
   if (!token) {
     redirect('/login'); // not logged in → straight to login, never render home
   }

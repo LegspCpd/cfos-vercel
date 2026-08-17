@@ -18,7 +18,7 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // POST /api/workspaces/:id/agent
 // Body: { prompt: string }
@@ -27,7 +27,8 @@ type Ctx = { params: { id: string } };
 // The agent may call GitHub/GitLab tools (multi-turn loop); write tools are gated
 // on the per-connection writeAccess grant.
 // The owner, or a write collaborator, may run the agent.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   if (!(await requireCfAccess(req))) {
     return NextResponse.json({ error: 'Cloudflare Access verification required' }, { status: 401 });
   }

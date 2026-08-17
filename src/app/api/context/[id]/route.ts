@@ -11,12 +11,13 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/context/:id — get a document's full content.
 // The owner can read any of their docs; anyone (logged in) can read an approved
 // public doc from the shared library.
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const doc = await prisma.contextDoc.findFirst({
@@ -31,7 +32,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
 // PATCH /api/context/:id — update title/content/tags, or change visibility.
 // Changing a private doc to public submits it for review (status → pending).
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PATCH(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.context))) {
@@ -73,7 +75,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/context/:id
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.context))) {

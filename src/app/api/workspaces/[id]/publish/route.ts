@@ -11,11 +11,12 @@ async function authUser(req: Request) {
   return verifySessionToken(token);
 }
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // POST /api/workspaces/:id/publish — one-click static publish.
 // Owner or write collaborator. Returns the public URL.
-export async function POST(req: Request, { params }: Ctx) {
+export async function POST(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap publishes per user (each writes to storage).
@@ -35,7 +36,8 @@ export async function POST(req: Request, { params }: Ctx) {
 }
 
 // GET /api/workspaces/:id/publish — the current published site (if any).
-export async function GET(req: Request, { params }: Ctx) {
+export async function GET(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const access = await workspaceAccess(session.userId, params.id);
@@ -58,7 +60,8 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 // DELETE /api/workspaces/:id/publish — unpublish (owner only).
-export async function DELETE(req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, props: Ctx) {
+  const params = await props.params;
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   // Cap unpublishes per user (each writes to storage).

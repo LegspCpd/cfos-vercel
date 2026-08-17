@@ -1,8 +1,44 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { deleteWorker } from '@/lib/cf-worker';
+import { deleteWorker, getWorkerScript, workerEnabled } from '@/lib/cf-worker';
 import { writeAudit } from '@/lib/audit';
+
+// GET /api/worker/:id — the user's Worker deployment detail (ownership-checked), merged with
+// the live Cloudflare script metadata (routes, handlers, timestamps) when configured.
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
+  if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  const session = await verifySessionToken(token);
+  if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  const rec = await prisma.workerDeployment.findFirst({
+    where: { id: params.id, userId: session.userId },
+  });
+  if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Live CF metadata (best-effort; null when not configured or the script was deleted).
+  let live = null;
+  if (workerEnabled()) {
+    live = await getWorkerScript(rec.workerName);
+  }
+
+  return NextResponse.json({
+    worker: {
+      id: rec.id,
+      workerName: rec.workerName,
+      projectName: rec.projectName,
+      status: rec.status,
+      error: rec.error,
+      log: rec.log,
+      code: rec.code,
+      url: `https://${rec.workerName}.${process.env.WORKER_SUBDOMAIN || 'workers.dev'}`,
+      createdAt: rec.createdAt.toISOString(),
+      updatedAt: rec.updatedAt.toISOString(),
+    },
+    live,
+  });
+}
 
 // DELETE /api/worker/:id — remove the user's Worker deployment (ownership-checked). Also tries
 // to delete the Cloudflare Workers script (best-effort).

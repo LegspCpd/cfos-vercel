@@ -32,6 +32,12 @@ export const SETTING_PAGES_ACCOUNT_SHOW = 'pagesAccountShow';
 export const ENV_PAGES_BILLING_SHOW = 'PAGES_BILLING_SHOW';
 export const ENV_PAGES_ACCOUNT_SHOW = 'PAGES_ACCOUNT_SHOW';
 
+// Worker bindings management (beta). Same env-or-DB pattern as the Pages panel flags:
+// WORKER_BINDINGS_ENABLED env var wins; otherwise the admin panel setting is used.
+// Defaults to OFF (beta feature).
+export const SETTING_WORKER_BINDINGS_ENABLED = 'workerBindingsEnabled';
+export const ENV_WORKER_BINDINGS_ENABLED = 'WORKER_BINDINGS_ENABLED';
+
 export const ENV_TURNSTILE_SITE_KEY = 'TURNSTILE_SITE_KEY';
 export const ENV_TURNSTILE_SECRET_KEY = 'TURNSTILE_SECRET_KEY';
 export const ENV_RECAPTCHA_SITE_KEY = 'RECAPTCHA_SITE_KEY';
@@ -61,6 +67,7 @@ const DEFAULTS: Record<string, string> = {
   [SETTING_RECAPTCHA_SECRET_KEY]: '',
   [SETTING_PAGES_BILLING_SHOW]: 'false',
   [SETTING_PAGES_ACCOUNT_SHOW]: 'false',
+  [SETTING_WORKER_BINDINGS_ENABLED]: 'false',
 };
 
 // Short-lived in-memory cache for settings reads. `getSetting` is called on every page
@@ -243,6 +250,15 @@ export async function getPagesPanelFlags(): Promise<{ billingShow: boolean; acco
     billingEnvManaged: billing.envManaged,
     accountEnvManaged: account.envManaged,
   };
+}
+
+// Worker bindings management (beta) — env var wins, otherwise the admin panel setting.
+export async function getWorkerBindingsEnabled(): Promise<boolean> {
+  const envVal = process.env[ENV_WORKER_BINDINGS_ENABLED];
+  if (envVal !== undefined && envVal !== '') {
+    return envVal === 'true' || envVal === '1';
+  }
+  return (await getSetting(SETTING_WORKER_BINDINGS_ENABLED)) === 'true';
 }
 
 export async function getPublicCaptchaConfig(): Promise<CaptchaConfig> {

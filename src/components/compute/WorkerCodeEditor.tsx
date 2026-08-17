@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
+import { clsx } from 'clsx';
 import '@/lib/client/monaco';
 
 // Monaco editor for the Worker deploy modal — JS syntax highlighting + Cloudflare
@@ -114,9 +115,11 @@ const WORKER_GLOBALS: { label: string; detail: string; insertText: string }[] = 
 interface WorkerCodeEditorProps {
   value: string;
   onChange: (value: string) => void;
+  /** Editor height (CSS). Defaults to 240px (deploy modal). The fullscreen IDE passes "100%". */
+  height?: string;
 }
 
-export default function WorkerCodeEditor({ value, onChange }: WorkerCodeEditorProps) {
+export default function WorkerCodeEditor({ value, onChange, height = '240px' }: WorkerCodeEditorProps) {
   // Follow the app theme (light/dark/system) so the editor matches the surrounding UI.
   const [dark, setDark] = useState(true);
   useEffect(() => {
@@ -151,9 +154,9 @@ export default function WorkerCodeEditor({ value, onChange }: WorkerCodeEditorPr
   );
 
   return (
-    <div className="mt-1 overflow-hidden rounded-md border bg-background">
+    <div className={clsx('overflow-hidden rounded-md border bg-background', height === '100%' ? 'h-full' : 'mt-1')}>
       <MonacoEditor
-        height="240px"
+        height={height}
         language="javascript"
         theme={dark ? 'vs-dark' : 'vs'}
         value={value}

@@ -49,7 +49,7 @@ importers:
         version: 14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       openai:
         specifier: ^4.77.0
-        version: 4.104.0(zod@3.25.76)
+        version: 4.104.0(ws@8.21.3)(zod@3.25.76)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -2126,6 +2126,18 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
+  ws@8.21.3:
+    resolution: {integrity: sha512-201TZ/kPWxoPr/OKWjquZR1SWKXcvxdH+e1xrx89b3YbmzLMFCLfnaG1HFIgWzJOEWZ7MvpK++odZufgYR50Rw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   yaml@2.9.0:
     resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
     engines: {node: '>= 14.6'}
@@ -3786,7 +3798,7 @@ snapshots:
 
   ohash@2.0.11: {}
 
-  openai@4.104.0(zod@3.25.76):
+  openai@4.104.0(ws@8.21.3)(zod@3.25.76):
     dependencies:
       '@types/node': 18.19.130
       '@types/node-fetch': 2.6.13
@@ -3796,6 +3808,7 @@ snapshots:
       formdata-node: 4.4.1
       node-fetch: 2.7.0
     optionalDependencies:
+      ws: 8.21.3
       zod: 3.25.76
     transitivePeerDependencies:
       - encoding
@@ -4332,6 +4345,9 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  ws@8.21.3:
+    optional: true
 
   yaml@2.9.0:
     optional: true

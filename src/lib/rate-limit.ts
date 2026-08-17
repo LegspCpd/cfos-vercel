@@ -46,5 +46,8 @@ export const loginLimiter = new RateLimiter(60_000, 15); // 15 login attempts / 
 // Deploy is a heavy operation (calls the Cloudflare API, decompresses archives). Cap it so a
 // logged-in user can't spin deploys to exhaust the CF API quota / CPU. Keyed per-user.
 export const deployLimiter = new RateLimiter(60_000, 10); // 10 deploys / user / minute
+// Worker config writes (bindings / routes / secrets) each hit the Cloudflare API. Cap them
+// per-user so a script can't hammer the CF API quota. Keyed per-user.
+export const workerConfigLimiter = new RateLimiter(60_000, 30); // 30 config writes / user / minute
 // Ticket submissions email every admin, so cap them to prevent email-bombing the inbox.
 export const ticketLimiter = new RateLimiter(60 * 60_000, 5); // 5 tickets / user / hour

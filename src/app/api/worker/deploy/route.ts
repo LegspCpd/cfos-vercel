@@ -50,17 +50,31 @@ export async function POST(req: Request) {
     await deployWorker(workerName, code);
     log.push(`[worker] deployed ${workerName} → https://${workerName}.${process.env.WORKER_SUBDOMAIN || 'workers.dev'}`);
 
-    const record = await prisma.workerDeployment.create({
-      data: {
-        userId: session.userId,
-        workerName,
-        projectName,
-        code,
-        status: 'deployed',
-        log: log.join('\n'),
-      },
+    // Re-deploying an existing worker (from the IDE) updates the SAME record so the detail
+    // page / IDE keep pointing at it. A brand-new name creates a fresh record.
+    const existing = await prisma.workerDeployment.findFirst({
+      where: { userId: session.userId, workerName },
+      select: { id: true },
     });
-    recordId = record.id;
+    if (existing) {
+      const updated = await prisma.workerDeployment.update({
+        where: { id: existing.id },
+        data: { projectName, code, status: 'deployed', error: null, log: log.join('\n') },
+      });
+      recordId = updated.id;
+    } else {
+      const record = await prisma.workerDeployment.create({
+        data: {
+          userId: session.userId,
+          workerName,
+          projectName,
+          code,
+          status: 'deployed',
+          log: log.join('\n'),
+        },
+      });
+      recordId = record.id;
+    }
 
     await writeAudit({
       userId: session.userId,

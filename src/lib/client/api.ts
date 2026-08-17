@@ -505,6 +505,78 @@ export const api = {
       { method: 'POST', body: JSON.stringify(data) },
     ),
   deleteWorker: (id: string) => request<{ ok: boolean }>(`/api/worker/${id}`, { method: 'DELETE' }),
+  // Worker detail (live Cloudflare data, ownership-checked server-side).
+  getWorker: (id: string) =>
+    request<{
+      worker: {
+        id: string;
+        workerName: string;
+        projectName: string | null;
+        status: string;
+        error: string | null;
+        log: string | null;
+        code: string | null;
+        url: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+      live: {
+        id: string;
+        modifiedOn: string;
+        createdOn: string;
+        deploymentId: string;
+        url: string;
+      } | null;
+    }>(`/api/worker/${id}`),
+  getWorkerCode: (id: string) => request<{ code: string }>(`/api/worker/${id}/code`),
+  getWorkerVersions: (id: string) =>
+    request<{
+      versions: {
+        id: string;
+        number: string;
+        createdOn: string;
+        source: string;
+        authorEmail: string | null;
+      }[];
+    }>(`/api/worker/${id}/versions`),
+  getWorkerBindings: (id: string) =>
+    request<{
+      enabled: boolean;
+      bindings: {
+        name: string;
+        type: string;
+        namespaceId?: string;
+        databaseId?: string;
+        queueName?: string;
+      }[];
+    }>(`/api/worker/${id}/bindings`),
+  addWorkerBinding: (
+    id: string,
+    data: { name: string; type: string; namespace_id?: string; database_id?: string; queue_name?: string },
+  ) => request<{ ok: boolean }>(`/api/worker/${id}/bindings`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteWorkerBinding: (id: string, name: string) =>
+    request<{ ok: boolean }>(`/api/worker/${id}/bindings?name=${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  getWorkerRoutes: (id: string) =>
+    request<{ routes: { id: string; pattern: string; script: string }[] }>(`/api/worker/${id}/routes`),
+  addWorkerRoute: (id: string, pattern: string) =>
+    request<{ ok: boolean }>(`/api/worker/${id}/routes`, { method: 'POST', body: JSON.stringify({ pattern }) }),
+  deleteWorkerRoute: (id: string, routeId: string) =>
+    request<{ ok: boolean }>(`/api/worker/${id}/routes?routeId=${encodeURIComponent(routeId)}`, { method: 'DELETE' }),
+  getWorkerSecrets: (id: string) =>
+    request<{ enabled: boolean; secrets: { name: string; type: string }[] }>(`/api/worker/${id}/secrets`),
+  addWorkerSecret: (id: string, name: string, value: string) =>
+    request<{ ok: boolean }>(`/api/worker/${id}/secrets`, { method: 'POST', body: JSON.stringify({ name, value }) }),
+  deleteWorkerSecret: (id: string, name: string) =>
+    request<{ ok: boolean }>(`/api/worker/${id}/secrets?name=${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  getWorkerAnalytics: (id: string, since?: string, until?: string) =>
+    request<{
+      requests: number;
+      errors: number;
+      cpuMs: number;
+      buckets: { t: string; requests: number; errors: number }[];
+    }>(`/api/worker/${id}/analytics?${new URLSearchParams({ ...(since ? { since } : {}), ...(until ? { until } : {}) })}`),
+  createWorkerTail: (id: string) =>
+    request<{ id: string; url: string }>(`/api/worker/${id}/tail`, { method: 'POST' }),
   testSshHost: (id: string, creds?: { password?: string; privateKey?: string; passphrase?: string }) =>
     request<{ ok: boolean; message?: string; error?: string }>(`/api/ssh-hosts/${id}/test`, {
       method: 'POST',

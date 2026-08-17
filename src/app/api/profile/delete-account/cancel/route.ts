@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifySessionToken } from '@/lib/auth';
 import { writeAudit } from '@/lib/audit';
+import { profileLimiter } from '@/lib/rate-limit';
 
 // POST /api/profile/delete-account/cancel — cancel a pending account-deletion request.
 // Only valid during the cooldown (before the deadline passes).
@@ -10,6 +11,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap account-deletion mutations per user.
+  if (profileLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+  }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

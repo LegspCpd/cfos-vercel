@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isCollabRole, listFileShares } from '@/lib/collaboration';
 import { notify } from '@/lib/notifications';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -46,6 +47,11 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!file) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (file.workspace.ownerId !== session.userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Cap share changes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const body = await req.json();
@@ -95,6 +101,10 @@ export async function POST(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap share changes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const file = await prisma.workspaceFile.findUnique({
     where: { id: params.id },
     include: { workspace: { select: { ownerId: true } } },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { chatLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -29,6 +30,10 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
     return NextResponse.json({ error: 'You do not have permission to use workspaces.' }, { status: 403 });
+  }
+  // Cap chat creation per user to stop chat-spam / LLM cost abuse.
+  if (chatLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   const owned = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },

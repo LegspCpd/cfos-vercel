@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { contextWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -35,6 +36,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.context))) {
     return NextResponse.json({ error: 'You do not have permission to manage context documents.' }, { status: 403 });
+  }
+  // Cap context writes per user.
+  if (contextWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   const body = await req.json();
   const data: {
@@ -73,6 +78,10 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.context))) {
     return NextResponse.json({ error: 'You do not have permission to manage context documents.' }, { status: 403 });
+  }
+  // Cap context writes per user.
+  if (contextWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   await prisma.contextDoc.deleteMany({ where: { id: params.id, ownerId: session.userId } });
   await writeAudit({

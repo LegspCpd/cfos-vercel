@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isSafeFilePath } from '@/lib/path';
 import { workspaceAccess } from '@/lib/collaboration';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -28,6 +29,11 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (!access) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (access === 'read') {
     return NextResponse.json({ error: 'You do not have permission to edit this workspace.' }, { status: 403 });
+  }
+
+  // Cap file writes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const { files } = await req.json();
@@ -117,6 +123,10 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
     return NextResponse.json({ error: 'You do not have permission to edit workspaces.' }, { status: 403 });
+  }
+  // Cap file deletions per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   const url = new URL(req.url);
   const path = url.searchParams.get('path');

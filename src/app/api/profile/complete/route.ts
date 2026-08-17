@@ -7,6 +7,8 @@ import { getPublicCaptchaConfig } from '@/lib/settings';
 import { verifyCaptcha, type CaptchaProvider } from '@/lib/captcha';
 import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
+import { profileLimiter } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/ip';
 
 // POST /api/profile/complete — required onboarding step for accounts created via a
 // third-party (OAuth) login. The user must pick a username, set a password, and pass a
@@ -27,6 +29,12 @@ export async function POST(req: Request) {
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     const session = await verifySessionToken(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+    // Cap profile-completion attempts per user (and per IP as a fallback).
+    const ip = clientIp(req) ?? 'unknown';
+    if (profileLimiter.tryCall(session.userId) <= 0 || profileLimiter.tryCall(`ip:${ip}`) <= 0) {
+      return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

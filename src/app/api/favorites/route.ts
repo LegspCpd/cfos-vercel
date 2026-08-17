@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { cachedJson, invalidateCache } from '@/lib/kv-cache';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
     return NextResponse.json({ error: 'You do not have permission to manage workspaces.' }, { status: 403 });
+  }
+  // Cap favorite toggles per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   const { workspaceId, favorite } = await req.json();
   if (!workspaceId || typeof favorite !== 'boolean') {

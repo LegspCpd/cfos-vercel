@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { githubSetWriteAccess, type WriteAccess } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 // POST /api/github/access — toggle the Gatekeeper write capability for the user's
 // most-recently-connected GitHub account. Default is 'readonly'; the agent may only run
@@ -11,6 +12,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap access toggles per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   let body: { access?: string } = {};
   try {

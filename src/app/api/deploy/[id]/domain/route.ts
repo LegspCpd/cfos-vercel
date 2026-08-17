@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { bindCustomDomain } from '@/lib/cf-pages';
 import { writeAudit } from '@/lib/audit';
 import { invalidateCache } from '@/lib/kv-cache';
+import { workerConfigLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -18,6 +19,11 @@ type Ctx = { params: { id: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap domain binds per user (each hits the Cloudflare API).
+  if (workerConfigLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const rec = await prisma.deployment.findFirst({ where: { id: params.id, userId: session.userId } });
   if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 });

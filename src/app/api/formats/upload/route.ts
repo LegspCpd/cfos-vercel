@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { isOutputIcon, serializeTemplateVariants, toFormatRecord, type FormatTemplateVariant } from '@/lib/formats';
 import { z } from 'zod';
+import { formatUploadLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -29,6 +30,11 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap submissions per user so a script can't spam the marketplace queue.
+  if (formatUploadLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many submissions. Try again later.' }, { status: 429 });
+  }
 
   const body = createSchema.parse(await req.json());
 

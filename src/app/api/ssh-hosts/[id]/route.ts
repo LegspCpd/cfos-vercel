@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { encryptSecret } from '@/lib/credentials';
 import { z } from 'zod';
 import { invalidateCache } from '@/lib/kv-cache';
+import { sshLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -29,6 +30,11 @@ const patchSchema = z.object({
 export async function PATCH(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap SSH host updates per user.
+  if (sshLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const existing = await prisma.sshHost.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!existing) return NextResponse.json({ error: 'Host not found' }, { status: 404 });
@@ -101,6 +107,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap SSH host deletions per user.
+  if (sshLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const existing = await prisma.sshHost.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!existing) return NextResponse.json({ error: 'Host not found' }, { status: 404 });
   await prisma.sshHost.delete({ where: { id: existing.id } });

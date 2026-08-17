@@ -6,6 +6,7 @@ import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { getFormat, seedFilesForFormat, DEFAULT_ENTRY_FILE } from '@/lib/formats';
 import { cachedJson, invalidateCache } from '@/lib/kv-cache';
 import { z } from 'zod';
+import { workspaceCreateLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -68,6 +69,11 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
     return forbidden();
+  }
+
+  // Cap workspace creation per user to stop DB churn.
+  if (workspaceCreateLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const body = createSchema.parse(await req.json());

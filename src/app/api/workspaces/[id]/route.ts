@@ -7,6 +7,7 @@ import { signPreviewUrl } from '@/lib/preview-url';
 import { getFormat, seedFilesForFormat, resolveWorkspaceOutput } from '@/lib/formats';
 import { workspaceAccess } from '@/lib/collaboration';
 import { invalidateCache } from '@/lib/kv-cache';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -146,6 +147,10 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await canEditWorkspace(session.userId))) {
     return NextResponse.json({ error: 'You do not have permission to delete workspaces.' }, { status: 403 });
+  }
+  // Cap workspace deletions per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
   const target = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },

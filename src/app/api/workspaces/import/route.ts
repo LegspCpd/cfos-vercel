@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isSafeFilePath } from '@/lib/path';
 import { getFormat } from '@/lib/formats';
+import { workspaceCreateLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -19,6 +20,11 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.workspace))) {
     return NextResponse.json({ error: 'You do not have permission to create workspaces.' }, { status: 403 });
+  }
+
+  // Cap workspace imports per user to stop DB churn.
+  if (workspaceCreateLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const { title, files, formatId } = await req.json();

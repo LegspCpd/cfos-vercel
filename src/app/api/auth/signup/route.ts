@@ -8,6 +8,8 @@ import { writeAudit } from '@/lib/audit';
 import { verifyCode } from '@/lib/verification';
 import { verifyCaptcha, type CaptchaProvider } from '@/lib/captcha';
 import { z } from 'zod';
+import { signupLimiter } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/ip';
 
 const signupSchema = z.object({
   username: z.string().min(3).max(64).regex(/^[a-z0-9_.-]+$/i, 'Only letters, numbers, dot, dash, underscore').optional(),
@@ -23,6 +25,13 @@ const signupSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Rate-limit signups per IP (the only identity available pre-auth). Stops
+    // registration bombs / mass account creation from a single source.
+    const ip = clientIp(req) ?? 'unknown';
+    if (signupLimiter.tryCall(`signup:${ip}`) <= 0) {
+      return NextResponse.json({ error: 'Too many signup attempts. Try again later.' }, { status: 429 });
+    }
+
     // Registration is gated by the admin-controlled "signups enabled" switch.
     // Exception: if there are ZERO users yet, allow the first (bootstrap) account.
     const userCount = await prisma.user.count();

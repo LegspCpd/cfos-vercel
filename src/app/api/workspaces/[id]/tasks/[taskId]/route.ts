@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { workspaceAccess } from '@/lib/collaboration';
 import { parseCron } from '@/lib/scheduled-tasks';
 import { z } from 'zod';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -26,6 +27,10 @@ const patchSchema = z.object({
 export async function PATCH(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap task updates per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const access = await workspaceAccess(session.userId, params.id);
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -60,6 +65,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap task deletions per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const access = await workspaceAccess(session.userId, params.id);
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

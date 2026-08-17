@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { chatLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -14,6 +15,11 @@ type Ctx = { params: { id: string; chatId: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap chat messages per user to stop chat-spam / LLM cost abuse.
+  if (chatLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const chat = await prisma.chat.findFirst({
     where: { id: params.chatId, workspaceId: params.id, userId: session.userId },

@@ -12,6 +12,7 @@ import {
   parsePwdOutput,
   parseEnvOutput,
 } from '@/lib/ssh-session';
+import { sshLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -28,6 +29,11 @@ type Ctx = { params: { id: string; sessionId: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap SSH exec per user (each opens a connection to their host).
+  if (sshLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const host = await prisma.sshHost.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!host) return NextResponse.json({ error: 'Host not found' }, { status: 404 });

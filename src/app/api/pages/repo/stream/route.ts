@@ -40,6 +40,13 @@ export async function POST(req: Request) {
   const provider = body.provider === 'gitlab' ? 'gitlab' : 'github';
   if (!body.repo) return new Response('repo is required', { status: 400 });
 
+  // Sanitize the repo name for logging/DB/SSE (it's validated by assert*RepoOwned before
+  // any download, but could carry newlines/control chars that would corrupt SSE frames or
+  // the DB log if interpolated raw).
+  const safeRepo = String(body.repo)
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .slice(0, 200);
+
   // Sanitize the ref for logging/DB (it's URL-encoded before download, but could carry
   // newlines/control chars that would corrupt SSE frames if interpolated raw).
   const safeRef = String(body.ref || '')
@@ -61,7 +68,7 @@ export async function POST(req: Request) {
       userId: session.userId,
       workspaceId: null, // Git deploys aren't tied to a workspace
       source: provider,
-      repo: body.repo,
+      repo: safeRepo,
       repoRef: safeRef,
       pagesProject: projectName,
       projectName: sanitizeProjectName(body.projectName),
@@ -88,8 +95,8 @@ export async function POST(req: Request) {
 
       try {
         const tag = `[${provider}]`;
-        send({ type: 'data', text: `${tag} verifying ${body.repo}…` });
-        logTail = [...logTail, `${tag} verifying ${body.repo}`];
+        send({ type: 'data', text: `${tag} verifying ${safeRepo}…` });
+        logTail = [...logTail, `${tag} verifying ${safeRepo}`];
 
         // Ownership check: the requested repo MUST belong to the current user's connected
         // account. Without this, a caller could feed an arbitrary repo (even one the connected
@@ -101,7 +108,7 @@ export async function POST(req: Request) {
           await assertGithubRepoOwned(session.userId, body.repo!);
         }
 
-        send({ type: 'data', text: `${tag} fetching ${body.repo}${safeRef ? `@${safeRef}` : ''}` });
+        send({ type: 'data', text: `${tag} fetching ${safeRepo}${safeRef ? `@${safeRef}` : ''}` });
         const files =
           provider === 'gitlab'
             ? await gitlabRepoFiles(session.userId, body.repo!, body.ref)
@@ -129,7 +136,7 @@ export async function POST(req: Request) {
           userId: session.userId,
           username: session.username,
           action: 'deploy.repo',
-          detail: `Deployed ${provider}:${body.repo} → ${pagesUrl}`,
+          detail: `Deployed ${provider}:${safeRepo} → ${pagesUrl}`,
         });
         // Drop the cached CF project list so the new deploy shows up immediately.
         await invalidateCache('pages', 'projects');

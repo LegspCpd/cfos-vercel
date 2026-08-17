@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 // POST /api/gitlab/disconnect — remove a GitLab connection for the current user.
 // Body: { id?: string } — when id is given, remove just that connected account
@@ -13,6 +14,11 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.connections))) {
     return NextResponse.json({ error: 'You do not have permission to manage connections.' }, { status: 403 });
+  }
+
+  // Cap connection changes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   let id: string | undefined;

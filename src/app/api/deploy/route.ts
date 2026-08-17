@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { slugifyProject } from '@/lib/cf-pages';
 import { runDeploy } from '@/lib/deploy-run';
 import { writeAudit } from '@/lib/audit';
+import { deployLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -19,6 +20,11 @@ async function auth(req: Request) {
 export async function POST(req: Request) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap deploys per user so a script can't exhaust the Cloudflare API quota / CPU.
+  if (deployLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many deploys. Try again later.' }, { status: 429 });
+  }
 
   let body: {
     workspaceId?: string;

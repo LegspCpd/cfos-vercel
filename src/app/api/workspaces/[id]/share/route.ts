@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { siteUrl } from '@/lib/site';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -21,6 +22,11 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
     return NextResponse.json({ error: 'You do not have permission to share blueprints.' }, { status: 403 });
+  }
+
+  // Cap share-token creation per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const workspace = await prisma.workspace.findFirst({

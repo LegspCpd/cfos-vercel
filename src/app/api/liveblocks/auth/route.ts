@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 // POST /api/liveblocks/auth — issue a Liveblocks ID-token for the current user.
 //
@@ -16,6 +17,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap token issuance per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const secret = process.env.LIVEBLOCKS_SECRET_KEY;
   if (!secret) {

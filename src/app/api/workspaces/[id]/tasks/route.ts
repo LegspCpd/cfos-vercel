@@ -5,6 +5,7 @@ import { workspaceAccess } from '@/lib/collaboration';
 import { parseCron } from '@/lib/scheduled-tasks';
 import { validateFetchUrl } from '@/lib/ssrf';
 import { z } from 'zod';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -43,6 +44,10 @@ export async function GET(req: Request, { params }: Ctx) {
 export async function POST(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap task creation per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const access = await workspaceAccess(session.userId, params.id);
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

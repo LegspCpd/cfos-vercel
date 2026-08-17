@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { verifyCode } from '@/lib/verification';
 import { z } from 'zod';
+import { profileLimiter } from '@/lib/rate-limit';
 
 // PATCH /api/profile — update displayName, password, and/or bind an email.
 const patchSchema = z.object({
@@ -20,6 +21,11 @@ export async function PATCH(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap profile mutations per user (password changes, email binds).
+  if (profileLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const body = patchSchema.parse(await req.json());
   const data: { displayName?: string; passwordHash?: string; email?: string } = {};

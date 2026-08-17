@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { avatarUploadLimiter } from '@/lib/rate-limit';
 
 // Image-hosting configuration. The token + base URL live in env vars so they're never
 // exposed to the browser or stored in the admin panel.
@@ -21,6 +22,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap uploads per user so a script can't exhaust the image-hosting quota.
+  if (avatarUploadLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429 });
+  }
 
   if (!IMGHOST_TOKEN) {
     return NextResponse.json(

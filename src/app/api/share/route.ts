@@ -6,6 +6,7 @@ import { r2Put, isR2Configured, listSharedFiles } from '@/lib/r2';
 import { requireCfAccess } from '@/lib/require-access';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import crypto from 'node:crypto';
+import { shareUploadLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -32,6 +33,11 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
     return NextResponse.json({ error: 'You do not have permission to share files.' }, { status: 403 });
+  }
+
+  // Cap uploads per user so a script can't exhaust the R2 storage quota.
+  if (shareUploadLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429 });
   }
 
   if (!isR2Configured()) {

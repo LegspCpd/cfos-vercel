@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { markNotificationsRead } from '@/lib/notifications';
 import { cachedJson, invalidateCache } from '@/lib/kv-cache';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -43,6 +44,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap notification mutations per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const id = typeof body?.id === 'string' ? body.id : undefined;

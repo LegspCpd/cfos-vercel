@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { decryptSecret } from '@/lib/credentials';
 import { writeAudit } from '@/lib/audit';
 import { assertGitlabRepoOwned } from '@/lib/git-fetch';
+import { externalToolLimiter } from '@/lib/rate-limit';
 
 const BASE_URL = (process.env.GITLAB_BASE_URL || 'https://gitlab.com').replace(/\/+$/, '');
 
@@ -15,6 +16,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap external API calls per user so a script can't burn the GitLab API quota.
+  if (externalToolLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   let body: Record<string, unknown> = {};
   try {

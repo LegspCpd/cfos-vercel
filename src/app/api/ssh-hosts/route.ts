@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { encryptSecret } from '@/lib/credentials';
 import { z } from 'zod';
 import { cachedJson, invalidateCache } from '@/lib/kv-cache';
+import { sshLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -62,6 +63,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap SSH host management per user.
+  if (sshLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const parsed = createSchema.safeParse(await req.json());
   if (!parsed.success) {

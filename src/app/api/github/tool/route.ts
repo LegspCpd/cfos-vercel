@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { githubListRepos, githubReadFile, githubCreateIssue } from '@/lib/github';
 import { writeAudit } from '@/lib/audit';
 import { requireCfAccess } from '@/lib/require-access';
+import { externalToolLimiter } from '@/lib/rate-limit';
 
 // POST /api/github/tool — let the agent call GitHub tools on the user's behalf.
 // Read-only tools: { tool: "list_repos" } | { tool: "read_file", repo, path }
@@ -15,6 +16,11 @@ export async function POST(req: Request) {
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap external API calls per user so a script can't burn the GitHub API quota.
+  if (externalToolLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const body = await req.json();
   const tool = body?.tool as string;

@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { workspaceAccess } from '@/lib/collaboration';
 import { publishWorkspace, deletePublishedSite } from '@/lib/static-publish';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -17,6 +18,10 @@ type Ctx = { params: { id: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap publishes per user (each writes to storage).
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const access = await workspaceAccess(session.userId, params.id);
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -56,6 +61,10 @@ export async function GET(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap unpublishes per user (each writes to storage).
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const access = await workspaceAccess(session.userId, params.id);
   if (!access || access === 'read') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

@@ -51,3 +51,27 @@ export const deployLimiter = new RateLimiter(60_000, 10); // 10 deploys / user /
 export const workerConfigLimiter = new RateLimiter(60_000, 30); // 30 config writes / user / minute
 // Ticket submissions email every admin, so cap them to prevent email-bombing the inbox.
 export const ticketLimiter = new RateLimiter(60 * 60_000, 5); // 5 tickets / user / hour
+// Signup is a public endpoint (no session yet) — cap per IP to stop registration bombs.
+// Keyed by IP (the only identity available pre-auth).
+export const signupLimiter = new RateLimiter(60 * 60_000, 10); // 10 signups / IP / hour
+// File uploads to R2 (share links) consume storage quota — cap per user.
+export const shareUploadLimiter = new RateLimiter(60_000, 10); // 10 uploads / user / minute
+// Avatar uploads consume image-hosting quota — cap per user.
+export const avatarUploadLimiter = new RateLimiter(60_000, 5); // 5 uploads / user / minute
+// Format submissions are public-ish (marketplace) — cap per user to stop spam.
+export const formatUploadLimiter = new RateLimiter(60 * 60_000, 10); // 10 submissions / user / hour
+// External API calls (GitHub/GitLab tools) cost quota and rate limits — cap per user.
+export const externalToolLimiter = new RateLimiter(60_000, 30); // 30 calls / user / minute
+// Workspace creation / import — cap per user to stop DB churn.
+export const workspaceCreateLimiter = new RateLimiter(60_000, 20); // 20 creates / user / minute
+// Chat messages — cap per user to stop chat-spam / LLM cost abuse.
+export const chatLimiter = new RateLimiter(60_000, 30); // 30 messages / user / minute
+// Context (document library) writes — cap per user.
+export const contextWriteLimiter = new RateLimiter(60_000, 20); // 20 writes / user / minute
+// SSH host management + exec — cap per user (exec runs commands on their own host,
+// but still costs resources).
+export const sshLimiter = new RateLimiter(60_000, 30); // 30 ops / user / minute
+// Profile / account mutations — cap per user.
+export const profileLimiter = new RateLimiter(60_000, 20); // 20 ops / user / minute
+// Notifications / favorites — cap per user.
+export const miscWriteLimiter = new RateLimiter(60_000, 60); // 60 ops / user / minute

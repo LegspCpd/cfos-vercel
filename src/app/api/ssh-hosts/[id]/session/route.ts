@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { createSession, getSession, deleteSession } from '@/lib/ssh-session';
+import { sshLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -18,6 +19,11 @@ type Ctx = { params: { id: string } };
 export async function POST(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap session creation per user.
+  if (sshLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const host = await prisma.sshHost.findFirst({ where: { id: params.id, ownerId: session.userId } });
   if (!host) return NextResponse.json({ error: 'Host not found' }, { status: 404 });

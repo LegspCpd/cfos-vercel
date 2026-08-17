@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { writeAudit } from '@/lib/audit';
 import { r2GetPresignedUrl, deleteSharedFile } from '@/lib/r2';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -65,6 +66,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   if (!(await userHasPermission(session.userId, PERMISSIONS.fileshare))) {
     return NextResponse.json({ error: 'You do not have permission to manage shared files.' }, { status: 403 });
+  }
+
+  // Cap share deletions per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
   const ok = await deleteSharedFile(params.id, session.userId);

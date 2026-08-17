@@ -5,6 +5,7 @@ import { writeAudit } from '@/lib/audit';
 import { userHasPermission, PERMISSIONS } from '@/lib/permissions';
 import { isCollabRole, listWorkspaceCollaborators } from '@/lib/collaboration';
 import { notify } from '@/lib/notifications';
+import { miscWriteLimiter } from '@/lib/rate-limit';
 
 async function authUser(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -92,6 +93,10 @@ export async function POST(req: Request, { params }: Ctx) {
 export async function PATCH(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap collaborator changes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const workspace = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },
     select: { id: true },
@@ -115,6 +120,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
 export async function DELETE(req: Request, { params }: Ctx) {
   const session = await authUser(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  // Cap collaborator changes per user.
+  if (miscWriteLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
   const workspace = await prisma.workspace.findFirst({
     where: { id: params.id, ownerId: session.userId },
     select: { id: true, title: true },

@@ -3,6 +3,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { deleteWorker, getWorkerScript, workerEnabled } from '@/lib/cf-worker';
 import { writeAudit } from '@/lib/audit';
+import { workerConfigLimiter } from '@/lib/rate-limit';
 
 // GET /api/worker/:id — the user's Worker deployment detail (ownership-checked), merged with
 // the live Cloudflare script metadata (routes, handlers, timestamps) when configured.
@@ -47,6 +48,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   const session = await verifySessionToken(token);
   if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+  // Cap worker deletions per user.
+  if (workerConfigLimiter.tryCall(session.userId) === 0) {
+    return NextResponse.json({ error: 'Too many config changes. Please wait a minute.' }, { status: 429 });
+  }
 
   const rec = await prisma.workerDeployment.findFirst({
     where: { id: params.id, userId: session.userId },

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { deletePagesProject, listPagesProjects } from '@/lib/cf-pages';
 import { writeAudit } from '@/lib/audit';
 import { invalidateCache, cachedJson } from '@/lib/kv-cache';
+import { workerConfigLimiter } from '@/lib/rate-limit';
 
 async function auth(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer /, '');
@@ -75,6 +76,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
+  // Cap deployment deletions per user (each may hit the Cloudflare API).
+  if (workerConfigLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
+
   const rec = await prisma.deployment.findFirst({
     where: { id: params.id, userId: session.userId },
     select: { id: true, pagesProject: true },
@@ -118,6 +124,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
 export async function PATCH(req: Request, { params }: Ctx) {
   const session = await auth(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  // Cap deployment config changes per user.
+  if (workerConfigLimiter.tryCall(session.userId) <= 0) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
 
   const rec = await prisma.deployment.findFirst({
     where: { id: params.id, userId: session.userId },

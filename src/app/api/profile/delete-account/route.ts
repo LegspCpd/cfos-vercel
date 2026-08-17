@@ -7,6 +7,7 @@ import { verifyCaptcha, type CaptchaProvider } from '@/lib/captcha';
 import { deletionDeadline, applyDueDeletion } from '@/lib/account-deletion';
 import { writeAudit } from '@/lib/audit';
 import { z } from 'zod';
+import { profileLimiter } from '@/lib/rate-limit';
 
 // POST /api/profile/delete-account — request account deletion. Verifies the code sent to
 // the bound email + a human-verification challenge, then puts the account on a 4–7 day
@@ -25,6 +26,10 @@ export async function POST(req: Request) {
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     const session = await verifySessionToken(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    // Cap account-deletion attempts per user.
+    if (profileLimiter.tryCall(session.userId) <= 0) {
+      return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+    }
     // If the deletion deadline already passed, remove the account first (it's already gone).
     if (await applyDueDeletion(session.userId)) {
       return NextResponse.json({ error: 'Account has been deleted' }, { status: 401 });

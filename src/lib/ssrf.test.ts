@@ -38,6 +38,27 @@ describe('validateFetchUrl', () => {
     expect(validateFetchUrl('http://[fe80::1]/x')).toMatch(/Private/);
   });
 
+  it('rejects IPv4-mapped IPv6 addresses that embed private IPv4s', () => {
+    // ::ffff:a.b.c.d — the classic metadata-service bypass
+    expect(validateFetchUrl('http://[::ffff:169.254.169.254]/latest/meta-data')).toMatch(/Private/);
+    expect(validateFetchUrl('http://[::ffff:10.0.0.1]/x')).toMatch(/Private/);
+    expect(validateFetchUrl('http://[::ffff:127.0.0.1]/x')).toMatch(/Private/);
+    expect(validateFetchUrl('http://[::ffff:192.168.1.1]/x')).toMatch(/Private/);
+    // hex-encoded IPv4 (::ffff:7f00:1 == 127.0.0.1)
+    expect(validateFetchUrl('http://[::ffff:7f00:1]/x')).toMatch(/Private/);
+    // fully expanded form
+    expect(validateFetchUrl('http://[0:0:0:0:0:ffff:169.254.169.254]/x')).toMatch(/Private/);
+    expect(validateFetchUrl('http://[0:0:0:0:0:ffff:7f00:1]/x')).toMatch(/Private/);
+    // IPv4-compatible (::a.b.c.d)
+    expect(validateFetchUrl('http://[::10.0.0.1]/x')).toMatch(/Private/);
+    expect(validateFetchUrl('http://[::7f00:1]/x')).toMatch(/Private/);
+  });
+
+  it('accepts IPv4-mapped IPv6 addresses that embed public IPv4s', () => {
+    expect(validateFetchUrl('http://[::ffff:8.8.8.8]/x')).toBeNull();
+    expect(validateFetchUrl('http://[::ffff:1.1.1.1]/x')).toBeNull();
+  });
+
   it('accepts public IP literals', () => {
     expect(validateFetchUrl('http://8.8.8.8/x')).toBeNull();
     expect(validateFetchUrl('http://1.1.1.1/x')).toBeNull();

@@ -5,6 +5,7 @@ import PwaRegister from '@/components/PwaRegister';
 import SiteBackground from '@/components/SiteBackground';
 import { getSetting, SETTING_SITE_FAVICON, SETTING_SITE_NAME } from '@/lib/settings';
 import { siteBaseUrl } from '@/lib/site';
+import { Analytics } from '@vercel/analytics/next';
 
 // Default icon = the project logo (public/app-icon.png, copied from the repo-root logo).
 const DEFAULT_ICON = '/app-icon.png';
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <I18nProvider>{children}</I18nProvider>
         <PwaRegister />
         <SiteBackground />
+        <Analytics />
       </body>
     </html>
   );
